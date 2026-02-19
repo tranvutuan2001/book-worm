@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-server
+  namespace: book-worm
+  labels:
+    app: llm-server
+spec:
+  selector:
+    app: llm-server
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP

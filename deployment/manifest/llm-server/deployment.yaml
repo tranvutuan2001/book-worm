@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-server
+  namespace: book-worm
+  labels:
+    app: llm-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-server
+  template:
+    metadata:
+      labels:
+        app: llm-server
+    spec:
+      containers:
+        - name: llm-server
+          image: tranvutuan2001/book-worm-llm-server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          env:
+            - name: PORT
+              value: "8000"
+            - name: MODEL_DIR
+              value: "/models"
+          volumeMounts:
+            - name: models
+              mountPath: /models
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "4Gi"
+            limits:
+              cpu: "4000m"
+              memory: "16Gi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: llm-server-models-pvc
