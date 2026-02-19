@@ -357,25 +357,3 @@ class PreAnalyzeDocumentService:
             raise
 
 pre_analyze_document_service = PreAnalyzeDocumentService()
-
-def parse_arguments():
-    parser = argparse.ArgumentParser(
-        description="Pre-analyze document by processing chunks, sections, and/or chapters"
-    )
-    parser.add_argument(
-        "--level",
-        choices=["chunks", "sections", "chapters"],
-        nargs="+",
-        help="Specify which levels to process. Can specify multiple levels (e.g., --level chunks sections). If not specified, all levels will be processed."
-    )
-    return parser.parse_args()
-
-if __name__ == "__main__":
-    args = parse_arguments()
-    
-    if args.level:
-        print(f"Processing levels: {', '.join(args.level)}")
-        pre_analyze_document_service.pre_analyze_document(args.level)
-    else:
-        print("Processing all levels: chunks, sections, chapters")
-        pre_analyze_document_service.pre_analyze_document()
