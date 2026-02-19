@@ -19,9 +19,9 @@ RUN apt update \
 # Copy only requirements first to leverage Docker cache
 COPY requirements.txt ./
 
-# Upgrade pip and install dependencies (also install gunicorn for production)
+# Upgrade pip and install dependencies
 RUN pip install --upgrade pip setuptools wheel \
- && pip install --no-cache-dir -r requirements.txt gunicorn
+ && pip install --no-cache-dir -r requirements.txt
 
 # Final runtime image
 FROM python:3.11-slim
@@ -60,4 +60,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 # Default command: run with gunicorn
 # Assumes a WSGI/ASGI app object named `app` is available in `main.py`.
 # If your app object lives elsewhere, change `main:app` accordingly.
-CMD ["gunicorn", "--chdir", "/app", "main:app", "-w", "4", "-b", "0.0.0.0:8000", "--access-logfile", "-", "--error-logfile", "-"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--log-level", "info"]

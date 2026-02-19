@@ -7,8 +7,6 @@ services:
     ports:
       - "8000:8000"
     restart: unless-stopped
-    volumes:
-      - ./backend/0_data:/app/0_data
     networks:
       - appnet
 
