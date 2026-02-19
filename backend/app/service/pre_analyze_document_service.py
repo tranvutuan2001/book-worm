@@ -162,7 +162,7 @@ class PreAnalyzeDocumentService:
             
             try:
                 summary = complete_chat(
-                    message_list=message_list, system_prompt=system_prompt, tools=[], model_name="Qwen3-30B-A3B-Instruct-2507-Q3_K_L" # TODO: make model name configurable
+                    message_list=message_list, system_prompt=system_prompt, tools=[], model_name="Qwen3-4B-Instruct-2507-Q4_K_M" # TODO: make model name configurable
                 )
                 section_summary.append(summary)
             except Exception as e:
