@@ -25,4 +25,4 @@ kube-prometheus-stack:
     templateFiles: {}
     alertmanagerSpec:
       nodeSelector:
-        node-role.kubernetes.io/control-plane: ""
+        ram: "medium"
