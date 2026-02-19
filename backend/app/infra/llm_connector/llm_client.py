@@ -119,7 +119,7 @@ def embed_text(model_name: str, text: str):
             raise
 
         try:
-            response = client.embeddings.create(input=text, model=model_name)
+            response = client.embeddings.create(input=text, model=model_name, encoding_format='float')
             logger.info("Embedding created successfully")
             return response.data[0].embedding
         except TimeoutError as e:

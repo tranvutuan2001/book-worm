@@ -48,7 +48,7 @@ class PreAnalyzeDocumentService:
 
         for attempt in range(3):
             try:
-                embeded_text = embed_text(text =text, model_name="Qwen/Qwen3-Embedding-4B-GGUF") # TODO: make model name configurable
+                embeded_text = embed_text(text =text, model_name="Qwen3-Embedding-4B-Q4_K_M") # TODO: make model name configurable
                 return embeded_text
             except Exception as exc:
                 last_exception = exc
@@ -162,7 +162,7 @@ class PreAnalyzeDocumentService:
             
             try:
                 summary = complete_chat(
-                    message_list=message_list, system_prompt=system_prompt, tools=[]
+                    message_list=message_list, system_prompt=system_prompt, tools=[], model_name="Qwen3-30B-A3B-Instruct-2507-Q3_K_L" # TODO: make model name configurable
                 )
                 section_summary.append(summary)
             except Exception as e:

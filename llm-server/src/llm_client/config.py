@@ -9,11 +9,11 @@ class Settings(BaseSettings):
         case_sensitive=False
     )
     
-    n_ctx: int = 2048
+    n_ctx: int = 30000
     n_gpu_layers: int = 0
     n_threads: int = 4
     temperature: float = 0.7
-    max_tokens: int = 512
+    max_tokens: int = 3000
     verbose: bool = False
 
 

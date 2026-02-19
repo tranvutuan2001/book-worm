@@ -1,9 +1,6 @@
 """
 Chat completion service - business logic layer
 """
-import json
-import uuid
-import time
 from typing import List, Optional
 from llama_cpp import Llama
 
