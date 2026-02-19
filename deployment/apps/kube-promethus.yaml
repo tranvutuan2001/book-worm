@@ -15,7 +15,7 @@ spec:
 
     - repoURL: 'https://github.com/tranvutuan2001/book-worm'
       targetRevision: HEAD
-      ref: values # This 'ref' creates the $values variable used above
+      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
