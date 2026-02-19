@@ -11,6 +11,7 @@ from app.infra.session_manager import session_manager
 from app.infra.logging_config import start_request_logging, end_request_logging, get_request_logger
 from pathlib import Path
 import time
+import traceback
 
 class AIChatService:
     async def ask(self, payload: Conversation) -> AskResponse:
@@ -24,16 +25,26 @@ class AIChatService:
         try:
             # Check if document name is provided
             if not payload.document_name:
+                error_msg = "Document name is required but not provided"
+                logger.error(error_msg)
+                print(f"❌ {error_msg}")
                 raise HTTPException(status_code=400, detail="Document name is required")
             
             # Check if document exists
             doc_path = Path(f"0_data/{payload.document_name}")
             if not doc_path.exists():
+                error_msg = f"Document '{payload.document_name}' not found at path: {doc_path}"
+                logger.error(error_msg)
+                print(f"❌ {error_msg}")
                 raise HTTPException(status_code=404, detail=f"Document '{payload.document_name}' not found")
+            
+            logger.info(f"Document found: {payload.document_name}")
             
             # Use session context manager to ensure proper session handling
             with session_manager.session_context(payload.document_name) as session_id:
                 message_list = payload.message_list
+                logger.info(f"Using session ID: {session_id}")
+                
                 system_prompt = f"""
                     You are a knowledgeable assistant in a document-analyzing system.
                     Answer in the language of the question.
@@ -45,12 +56,27 @@ class AIChatService:
                     Format your answer for human-readability.
                 """
 
-                logger.info("Starting initial LLM completion...")           
-                answer = complete_chat(message_list=message_list, system_prompt=system_prompt,
-                                    tools=[get_the_most_relevant_chunks, get_document_summary], model_name=payload.chat_model)
-                logger.info(f"Initial answer generated: {len(answer)} characters")
+                logger.info("Starting initial LLM completion...")
+                try:
+                    answer = complete_chat(message_list=message_list, system_prompt=system_prompt,
+                                        tools=[get_the_most_relevant_chunks, get_document_summary], model_name=payload.chat_model)
+                    logger.info(f"Initial answer generated: {len(answer)} characters")
+                except Exception as e:
+                    error_msg = f"Failed to generate initial answer: {str(e)}"
+                    logger.error(error_msg)
+                    print(f"❌ {error_msg}")
+                    print(f"Stack trace: {traceback.format_exc()}")
+                    raise
 
-                verified_answer = await self._verify_answer(message_list, answer, payload.chat_model)
+                try:
+                    verified_answer = await self._verify_answer(message_list, answer, payload.chat_model)
+                    logger.info("Answer verification completed successfully")
+                except Exception as e:
+                    error_msg = f"Failed during answer verification: {str(e)}"
+                    logger.error(error_msg)
+                    print(f"❌ {error_msg}")
+                    print(f"Stack trace: {traceback.format_exc()}")
+                    raise
                 
                 return AskResponse(
                     message=verified_answer, 
@@ -58,44 +84,53 @@ class AIChatService:
                     timestamp=123456789
                 )
             
+        except HTTPException:
+            # Re-raise HTTP exceptions as-is (they're already logged above)
+            raise
         except Exception as e:
-            logger.error(f"Request failed with error: {str(e)}")
+            error_msg = f"Unexpected error during chat request: {str(e)}"
+            logger.error(error_msg)
+            print(f"❌ {error_msg}")
+            print(f"Stack trace: {traceback.format_exc()}")
             end_request_logging(response_summary=f"Error: {str(e)}", success=False)
             raise
     
 
     async def _verify_answer(self, message_list: List[Message], answer: str, chat_model: str) -> str:
         logger = get_request_logger("app.api")
-        context_messages = "\n".join([
-                    f"{msg.role.value}: {msg.content}"
-                    for msg in message_list
-                ]) if message_list else "N/A"
+        
+        try:
+            context_messages = "\n".join([
+                        f"{msg.role.value}: {msg.content}"
+                        for msg in message_list
+                    ]) if message_list else "N/A"
 
-        current_user_query = message_list[-1].content if message_list else "N/A"
+            current_user_query = message_list[-1].content if message_list else "N/A"
 
-        verification_prompt = f"""
-            Conversation Context (previous messages):
-            {context_messages}
-            
-            Current User Query: {current_user_query}
-            
-            Answer to Review:
-            {answer}
-            
-            Verify the answer above by checking each factual claim against the document using the tools. Return the verified final answer.
-        """
+            verification_prompt = f"""
+                Conversation Context (previous messages):
+                {context_messages}
+                
+                Current User Query: {current_user_query}
+                
+                Answer to Review:
+                {answer}
+                
+                Verify the answer above by checking each factual claim against the document using the tools. Return the verified final answer.
+            """
 
-        verification_message = [Message(
-            id="verification",
-            role=Role.USER,
-            content=verification_prompt,
-            timestamp=int(time.time() * 1000)
-        )]
+            verification_message = [Message(
+                id="verification",
+                role=Role.USER,
+                content=verification_prompt,
+                timestamp=int(time.time() * 1000)
+            )]
 
-        logger.info("Starting verification step...")
-        verified_answer = complete_chat(
-            message_list=verification_message,
-            system_prompt="""You are a strict verification assistant. Your job is to fact-check answers against the document using tools.
+            logger.info("Starting verification step...")
+            try:
+                verified_answer = complete_chat(
+                    message_list=verification_message,
+                    system_prompt="""You are a strict verification assistant. Your job is to fact-check answers against the document using tools.
 
                 CRITICAL RULES:
                 - ONLY use information that you can verify with the provided tools
@@ -110,12 +145,23 @@ class AIChatService:
             tools=[get_the_most_relevant_chunks, get_document_summary],
             model_name=chat_model
         )
-        
-        logger.info(f"Verification completed: {len(verified_answer)} characters")
-        
-        # End request logging with success
-        end_request_logging(response_summary=verified_answer, success=True)
+                logger.info(f"Verification completed: {len(verified_answer)} characters")
+            except Exception as e:
+                error_msg = f"LLM verification call failed: {str(e)}"
+                logger.error(error_msg)
+                print(f"❌ {error_msg}")
+                print(f"Stack trace: {traceback.format_exc()}")
+                raise
+            
+            # End request logging with success
+            end_request_logging(response_summary=verified_answer, success=True)
 
-        return verified_answer
+            return verified_answer
+            
+        except Exception as e:
+            error_msg = f"Error during answer verification process: {str(e)}"
+            logger.error(error_msg)
+            print(f"❌ {error_msg}")
+            raise
 
 ai_service = AIChatService()

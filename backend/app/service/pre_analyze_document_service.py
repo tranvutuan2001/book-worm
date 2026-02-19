@@ -1,6 +1,8 @@
 import pdfplumber
 import argparse
 import time
+import logging
+import traceback
 from typing import List, Optional
 from app.infra.llm_connector.llm_client import embed_text, complete_chat
 from app.util import write_json_file
@@ -8,18 +10,35 @@ from app.domain.entity.message import Message
 from app.constant import Role
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+logger = logging.getLogger('app.service')
+
 class PreAnalyzeDocumentService:
     def _read_document_by_page(self, path: str) -> List[str]:
         text_by_page: List[str] = []
-        with pdfplumber.open(path) as pdf:
-            for _, page in enumerate(pdf.pages):
-                try:
-                    txt = page.extract_text()
-                    if txt:
-                        text_by_page.append(txt)
-                except Exception:
-                    # skip pages that fail to extract gracefully
-                    continue
+        try:
+            with pdfplumber.open(path) as pdf:
+                for page_num, page in enumerate(pdf.pages):
+                    try:
+                        txt = page.extract_text()
+                        if txt:
+                            text_by_page.append(txt)
+                    except Exception as e:
+                        error_msg = f"Failed to extract text from page {page_num + 1}: {str(e)}"
+                        logger.warning(error_msg)
+                        print(f"⚠️  {error_msg}")
+                        # skip pages that fail to extract gracefully
+                        continue
+        except FileNotFoundError as e:
+            error_msg = f"PDF file not found: {path}"
+            logger.error(error_msg)
+            print(f"❌ {error_msg}")
+            raise
+        except Exception as e:
+            error_msg = f"Failed to open or read PDF file {path}: {str(e)}"
+            logger.error(error_msg)
+            print(f"❌ {error_msg}")
+            print(f"Stack trace: {traceback.format_exc()}")
+            raise
 
         return text_by_page
 
@@ -27,32 +46,53 @@ class PreAnalyzeDocumentService:
     def _embed_text_by_llm(self, text: str) -> List[float]:
         last_exception: Optional[Exception] = None
 
-        for _ in range(3):
+        for attempt in range(3):
             try:
                 embeded_text = embed_text(text)
                 return embeded_text
             except Exception as exc:
-                # capture the first failure and try again before surfacing it
                 last_exception = exc
+                error_msg = f"Embedding attempt {attempt + 1}/3 failed: {str(exc)}"
+                logger.warning(error_msg)
+                print(f"⚠️  {error_msg}")
+                if attempt < 2:  # Don't sleep on the last attempt
+                    time.sleep(1)  # Wait before retry
 
+        error_msg = f"Failed to embed text after 3 attempts. Last error: {str(last_exception)}"
+        logger.error(error_msg)
+        print(f"❌ {error_msg}")
+        print(f"Stack trace: {traceback.format_exc()}")
         raise RuntimeError("Failed to embed text after 3 attempts.") from last_exception
 
 
     def _embed_chunk(self, chunks: List[str]) -> List[List[float]]:
         res: List[List[float]] = []
         for index, chunk in enumerate(chunks):
-            print(f"Embedding chunk {index + 1}/{len(chunks)}...")
-            vector = self._embed_text_by_llm(text=chunk)
-            res.append(vector)
+            try:
+                print(f"Embedding chunk {index + 1}/{len(chunks)}...")
+                vector = self._embed_text_by_llm(text=chunk)
+                res.append(vector)
+            except Exception as e:
+                error_msg = f"Failed to embed chunk {index + 1}/{len(chunks)}: {str(e)}"
+                logger.error(error_msg)
+                print(f"❌ {error_msg}")
+                print(f"Chunk preview (first 100 chars): {chunk[:100]}...")
+                raise
 
         return res
 
     def _embed_section_summary(self, section_summary: List[str]) -> List[List[float]]:
         res: List[List[float]] = []
         for index, summary in enumerate(section_summary):
-            print(f"Embedding section summary {index + 1}/{len(section_summary)}...")
-            vector = self._embed_text_by_llm(text=summary)
-            res.append(vector)
+            try:
+                print(f"Embedding section summary {index + 1}/{len(section_summary)}...")
+                vector = self._embed_text_by_llm(text=summary)
+                res.append(vector)
+            except Exception as e:
+                error_msg = f"Failed to embed section summary {index + 1}/{len(section_summary)}: {str(e)}"
+                logger.error(error_msg)
+                print(f"❌ {error_msg}")
+                raise
         
         return res
 
@@ -60,9 +100,15 @@ class PreAnalyzeDocumentService:
     def _embed_chapter_summary(self, chapter_summary: List[str]) -> List[List[float]]:
         res: List[List[float]] = []
         for index, summary in enumerate(chapter_summary):
-            print(f"Embedding chapter summary {index + 1}/{len(chapter_summary)}...")
-            vector = self._embed_text_by_llm(text=summary)
-            res.append(vector)
+            try:
+                print(f"Embedding chapter summary {index + 1}/{len(chapter_summary)}...")
+                vector = self._embed_text_by_llm(text=summary)
+                res.append(vector)
+            except Exception as e:
+                error_msg = f"Failed to embed chapter summary {index + 1}/{len(chapter_summary)}: {str(e)}"
+                logger.error(error_msg)
+                print(f"❌ {error_msg}")
+                raise
         
         return res
 
@@ -114,10 +160,17 @@ class PreAnalyzeDocumentService:
             )
             message_list = [system_message, user_message]
             
-            summary = complete_chat(
-                message_list=message_list, system_prompt=system_prompt, tools=[]
-            )
-            section_summary.append(summary)
+            try:
+                summary = complete_chat(
+                    message_list=message_list, system_prompt=system_prompt, tools=[]
+                )
+                section_summary.append(summary)
+            except Exception as e:
+                error_msg = f"Failed to generate section summary for chunks {i + 1} to {min(i + numb_chunk_per_section, len(all_chunks))}: {str(e)}"
+                logger.error(error_msg)
+                print(f"❌ {error_msg}")
+                print(f"Stack trace: {traceback.format_exc()}")
+                raise
 
         return section_summary
 
@@ -159,10 +212,17 @@ class PreAnalyzeDocumentService:
             message_list = [system_message, user_message]
             
             print(f"Building chapter summary {len(chapter_summaries) + 1}...")
-            chapter_summary = complete_chat(
-                message_list=message_list, system_prompt=system_prompt, tools=[]
-            )
-            chapter_summaries.append(chapter_summary)
+            try:
+                chapter_summary = complete_chat(
+                    message_list=message_list, system_prompt=system_prompt, tools=[]
+                )
+                chapter_summaries.append(chapter_summary)
+            except Exception as e:
+                error_msg = f"Failed to generate chapter summary for sections {i + 1} to {min(i + sections_per_chapter, len(section_summaries))}: {str(e)}"
+                logger.error(error_msg)
+                print(f"❌ {error_msg}")
+                print(f"Stack trace: {traceback.format_exc()}")
+                raise
         
         return chapter_summaries
 
@@ -186,53 +246,115 @@ class PreAnalyzeDocumentService:
         if document_name is None:
             document_name = book_name
         
+        logger.info(f"Starting document pre-analysis for: {document_name}")
+        print(f"\n🚀 Starting document pre-analysis for: {document_name}")
+        
         try:
             document_by_page = self._read_document_by_page(pdf_path)
-            print(f"Extracted {len(document_by_page)} pages from the document.")
+            logger.info(f"Successfully extracted {len(document_by_page)} pages from the document")
+            print(f"✓ Extracted {len(document_by_page)} pages from the document.")
+            
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=2000, chunk_overlap=100
             )
             all_chunks = text_splitter.split_text("".join(document_by_page))
-            print(f"Split document into {len(all_chunks)} chunks.")
+            logger.info(f"Successfully split document into {len(all_chunks)} chunks")
+            print(f"✓ Split document into {len(all_chunks)} chunks.")
             
             # Process chunks if requested
             if "chunks" in process_levels:
-                print("Processing chunks...")
-                write_json_file(all_chunks, f"./0_data/{document_name}/{document_name}_chunks.json")
-                embeded_chunks = self._embed_chunk(all_chunks)
-                write_json_file(embeded_chunks, f"./0_data/{document_name}/{document_name}_chunk_embeddings.json")
+                print("\n📝 Processing chunks...")
+                logger.info("Starting chunk processing")
+                try:
+                    write_json_file(all_chunks, f"./0_data/{document_name}/{document_name}_chunks.json")
+                    logger.info("Successfully saved chunks to file")
+                    embeded_chunks = self._embed_chunk(all_chunks)
+                    write_json_file(embeded_chunks, f"./0_data/{document_name}/{document_name}_chunk_embeddings.json")
+                    logger.info("Successfully saved chunk embeddings to file")
+                    print(f"✓ Chunk processing completed")
+                except Exception as e:
+                    error_msg = f"Failed during chunk processing: {str(e)}"
+                    logger.error(error_msg)
+                    print(f"❌ {error_msg}")
+                    raise
             
             # Process sections if requested
             section_summary = None
             if "sections" in process_levels:
-                print("Processing sections...")
-                section_summary = self._build_section_summaries(all_chunks)
-                write_json_file(section_summary, f"./0_data/{document_name}/{document_name}_section_summaries.json")
-                embeded_section_summaries = self._embed_section_summary(section_summary)
-                write_json_file(embeded_section_summaries, f"./0_data/{document_name}/{document_name}_section_summary_embeddings.json")
+                print("\n📚 Processing sections...")
+                logger.info("Starting section processing")
+                try:
+                    section_summary = self._build_section_summaries(all_chunks)
+                    write_json_file(section_summary, f"./0_data/{document_name}/{document_name}_section_summaries.json")
+                    logger.info("Successfully saved section summaries to file")
+                    embeded_section_summaries = self._embed_section_summary(section_summary)
+                    write_json_file(embeded_section_summaries, f"./0_data/{document_name}/{document_name}_section_summary_embeddings.json")
+                    logger.info("Successfully saved section summary embeddings to file")
+                    print(f"✓ Section processing completed")
+                except Exception as e:
+                    error_msg = f"Failed during section processing: {str(e)}"
+                    logger.error(error_msg)
+                    print(f"❌ {error_msg}")
+                    raise
             
             # Process chapters if requested
             if "chapters" in process_levels:
-                print("Processing chapters...")
-                # Load section summaries if not already created in this run
-                if section_summary is None:
-                    try:
-                        import json
-                        with open(f"./0_data/{document_name}/{document_name}_section_summaries.json", 'r') as f:
-                            section_summary = json.load(f)
-                        print("Loaded existing section summaries.")
-                    except FileNotFoundError:
-                        print("Section summaries not found. Creating them first...")
-                        section_summary = self._build_section_summaries(all_chunks)
-                        write_json_file(section_summary, f"./0_data/{document_name}/{document_name}_section_summaries.json")
-                
-                chapter_summaries = self._build_chapter_summary(section_summary)
-                write_json_file(chapter_summaries, f"./0_data/{document_name}/{document_name}_chapter_summaries.json")
-                embeded_chapter_summaries = self._embed_chapter_summary(chapter_summaries)
-                write_json_file(embeded_chapter_summaries, f"./0_data/{document_name}/{document_name}_chapter_summary_embeddings.json")
+                print("\n📖 Processing chapters...")
+                logger.info("Starting chapter processing")
+                try:
+                    # Load section summaries if not already created in this run
+                    if section_summary is None:
+                        try:
+                            import json
+                            with open(f"./0_data/{document_name}/{document_name}_section_summaries.json", 'r') as f:
+                                section_summary = json.load(f)
+                            logger.info("Loaded existing section summaries")
+                            print("✓ Loaded existing section summaries.")
+                        except FileNotFoundError:
+                            logger.info("Section summaries not found. Creating them first...")
+                            print("⚠️  Section summaries not found. Creating them first...")
+                            section_summary = self._build_section_summaries(all_chunks)
+                            write_json_file(section_summary, f"./0_data/{document_name}/{document_name}_section_summaries.json")
+                        except Exception as e:
+                            error_msg = f"Failed to load section summaries: {str(e)}"
+                            logger.error(error_msg)
+                            print(f"❌ {error_msg}")
+                            raise
+                    
+                    chapter_summaries = self._build_chapter_summary(section_summary)
+                    write_json_file(chapter_summaries, f"./0_data/{document_name}/{document_name}_chapter_summaries.json")
+                    logger.info("Successfully saved chapter summaries to file")
+                    embeded_chapter_summaries = self._embed_chapter_summary(chapter_summaries)
+                    write_json_file(embeded_chapter_summaries, f"./0_data/{document_name}/{document_name}_chapter_summary_embeddings.json")
+                    logger.info("Successfully saved chapter summary embeddings to file")
+                    print(f"✓ Chapter processing completed")
+                except Exception as e:
+                    error_msg = f"Failed during chapter processing: {str(e)}"
+                    logger.error(error_msg)
+                    print(f"❌ {error_msg}")
+                    raise
 
+            logger.info(f"✅ Document pre-analysis completed successfully for: {document_name}")
+            print(f"\n✅ Document pre-analysis completed successfully for: {document_name}")
+            
+        except FileNotFoundError as e:
+            error_msg = f"File not found error during pre-analysis: {str(e)}"
+            logger.error(error_msg)
+            print(f"\n❌ {error_msg}")
+            print(f"Stack trace: {traceback.format_exc()}")
+            raise
         except RuntimeError as e:
-            print(f"Text extraction error: {e}")
+            error_msg = f"Runtime error during pre-analysis: {str(e)}"
+            logger.error(error_msg)
+            print(f"\n❌ {error_msg}")
+            print(f"Stack trace: {traceback.format_exc()}")
+            raise
+        except Exception as e:
+            error_msg = f"Unexpected error during pre-analysis: {str(e)}"
+            logger.error(error_msg)
+            print(f"\n❌ {error_msg}")
+            print(f"Stack trace: {traceback.format_exc()}")
+            raise
 
 pre_analyze_document_service = PreAnalyzeDocumentService()
 
