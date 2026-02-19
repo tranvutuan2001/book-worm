@@ -18,6 +18,7 @@ kube-prometheus-stack:
     resources:
       limits:
         memory: "512Mi"
+    adminPassword: "admin1234"
 
   # Disable components that might overwhelm 1GB nodes
   alertmanager:
