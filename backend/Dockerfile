@@ -29,7 +29,8 @@ LABEL maintainer=""
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/home/app/.local/bin:$PATH"
+    PATH="/home/app/.local/bin:$PATH" \
+    ENVIRONMENT=production
 
 WORKDIR /app
 

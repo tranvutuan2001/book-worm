@@ -1,3 +1,4 @@
+import os
 from typing import List, TypeVar
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
@@ -8,6 +9,9 @@ from app.infra.llm_connector.LLMLoggingHandler import LLMLoggingHandler
 from openai import OpenAI
 
 T = TypeVar('T', bound=BaseModel)
+# select base_url depending on environment
+env = os.getenv("ENVIRONMENT", "").lower()
+base_url = "http://llm-server:8000/v1" if env == "production" else "http://localhost:8001/v1"
 
 def complete_chat(model_name: str, message_list: List[Message], system_prompt: str, tools: List[BaseTool], timeout: int = 1500) -> str:
     """
@@ -20,8 +24,8 @@ def complete_chat(model_name: str, message_list: List[Message], system_prompt: s
 
     llm = ChatOpenAI(
         model=model_name,
-        base_url="http://localhost:8001/v1",
-        api_key= "custom-api-key",
+        base_url=base_url,
+        api_key="custom-api-key",
         temperature=0.1,
         timeout=timeout,
         callbacks=[logging_handler],
@@ -50,7 +54,7 @@ def complete_chat(model_name: str, message_list: List[Message], system_prompt: s
 
 
 def embed_text(model_name: str, text: str):
-    client = OpenAI(base_url="http://localhost:8001/v1", api_key="custom-api-key")
+    client = OpenAI(base_url=base_url, api_key="custom-api-key")
 
     response = client.embeddings.create(input=text, model=model_name)
     return response.data[0].embedding
