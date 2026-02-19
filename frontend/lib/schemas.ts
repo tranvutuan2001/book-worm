@@ -58,6 +58,7 @@ export const ModelInfoSchema = z.object({
   name: z.string(),
   path: z.string(),
   size: z.string(),
+  status: z.enum(['ready_to_use', 'downloading']),
 });
 
 export const DownloadableModelInfoSchema = z.object({

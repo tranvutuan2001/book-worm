@@ -1,7 +1,7 @@
 """
 Model management controller with FastAPI router
 """
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from typing import List
 
 from src.api.schemas import (
@@ -15,12 +15,11 @@ from src.api.schemas import (
     ModelUnloadResponse,
     LoadedModelInfo
 )
-from src.api.services.model_service import ModelService
+from src.api.services.model_service import ModelService, get_model_service
 from src.llm_client.chat_model import LLMModelManager, load_chat_model
 from src.llm_client.embedding_model import EmbeddingModelManager, load_embedding_model
 
 router = APIRouter(prefix="/v1/models", tags=["models"])
-service = ModelService()
 chat_manager = LLMModelManager()
 embedding_manager = EmbeddingModelManager()
 
@@ -37,7 +36,7 @@ embedding_manager = EmbeddingModelManager()
     - File size in human-readable format
     """,
 )
-async def list_chat_models():
+async def list_chat_models(service: ModelService = Depends(get_model_service)):
     """Get list of available chat models"""
     try:
         models = service.list_available_chat_models()
@@ -58,7 +57,7 @@ async def list_chat_models():
     - File size in human-readable format
     """,
 )
-async def list_embedding_models():
+async def list_embedding_models(service: ModelService = Depends(get_model_service)):
     """Get list of available embedding models"""
     try:
         models = service.list_available_embedding_models()
@@ -77,7 +76,7 @@ async def list_embedding_models():
     downloaded using the POST /v1/models/download endpoint.
     """,
 )
-async def list_downloadable_chat_models():
+async def list_downloadable_chat_models(service: ModelService = Depends(get_model_service)):
     """Get list of downloadable chat models"""
     try:
         models = service.list_downloadable_chat_models()
@@ -96,7 +95,7 @@ async def list_downloadable_chat_models():
     downloaded using the POST /v1/models/download endpoint.
     """,
 )
-async def list_downloadable_embedding_models():
+async def list_downloadable_embedding_models(service: ModelService = Depends(get_model_service)):
     """Get list of downloadable embedding models"""
     try:
         models = service.list_downloadable_embedding_models()
@@ -144,7 +143,7 @@ async def list_downloadable_embedding_models():
         }
     }
 )
-async def download_model(request: ModelDownloadRequest, background_tasks: BackgroundTasks):
+async def download_model(request: ModelDownloadRequest, background_tasks: BackgroundTasks, service: ModelService = Depends(get_model_service)):
     """Download a model from Hugging Face in the background"""
     try:
         # Validate repository first
@@ -219,7 +218,7 @@ async def download_model(request: ModelDownloadRequest, background_tasks: Backgr
         500: {"description": "Error loading model"}
     }
 )
-async def load_model(request: ModelLoadRequest):
+async def load_model(request: ModelLoadRequest, service: ModelService = Depends(get_model_service)):
     """Load a model into memory"""
     try:
         # Validate model exists
@@ -320,7 +319,7 @@ async def load_model(request: ModelLoadRequest):
         500: {"description": "Error unloading model"}
     }
 )
-async def unload_model(request: ModelUnloadRequest):
+async def unload_model(request: ModelUnloadRequest, service: ModelService = Depends(get_model_service)):
     """Unload a model from memory"""
     try:
         # Validate model exists
@@ -391,7 +390,7 @@ async def unload_model(request: ModelUnloadRequest):
         }
     }
 )
-async def list_loaded_models():
+async def list_loaded_models(service: ModelService = Depends(get_model_service)):
     """Get list of currently loaded models"""
     try:
         loaded_models = []

@@ -9,6 +9,7 @@ class ModelInfo(BaseModel):
     name: str = Field(..., description="Model name (filename without extension)")
     path: str = Field(..., description="Relative path from models directory")
     size: str = Field(..., description="Model file size in human-readable format")
+    status: str = Field(..., description="Model status: 'ready_to_use' or 'downloading'")
     
     model_config = {
         "json_schema_extra": {
@@ -16,7 +17,14 @@ class ModelInfo(BaseModel):
                 {
                     "name": "qwen3-8b-instruct",
                     "path": "Qwen--Qwen3-8B/qwen3-8b-instruct.gguf",
-                    "size": "8.53 GB"
+                    "size": "8.53 GB",
+                    "status": "ready_to_use"
+                },
+                {
+                    "name": "qwen3-4b-instruct",
+                    "path": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+                    "size": "Downloading...",
+                    "status": "downloading"
                 }
             ]
         }

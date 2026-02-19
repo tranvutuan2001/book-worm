@@ -2,18 +2,14 @@
 Embedding controller with FastAPI router
 """
 from fastapi import APIRouter, HTTPException, Depends
-from llama_cpp import Llama
 from typing import List
-
 from src.api.schemas import EmbeddingRequest, EmbeddingResponse, EmbeddingData, EmbeddingUsage
 from src.api.services.embedding_service import EmbeddingService
-from src.api.services.model_service import ModelService
+from src.api.services.model_service import ModelService, get_model_service
 from src.llm_client.embedding_model import load_embedding_model
-from src.llm_client.config import settings
 
 router = APIRouter(prefix="/v1", tags=["embeddings"])
 service = EmbeddingService()
-model_service = ModelService()
 
 
 @router.post(
@@ -90,7 +86,8 @@ model_service = ModelService()
     }
 )
 async def create_embeddings(
-    request: EmbeddingRequest
+    request: EmbeddingRequest,
+    model_service: ModelService = Depends(get_model_service)
 ):
     """
     Generate embeddings for input text(s).

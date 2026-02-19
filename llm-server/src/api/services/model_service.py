@@ -4,12 +4,14 @@ Model management service - business logic for listing and downloading models
 import os
 import asyncio
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Optional
 from huggingface_hub import hf_hub_download
 
 
 class ModelService:
-    """Service for handling model listing and downloading"""
+    """Service for handling model listing and downloading (Singleton)"""
+    
+    _instance: Optional['ModelService'] = None
     
     # Mapping of repository to specific GGUF files to download
     DOWNLOADABLE_CHAT_MODELS = {
@@ -22,6 +24,16 @@ class ModelService:
         "Qwen/Qwen3-Embedding-8B-GGUF": "Qwen3-Embedding-8B-Q4_K_M.gguf"
     }
     
+    # Track active downloads: {filename: {"status": str, "repository": str}}
+    _active_downloads: Dict[str, Dict] = {}
+    
+    def __new__(cls, models_dir: str = "models"):
+        """Singleton pattern implementation"""
+        if cls._instance is None:
+            cls._instance = super(ModelService, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+    
     def __init__(self, models_dir: str = "models"):
         """
         Initialize model service
@@ -29,8 +41,12 @@ class ModelService:
         Args:
             models_dir: Directory where models are stored
         """
+        if self._initialized:
+            return
+        
         self.models_dir = Path(models_dir)
         self.models_dir.mkdir(exist_ok=True)
+        self._initialized = True
     
     def list_available_chat_models(self) -> List[Dict[str, str]]:
         """
@@ -49,8 +65,21 @@ class ModelService:
                 models.append({
                     "name": model_file.stem,
                     "path": str(model_file.relative_to(self.models_dir)),
-                    "size": self._format_size(model_file.stat().st_size)
+                    "size": self._format_size(model_file.stat().st_size),
+                    "status": "ready_to_use"
                 })
+        
+        # Add models that are currently downloading
+        for filename, download_info in self._active_downloads.items():
+            if "embed" not in filename.lower():
+                # Check if this model is not already in the list (fully downloaded)
+                if not any(m["name"] == Path(filename).stem for m in models):
+                    models.append({
+                        "name": Path(filename).stem,
+                        "path": filename,
+                        "size": "Downloading...",
+                        "status": "downloading"
+                    })
         
         return models
     
@@ -71,8 +100,21 @@ class ModelService:
                 models.append({
                     "name": model_file.stem,
                     "path": str(model_file.relative_to(self.models_dir)),
-                    "size": self._format_size(model_file.stat().st_size)
+                    "size": self._format_size(model_file.stat().st_size),
+                    "status": "ready_to_use"
                 })
+        
+        # Add models that are currently downloading
+        for filename, download_info in self._active_downloads.items():
+            if "embed" in filename.lower():
+                # Check if this model is not already in the list (fully downloaded)
+                if not any(m["name"] == Path(filename).stem for m in models):
+                    models.append({
+                        "name": Path(filename).stem,
+                        "path": filename,
+                        "size": "Downloading...",
+                        "status": "downloading"
+                    })
         
         return models
     
@@ -156,25 +198,41 @@ class ModelService:
         Args:
             repository: Hugging Face repository (e.g., "Qwen/Qwen3-8B")
         """
+        service_instance = self
+        
         def _download():
             try:
                 # Get the filename for this repository
-                all_models = {**self.DOWNLOADABLE_CHAT_MODELS, **self.DOWNLOADABLE_EMBEDDING_MODELS}
+                all_models = {**service_instance.DOWNLOADABLE_CHAT_MODELS, **service_instance.DOWNLOADABLE_EMBEDDING_MODELS}
                 filename = all_models.get(repository)
                 
                 if not filename:
                     raise ValueError(f"No filename configured for repository {repository}")
                 
+                # Track download status
+                service_instance._active_downloads[filename] = {
+                    "status": "downloading",
+                    "repository": repository
+                }
+                
                 # Download the specific GGUF file
                 downloaded_path = hf_hub_download(
                     repo_id=repository,
                     filename=filename,
-                    local_dir=str(self.models_dir),
+                    local_dir=str(service_instance.models_dir),
                     local_dir_use_symlinks=False,
                     resume_download=True
                 )
+                
+                # Download complete - remove from active downloads
+                if filename in service_instance._active_downloads:
+                    del service_instance._active_downloads[filename]
+                
                 print(f"Model {repository}/{filename} downloaded successfully to {downloaded_path}")
             except Exception as e:
+                # Remove from active downloads on error
+                if 'filename' in locals() and filename in service_instance._active_downloads:
+                    del service_instance._active_downloads[filename]
                 print(f"Failed to download model '{repository}': {str(e)}")
         
         # Run in thread pool to avoid blocking
@@ -197,3 +255,13 @@ class ModelService:
                 return f"{size_bytes:.2f} {unit}"
             size_bytes /= 1024.0
         return f"{size_bytes:.2f} PB"
+
+
+def get_model_service() -> ModelService:
+    """
+    FastAPI dependency to get the singleton ModelService instance
+    
+    Returns:
+        ModelService singleton instance
+    """
+    return ModelService()

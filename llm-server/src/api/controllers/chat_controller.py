@@ -2,17 +2,14 @@
 Chat completion controller with FastAPI router
 """
 from fastapi import APIRouter, HTTPException, Depends
-from llama_cpp import Llama
-
 from src.api.schemas import ChatCompletionRequest, ChatCompletionResponse
 from src.api.services.chat_service import ChatCompletionService
-from src.api.services.model_service import ModelService
+from src.api.services.model_service import ModelService, get_model_service
 from src.llm_client.chat_model import load_chat_model
 from src.llm_client.config import settings
 
 router = APIRouter(prefix="/v1", tags=["chat"])
 service = ChatCompletionService()
-model_service = ModelService()
 
 
 @router.post(
@@ -117,7 +114,8 @@ model_service = ModelService()
     }
 )
 async def create_chat_completion(
-    request: ChatCompletionRequest
+    request: ChatCompletionRequest,
+    model_service: ModelService = Depends(get_model_service)
 ) -> ChatCompletionResponse:
     """
     Create a chat completion with optional tool/function calling.
