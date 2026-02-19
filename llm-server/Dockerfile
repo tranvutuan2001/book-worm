@@ -7,10 +7,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=off \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_DEFAULT_TIMEOUT=100
+ENV LDFLAGS="-Wl,--no-as-needed -lpthread" \
+    CFLAGS="-pthread"
 
 RUN apt update && apt install -y --no-install-recommends \
     build-essential \
     cmake \
+    ninja-build \
     git \
     curl \
     gcc \
@@ -27,7 +30,7 @@ WORKDIR /wheels
 # Copy dependency files and build wheels so final image doesn't need build deps
 COPY requirements.txt ./
 RUN python -m pip install --upgrade pip setuptools wheel && \
-    pip wheel --wheel-dir /wheels -r requirements.txt
+    LDFLAGS="$LDFLAGS" CFLAGS="$CFLAGS" pip wheel --wheel-dir /wheels -r requirements.txt
 
 
 FROM python:3.11-slim-bullseye
@@ -39,7 +42,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Install minimal runtime OS deps needed by some libraries (OpenMP, BLAS)
 RUN apt update && apt install -y --no-install-recommends \
     libgomp1 \
-    libopenblas3 \
+    libopenblas-base \
+    curl \
     ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
@@ -56,9 +60,6 @@ COPY --from=builder /wheels /wheels
 RUN python -m pip install --upgrade pip setuptools wheel && \
     pip install --no-index --find-links=/wheels -r /app/requirements.txt && \
     rm -rf /wheels ~/.cache/pip
-
-# Expose the application port
-EXPOSE ${PORT}
 
 # Create app log dir and ensure permissions
 RUN mkdir -p /app/log && chown -R app:app /app

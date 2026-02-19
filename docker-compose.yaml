@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    volumes:
+      - ./backend/0_data:/app/0_data
+    networks:
+      - appnet
+
+  llm-server:
+    build:
+      context: ./llm-server
+    ports:
+      - "8001:8000"
+    restart: unless-stopped
+    networks:
+      - appnet
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - llm-server
+    networks:
+      - appnet
+
+networks:
+  appnet:
+    driver: bridge
