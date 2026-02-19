@@ -32,7 +32,7 @@ class LLMModelManager:
             logger.info(f"Loading chat model from {model_path}")
             self._models[model_path] = Llama(
                 model_path=model_path,
-                n_ctx=settings.n_ctx,
+                n_ctx=20000,
                 n_gpu_layers=settings.n_gpu_layers,
                 n_threads=settings.n_threads,
                 verbose=settings.verbose,
