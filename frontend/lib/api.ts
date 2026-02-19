@@ -19,8 +19,8 @@ import {
 import { z } from 'zod';
 
 // Use container hostnames in production (e.g. service name in Docker Compose)
-const API_BASE_URL = process.env.NODE_ENV === 'production' ? 'http://backend:8000' : 'http://localhost:8000';
-const LLM_BASE_URL = process.env.NODE_ENV === 'production' ? 'http://llm-server:8000' : 'http://localhost:8001';
+const API_BASE_URL = process.env.NODE_ENV === 'production' ? 'http://localhost:8000' : 'http://localhost:8000';
+const LLM_BASE_URL = process.env.NODE_ENV === 'production' ? 'http://localhost:8001' : 'http://localhost:8001';
 
 export async function sendMessage(request: Conversation): Promise<AskResponse> {
   const response = await fetch(`${API_BASE_URL}/ask`, {

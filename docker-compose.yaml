@@ -31,6 +31,12 @@ services:
     networks:
       - appnet
 
+  debug:
+    image: alpine:3.18
+    command: ["sh","-c","tail -f /dev/null"]
+    networks:
+      - appnet
+
 networks:
   appnet:
     driver: bridge
