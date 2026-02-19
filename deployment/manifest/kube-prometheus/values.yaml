@@ -1,0 +1,28 @@
+kube-prometheus-stack:
+  prometheus:
+    prometheusSpec:
+      nodeSelector:
+        ram: "medium" 
+      resources:
+        requests:
+          memory: "1Gi"
+        limits:
+          memory: "4Gi"
+      # Reduce retention to save space/memory
+      retention: 1d
+      retentionSize: "2GB"
+
+  grafana:
+    nodeSelector:
+      ram: "medium"
+    resources:
+      limits:
+        memory: "512Mi"
+
+  # Disable components that might overwhelm 1GB nodes
+  alertmanager:
+    enabled: true
+    templateFiles: {}
+    alertmanagerSpec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
