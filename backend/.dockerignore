@@ -1,0 +1,20 @@
+# Ignore files that should not be sent to Docker daemon
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+.env
+.DS_Store
+.git
+*.pyc
+logs/
+node_modules/
+dist/
+build/
+*.egg-info
+*.egg
+*.sqlite3
+/.venv
+/.idea
+*.log
+0_data/

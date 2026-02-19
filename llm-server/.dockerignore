@@ -1,0 +1,19 @@
+# Ignore files that should not be copied into the image
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+build/
+dist/
+.pytest_cache/
+.git
+tests/
+*.egg-info
+/*.egg-info
+docs/
+README.md
+*.md
+
+# Don't copy local model files into the image — mount them at runtime
+models/

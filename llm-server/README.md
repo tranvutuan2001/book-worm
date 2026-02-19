@@ -399,6 +399,31 @@ pytest
 # Run specific test file
 pytest tests/test_integration.py
 
+
+## Docker
+
+- **Build image:**
+
+```bash
+docker build -t llm-server:latest .
+```
+
+- **Run container (recommended):** mount the host `models/` directory into the container so large model files are not baked into the image.
+
+```bash
+docker run --rm -p 8000:8000 \
+  -v "$(pwd)/models:/models" \
+  -e PORT=8000 \
+  -e MODEL_DIR=/models \
+  --name llm-server \
+  llm-server:latest
+```
+
+- **Notes:**
+  - The Dockerfile builds Python wheels in a builder stage and keeps the final image minimal.
+  - Do NOT copy your large `.gguf` model files into the image; mount them at `/models` as shown above.
+  - Adjust `--workers` and `--threads` in the `Dockerfile` `CMD` if you need more concurrency.
+  - For orchestrators, the container exposes a healthcheck at `/health`.
 # Run with verbose output
 pytest -v
 
