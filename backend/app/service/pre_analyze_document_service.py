@@ -48,7 +48,7 @@ class PreAnalyzeDocumentService:
 
         for attempt in range(3):
             try:
-                embeded_text = embed_text(text)
+                embeded_text = embed_text(text =text, model_name="Qwen/Qwen3-Embedding-4B-GGUF") # TODO: make model name configurable
                 return embeded_text
             except Exception as exc:
                 last_exception = exc
