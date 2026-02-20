@@ -26,9 +26,12 @@ spec:
               value: "production"
             - name: PORT
               value: "3000"
-            - name: NEXT_PUBLIC_BACKEND_URL
+            # Server-side env vars used by Next.js rewrites (next.config.ts) to proxy
+            # /api/* and /llm/* to the respective in-cluster services.
+            # These are NOT exposed to the browser.
+            - name: BACKEND_URL
               value: "http://backend:8000"
-            - name: NEXT_PUBLIC_LLM_SERVER_URL
+            - name: LLM_SERVER_URL
               value: "http://llm-server:8000"
           resources:
             requests:

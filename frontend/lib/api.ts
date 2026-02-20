@@ -18,9 +18,13 @@ import {
 } from '@/lib/schemas';
 import { z } from 'zod';
 
-// Use container hostnames in production (e.g. service name in Docker Compose)
-const API_BASE_URL = process.env.NODE_ENV === 'production' ? 'http://localhost:8000' : 'http://localhost:8000';
-const LLM_BASE_URL = process.env.NODE_ENV === 'production' ? 'http://localhost:8001' : 'http://localhost:8001';
+// The frontend uses Next.js rewrites (see next.config.ts) to proxy requests:
+//   /api/*  -> backend service
+//   /llm/*  -> llm-server service
+// This keeps the browser code using relative paths only, so no URL is baked
+// into the browser bundle at build time.
+const API_BASE_URL = '/api';
+const LLM_BASE_URL = '/llm';
 
 export async function sendMessage(request: Conversation): Promise<AskResponse> {
   const response = await fetch(`${API_BASE_URL}/ask`, {
