@@ -6,12 +6,12 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://charts.gateway.envoyproxy.io
+    repoURL: docker.io/envoyproxy
     chart: gateway-helm
-    targetRevision: v1.4.1
+    targetRevision: v1.7.0
     helm:
       releaseName: eg
-      values: |
+      valuesObject:
         deployment:
           envoyGateway:
             resources:
