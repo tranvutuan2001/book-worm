@@ -6,7 +6,29 @@ import asyncio
 from pathlib import Path
 from typing import List, Dict, Optional
 from huggingface_hub import hf_hub_download
+from tqdm import tqdm
 
+import sys
+
+# Custom tqdm class to force progress bar in non-interactive environments (e.g. logs)
+class TqdmProgress(tqdm):
+    def __init__(self, *args, **kwargs):
+        # Force a large interval to reduce log frequency but ensure updates happen
+        kwargs.setdefault("mininterval", 2.0)
+        # Force output to stdout
+        kwargs.setdefault("file", sys.stdout)
+        # Force ascii to avoid unicode issues in logs
+        kwargs.setdefault("ascii", True)
+        # Avoid trying to determine column width which can fail in k8s
+        kwargs.setdefault("ncols", 80)
+        super().__init__(*args, **kwargs)
+
+    def update(self, n=1):
+        # Allow standard update to handle logic
+        super().update(n)
+        # Force flush to ensure logs appear immediately in K8s
+        if hasattr(self.fp, 'flush'):
+            self.fp.flush()
 
 class ModelService:
     """Service for handling model listing and downloading (Singleton)"""
@@ -221,7 +243,8 @@ class ModelService:
                     filename=filename,
                     local_dir=str(service_instance.models_dir),
                     local_dir_use_symlinks=False,
-                    resume_download=True
+                    resume_download=True,
+                    tqdm_class=TqdmProgress  # Force progress bar in logs
                 )
                 
                 # Download complete - remove from active downloads
