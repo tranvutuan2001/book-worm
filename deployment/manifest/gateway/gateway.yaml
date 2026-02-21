@@ -4,6 +4,8 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
@@ -13,6 +15,8 @@ kind: Gateway
 metadata:
   name: book-worm-gateway
   namespace: book-worm
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   gatewayClassName: eg
   listeners:

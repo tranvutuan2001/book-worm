@@ -5,6 +5,8 @@ kind: HTTPRoute
 metadata:
   name: frontend-route
   namespace: book-worm
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   parentRefs:
     - name: book-worm-gateway
@@ -24,6 +26,8 @@ kind: HTTPRoute
 metadata:
   name: backend-route
   namespace: book-worm
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   parentRefs:
     - name: book-worm-gateway
@@ -49,6 +53,8 @@ kind: HTTPRoute
 metadata:
   name: llm-server-route
   namespace: book-worm
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   parentRefs:
     - name: book-worm-gateway
