@@ -1,8 +1,8 @@
 """
 Model management service - business logic for listing and downloading models
 """
-import os
 import asyncio
+import threading
 from pathlib import Path
 from typing import List, Dict, Optional
 from huggingface_hub import hf_hub_download
@@ -48,6 +48,7 @@ class ModelService:
     
     # Track active downloads: {filename: {"status": str, "repository": str}}
     _active_downloads: Dict[str, Dict] = {}
+    _downloads_lock: threading.Lock = threading.Lock()
     
     def __new__(cls, models_dir: str = "models"):
         """Singleton pattern implementation"""
@@ -92,7 +93,9 @@ class ModelService:
                 })
         
         # Add models that are currently downloading
-        for filename, download_info in self._active_downloads.items():
+        with self._downloads_lock:
+            active = dict(self._active_downloads)
+        for filename, download_info in active.items():
             if "embed" not in filename.lower():
                 # Check if this model is not already in the list (fully downloaded)
                 if not any(m["name"] == Path(filename).stem for m in models):
@@ -127,7 +130,9 @@ class ModelService:
                 })
         
         # Add models that are currently downloading
-        for filename, download_info in self._active_downloads.items():
+        with self._downloads_lock:
+            active = dict(self._active_downloads)
+        for filename, download_info in active.items():
             if "embed" in filename.lower():
                 # Check if this model is not already in the list (fully downloaded)
                 if not any(m["name"] == Path(filename).stem for m in models):
@@ -220,42 +225,42 @@ class ModelService:
         Args:
             repository: Hugging Face repository (e.g., "Qwen/Qwen3-8B")
         """
-        service_instance = self
-        
         def _download():
             try:
                 # Get the filename for this repository
-                all_models = {**service_instance.DOWNLOADABLE_CHAT_MODELS, **service_instance.DOWNLOADABLE_EMBEDDING_MODELS}
+                all_models = {**self.DOWNLOADABLE_CHAT_MODELS, **self.DOWNLOADABLE_EMBEDDING_MODELS}
                 filename = all_models.get(repository)
                 
                 if not filename:
                     raise ValueError(f"No filename configured for repository {repository}")
                 
                 # Track download status
-                service_instance._active_downloads[filename] = {
-                    "status": "downloading",
-                    "repository": repository
-                }
+                with self._downloads_lock:
+                    self._active_downloads[filename] = {
+                        "status": "downloading",
+                        "repository": repository
+                    }
                 
                 # Download the specific GGUF file
                 downloaded_path = hf_hub_download(
                     repo_id=repository,
                     filename=filename,
-                    local_dir=str(service_instance.models_dir),
+                    local_dir=str(self.models_dir),
                     local_dir_use_symlinks=False,
                     resume_download=True,
                     tqdm_class=TqdmProgress  # Force progress bar in logs
                 )
                 
                 # Download complete - remove from active downloads
-                if filename in service_instance._active_downloads:
-                    del service_instance._active_downloads[filename]
+                with self._downloads_lock:
+                    self._active_downloads.pop(filename, None)
                 
                 print(f"Model {repository}/{filename} downloaded successfully to {downloaded_path}")
             except Exception as e:
                 # Remove from active downloads on error
-                if 'filename' in locals() and filename in service_instance._active_downloads:
-                    del service_instance._active_downloads[filename]
+                if 'filename' in locals():
+                    with self._downloads_lock:
+                        self._active_downloads.pop(filename, None)
                 print(f"Failed to download model '{repository}': {str(e)}")
         
         # Run in thread pool to avoid blocking
