@@ -9,8 +9,8 @@ const nextConfig: NextConfig = {
   // This keeps the browser code simple (relative paths only) and avoids
   // baking URLs into the Next.js browser bundle at build time.
   async rewrites() {
-    const backendUrl = process.env.NODE_ENV === 'production'? 'http://backend.book-worm.svc.cluster.local' : 'http://localhost:8000';
-    const llmServerUrl = process.env.NODE_ENV === 'production'? 'http://llm-server.book-worm.svc.cluster.local' : 'http://localhost:8001';
+    const backendUrl = process.env.NODE_ENV === 'production'? 'http://backend.book-worm.svc.cluster.local:8000' : 'http://localhost:8000';
+    const llmServerUrl = process.env.NODE_ENV === 'production'? 'http://llm-server.book-worm.svc.cluster.local:8000' : 'http://localhost:8001';
     return [
       {
         source: '/api/:path*',
