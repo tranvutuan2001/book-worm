@@ -3,6 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: llm-server-models-pvc
   namespace: book-worm
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false  # Never delete this PVC — deleting it would wipe model data
 spec:
   accessModes:
     - ReadWriteOnce
