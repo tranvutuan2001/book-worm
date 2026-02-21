@@ -1,28 +1,3 @@
-# Static PV with Retain policy — data survives pod deletion and PVC deletion.
-# Pinned to the 'ram:high' worker node so the pod always reconnects to the same local storage.
-# storageClassName: "" disables dynamic provisioning so no new PV is ever auto-created.
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: llm-server-models-pv
-spec:
-  capacity:
-    storage: 30Gi
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: ""      # Empty string = no dynamic provisioner involved
-  local:
-    path: /var/local-path-provisioner/llm-server-models
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: ram
-              operator: In
-              values:
-                - high
----
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -31,8 +6,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: ""      # Must match PV — prevents dynamic provisioner from creating a new PV
-  volumeName: llm-server-models-pv   # Directly binds to the named PV, guaranteed 1-to-1
+  storageClassName: standard
   resources:
     requests:
       storage: 30Gi
