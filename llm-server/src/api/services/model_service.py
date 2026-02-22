@@ -234,13 +234,6 @@ class ModelService:
                 if not filename:
                     raise ValueError(f"No filename configured for repository {repository}")
                 
-                # Track download status
-                with self._downloads_lock:
-                    self._active_downloads[filename] = {
-                        "status": "downloading",
-                        "repository": repository
-                    }
-                
                 # Download the specific GGUF file
                 downloaded_path = hf_hub_download(
                     repo_id=repository,
@@ -262,6 +255,20 @@ class ModelService:
                     with self._downloads_lock:
                         self._active_downloads.pop(filename, None)
                 print(f"Failed to download model '{repository}': {str(e)}")
+
+        # Register the download entry BEFORE dispatching to the thread pool.
+        # If the worker thread does this, there is a window between run_in_executor()
+        # returning and the thread actually running where _active_downloads is empty,
+        # causing the list endpoints to transiently return [].
+        all_models = {**self.DOWNLOADABLE_CHAT_MODELS, **self.DOWNLOADABLE_EMBEDDING_MODELS}
+        filename = all_models.get(repository)
+        if not filename:
+            raise ValueError(f"No filename configured for repository {repository}")
+        with self._downloads_lock:
+            self._active_downloads[filename] = {
+                "status": "downloading",
+                "repository": repository
+            }
         
         # Run in thread pool to avoid blocking
         loop = asyncio.get_event_loop()
