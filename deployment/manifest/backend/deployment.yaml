@@ -6,7 +6,6 @@ metadata:
   labels:
     app: backend
 spec:
-  serviceName: backend
   replicas: 1
   selector:
     matchLabels:
