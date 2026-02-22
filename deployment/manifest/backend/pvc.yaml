@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-pvc
+  namespace: book-worm
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false  # Never delete this PVC — deleting it would wipe model data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 1Gi

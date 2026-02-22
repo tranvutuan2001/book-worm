@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: backend
   namespace: book-worm
@@ -16,8 +16,6 @@ spec:
       labels:
         app: backend
     spec:
-      securityContext:
-        fsGroup: 999
       containers:
         - name: backend
           image: tranvutuan2001/book-worm-backend:latest
@@ -49,15 +47,7 @@ spec:
               port: 8000
             initialDelaySeconds: 30
             periodSeconds: 30
-  volumeClaimTemplates:
-    - metadata:
-        name: data
-        annotations:
-          argocd.argoproj.io/sync-options: Prune=false
-      spec:
-        accessModes:
-          - ReadWriteOnce
-        storageClassName: standard
-        resources:
-          requests:
-            storage: 10Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: backend-pvc
