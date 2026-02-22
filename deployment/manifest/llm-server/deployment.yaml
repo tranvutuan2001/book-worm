@@ -26,11 +26,9 @@ spec:
           env:
             - name: PORT
               value: "8000"
-            - name: MODEL_DIR
-              value: "/models"
           volumeMounts:
             - name: models
-              mountPath: /models
+              mountPath: /app/models
           resources:
             requests:
               cpu: "1000m"
