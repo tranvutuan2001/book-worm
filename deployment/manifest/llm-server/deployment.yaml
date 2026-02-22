@@ -31,7 +31,7 @@ spec:
               value: "/models"
           volumeMounts:
             - name: models
-              mountPath: /models
+              mountPath: /app/models
           resources:
             requests:
               cpu: "1000m"
