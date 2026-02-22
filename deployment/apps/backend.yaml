@@ -14,6 +14,17 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: book-worm
+  ignoreDifferences:
+    - group: "apps"
+      kind: StatefulSet
+      jsonPointers:
+        - /spec/volumeClaimTemplates
+    - group: ""
+      kind: PersistentVolumeClaim
+      jsonPointers:
+        - /spec/volumeName        # Set by k8s after binding — not in git
+        - /spec/storageClassName   # May be defaulted/normalized by k8s
+        - /spec/volumeMode        # Defaulted to Filesystem by k8s
   syncPolicy:
     automated:
       prune: true

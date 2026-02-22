@@ -1,11 +1,12 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: backend
   namespace: book-worm
   labels:
     app: backend
 spec:
+  serviceName: backend
   replicas: 1
   selector:
     matchLabels:
@@ -15,6 +16,8 @@ spec:
       labels:
         app: backend
     spec:
+      securityContext:
+        fsGroup: 999
       containers:
         - name: backend
           image: tranvutuan2001/book-worm-backend:latest
@@ -24,6 +27,9 @@ spec:
           env:
             - name: ENVIRONMENT
               value: "production"
+          volumeMounts:
+            - name: data
+              mountPath: /app/0_data
           resources:
             requests:
               cpu: "250m"
@@ -43,3 +49,15 @@ spec:
               port: 8000
             initialDelaySeconds: 30
             periodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        annotations:
+          argocd.argoproj.io/sync-options: Prune=false
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 10Gi

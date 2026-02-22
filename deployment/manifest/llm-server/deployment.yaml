@@ -1,11 +1,12 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: llm-server
   namespace: book-worm
   labels:
     app: llm-server
 spec:
+  serviceName: llm-server
   replicas: 1
   selector:
     matchLabels:
@@ -50,7 +51,15 @@ spec:
               port: 8000
             initialDelaySeconds: 60
             periodSeconds: 30
-      volumes:
-        - name: models
-          persistentVolumeClaim:
-            claimName: llm-server-models-pvc
+  volumeClaimTemplates:
+    - metadata:
+        name: models
+        annotations:
+          argocd.argoproj.io/sync-options: Prune=false
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 30Gi
