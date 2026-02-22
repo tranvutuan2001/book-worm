@@ -125,7 +125,7 @@ async def create_chat_completion(
     """
     try:
         # Validate that the model exists
-        model_exists, model_path = model_service.model_exists(request.model, "chat")
+        model_exists, model_path = model_service.chat_model_exists(request.model)
         if not model_exists:
             raise HTTPException(
                 status_code=404,

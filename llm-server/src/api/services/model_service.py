@@ -69,34 +69,37 @@ class ModelService:
         
         self.models_dir = Path(models_dir)
         self.models_dir.mkdir(exist_ok=True)
+        self.chat_models_dir = self.models_dir / "chat"
+        self.embed_models_dir = self.models_dir / "embed"
+        self.chat_models_dir.mkdir(exist_ok=True)
+        self.embed_models_dir.mkdir(exist_ok=True)
         self._initialized = True
     
     def list_available_chat_models(self) -> List[Dict[str, str]]:
         """
-        List all available chat models in the models directory
+        List all available chat models in the models/chat directory
         
         Returns:
             List of dictionaries with model information
         """
         models = []
-        if not self.models_dir.exists():
+        if not self.chat_models_dir.exists():
             return models
         
-        # Look for .gguf files in the models directory
-        for model_file in self.models_dir.rglob("*.gguf"):
-            if "embed" not in model_file.name.lower():  # Exclude embedding models
-                models.append({
-                    "name": model_file.stem,
-                    "path": str(model_file.relative_to(self.models_dir)),
-                    "size": self._format_size(model_file.stat().st_size),
-                    "status": "ready_to_use"
-                })
+        # Look for .gguf files in the models/chat directory
+        for model_file in self.chat_models_dir.rglob("*.gguf"):
+            models.append({
+                "name": model_file.stem,
+                "path": str(model_file.relative_to(self.models_dir)),
+                "size": self._format_size(model_file.stat().st_size),
+                "status": "ready_to_use"
+            })
         
         # Add models that are currently downloading
         with self._downloads_lock:
             active = dict(self._active_downloads)
         for filename, download_info in active.items():
-            if "embed" not in filename.lower():
+            if download_info.get("model_type") == "chat":
                 # Check if this model is not already in the list (fully downloaded)
                 if not any(m["name"] == Path(filename).stem for m in models):
                     models.append({
@@ -110,30 +113,29 @@ class ModelService:
     
     def list_available_embedding_models(self) -> List[Dict[str, str]]:
         """
-        List all available embedding models in the models directory
+        List all available embedding models in the models/embed directory
         
         Returns:
             List of dictionaries with model information
         """
         models = []
-        if not self.models_dir.exists():
+        if not self.embed_models_dir.exists():
             return models
         
-        # Look for .gguf files with "embed" in the name
-        for model_file in self.models_dir.rglob("*.gguf"):
-            if "embed" in model_file.name.lower():
-                models.append({
-                    "name": model_file.stem,
-                    "path": str(model_file.relative_to(self.models_dir)),
-                    "size": self._format_size(model_file.stat().st_size),
-                    "status": "ready_to_use"
-                })
+        # Look for .gguf files in the models/embed directory
+        for model_file in self.embed_models_dir.rglob("*.gguf"):
+            models.append({
+                "name": model_file.stem,
+                "path": str(model_file.relative_to(self.models_dir)),
+                "size": self._format_size(model_file.stat().st_size),
+                "status": "ready_to_use"
+            })
         
         # Add models that are currently downloading
         with self._downloads_lock:
             active = dict(self._active_downloads)
         for filename, download_info in active.items():
-            if "embed" in filename.lower():
+            if download_info.get("model_type") == "embedding":
                 # Check if this model is not already in the list (fully downloaded)
                 if not any(m["name"] == Path(filename).stem for m in models):
                     models.append({
@@ -145,27 +147,41 @@ class ModelService:
         
         return models
     
-    def model_exists(self, model_name: str, model_type: str = "chat") -> tuple[bool, str]:
+    def chat_model_exists(self, model_name: str) -> tuple[bool, str]:
         """
-        Check if a model exists in the models directory
+        Check if a chat model exists in models/chat/
         
         Args:
             model_name: Name of the model (stem without .gguf extension)
-            model_type: Type of model - "chat" or "embedding"
         
         Returns:
             Tuple of (exists: bool, full_path: str)
         """
-        if not self.models_dir.exists():
+        if not self.chat_models_dir.exists():
             return False, ""
         
-        # Search for the model file
-        for model_file in self.models_dir.rglob("*.gguf"):
+        for model_file in self.chat_models_dir.rglob("*.gguf"):
             if model_file.stem == model_name:
-                # Check if it matches the expected type
-                is_embedding = "embed" in model_file.name.lower()
-                if (model_type == "embedding" and is_embedding) or (model_type == "chat" and not is_embedding):
-                    return True, str(model_file)
+                return True, str(model_file)
+        
+        return False, ""
+    
+    def embedding_model_exists(self, model_name: str) -> tuple[bool, str]:
+        """
+        Check if an embedding model exists in models/embed/
+        
+        Args:
+            model_name: Name of the model (stem without .gguf extension)
+        
+        Returns:
+            Tuple of (exists: bool, full_path: str)
+        """
+        if not self.embed_models_dir.exists():
+            return False, ""
+        
+        for model_file in self.embed_models_dir.rglob("*.gguf"):
+            if model_file.stem == model_name:
+                return True, str(model_file)
         
         return False, ""
     
@@ -220,25 +236,31 @@ class ModelService:
     
     async def download_model_async(self, repository: str) -> None:
         """
-        Download a model from Hugging Face in the background
+        Download a model from Hugging Face in the background.
+        Chat models are saved to models/chat/, embedding models to models/embed/.
         
         Args:
             repository: Hugging Face repository (e.g., "Qwen/Qwen3-8B")
         """
+        # Determine model type and target directory
+        if repository in self.DOWNLOADABLE_CHAT_MODELS:
+            model_type = "chat"
+            target_dir = self.chat_models_dir
+            filename = self.DOWNLOADABLE_CHAT_MODELS[repository]
+        elif repository in self.DOWNLOADABLE_EMBEDDING_MODELS:
+            model_type = "embedding"
+            target_dir = self.embed_models_dir
+            filename = self.DOWNLOADABLE_EMBEDDING_MODELS[repository]
+        else:
+            raise ValueError(f"No filename configured for repository {repository}")
+
         def _download():
             try:
-                # Get the filename for this repository
-                all_models = {**self.DOWNLOADABLE_CHAT_MODELS, **self.DOWNLOADABLE_EMBEDDING_MODELS}
-                filename = all_models.get(repository)
-                
-                if not filename:
-                    raise ValueError(f"No filename configured for repository {repository}")
-                
-                # Download the specific GGUF file
+                # Download the specific GGUF file to the appropriate subdirectory
                 downloaded_path = hf_hub_download(
                     repo_id=repository,
                     filename=filename,
-                    local_dir=str(self.models_dir),
+                    local_dir=str(target_dir),
                     local_dir_use_symlinks=False,
                     resume_download=True,
                     tqdm_class=TqdmProgress  # Force progress bar in logs
@@ -251,23 +273,19 @@ class ModelService:
                 print(f"Model {repository}/{filename} downloaded successfully to {downloaded_path}")
             except Exception as e:
                 # Remove from active downloads on error
-                if 'filename' in locals():
-                    with self._downloads_lock:
-                        self._active_downloads.pop(filename, None)
+                with self._downloads_lock:
+                    self._active_downloads.pop(filename, None)
                 print(f"Failed to download model '{repository}': {str(e)}")
 
         # Register the download entry BEFORE dispatching to the thread pool.
         # If the worker thread does this, there is a window between run_in_executor()
         # returning and the thread actually running where _active_downloads is empty,
         # causing the list endpoints to transiently return [].
-        all_models = {**self.DOWNLOADABLE_CHAT_MODELS, **self.DOWNLOADABLE_EMBEDDING_MODELS}
-        filename = all_models.get(repository)
-        if not filename:
-            raise ValueError(f"No filename configured for repository {repository}")
         with self._downloads_lock:
             self._active_downloads[filename] = {
                 "status": "downloading",
-                "repository": repository
+                "repository": repository,
+                "model_type": model_type
             }
         
         # Run in thread pool to avoid blocking

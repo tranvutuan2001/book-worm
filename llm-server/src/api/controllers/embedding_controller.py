@@ -107,7 +107,7 @@ async def create_embeddings(
             )
         
         # Validate that the model exists
-        model_exists, model_path = model_service.model_exists(request.model, "embedding")
+        model_exists, model_path = model_service.embedding_model_exists(request.model)
         if not model_exists:
             raise HTTPException(
                 status_code=404,

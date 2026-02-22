@@ -222,7 +222,10 @@ async def load_model(request: ModelLoadRequest, service: ModelService = Depends(
     """Load a model into memory"""
     try:
         # Validate model exists
-        model_exists, model_path = service.model_exists(request.model, request.model_type)
+        if request.model_type == "chat":
+            model_exists, model_path = service.chat_model_exists(request.model)
+        else:
+            model_exists, model_path = service.embedding_model_exists(request.model)
         if not model_exists:
             raise HTTPException(
                 status_code=404,
@@ -232,7 +235,6 @@ async def load_model(request: ModelLoadRequest, service: ModelService = Depends(
         
         # Check if already loaded
         if request.model_type == "chat":
-            is_loaded = chat_manager.is_loaded(model_path)
             if is_loaded:
                 return ModelLoadResponse(
                     model=request.model,
@@ -323,7 +325,10 @@ async def unload_model(request: ModelUnloadRequest, service: ModelService = Depe
     """Unload a model from memory"""
     try:
         # Validate model exists
-        model_exists, model_path = service.model_exists(request.model, request.model_type)
+        if request.model_type == "chat":
+            model_exists, model_path = service.chat_model_exists(request.model)
+        else:
+            model_exists, model_path = service.embedding_model_exists(request.model)
         if not model_exists:
             raise HTTPException(
                 status_code=404,
