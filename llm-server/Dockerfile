@@ -70,5 +70,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 
 USER app
 
-# Use Gunicorn + Uvicorn workers for production (adjust workers/threads as needed)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# Single worker is intentional: LLMs are memory-bound, not CPU-bound.
+# Multiple workers each load a full model copy into RAM, causing OOM kills.
+# Concurrency is handled by async I/O within the single worker process.
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
