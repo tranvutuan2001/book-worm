@@ -16,12 +16,10 @@ from src.api.schemas import (
     LoadedModelInfo
 )
 from src.api.services.model_service import ModelService, get_model_service
-from src.llm_client.chat_model import LLMModelManager, load_chat_model
-from src.llm_client.embedding_model import EmbeddingModelManager, load_embedding_model
+from src.llm_client.chat_model import LLMModelManager, load_chat_model, get_chat_manager
+from src.llm_client.embedding_model import EmbeddingModelManager, load_embedding_model, get_embedding_manager
 
 router = APIRouter(prefix="/v1/models", tags=["models"])
-chat_manager = LLMModelManager()
-embedding_manager = EmbeddingModelManager()
 
 
 @router.get(
@@ -218,7 +216,7 @@ async def download_model(request: ModelDownloadRequest, background_tasks: Backgr
         500: {"description": "Error loading model"}
     }
 )
-async def load_model(request: ModelLoadRequest, service: ModelService = Depends(get_model_service)):
+async def load_model(request: ModelLoadRequest, service: ModelService = Depends(get_model_service), chat_manager: LLMModelManager = Depends(get_chat_manager), embedding_manager: EmbeddingModelManager = Depends(get_embedding_manager)):
     """Load a model into memory"""
     try:
         # Validate model exists
@@ -235,6 +233,7 @@ async def load_model(request: ModelLoadRequest, service: ModelService = Depends(
         
         # Check if already loaded
         if request.model_type == "chat":
+            is_loaded = chat_manager.is_loaded(model_path)
             if is_loaded:
                 return ModelLoadResponse(
                     model=request.model,
@@ -321,7 +320,7 @@ async def load_model(request: ModelLoadRequest, service: ModelService = Depends(
         500: {"description": "Error unloading model"}
     }
 )
-async def unload_model(request: ModelUnloadRequest, service: ModelService = Depends(get_model_service)):
+async def unload_model(request: ModelUnloadRequest, service: ModelService = Depends(get_model_service), chat_manager: LLMModelManager = Depends(get_chat_manager), embedding_manager: EmbeddingModelManager = Depends(get_embedding_manager)):
     """Unload a model from memory"""
     try:
         # Validate model exists
@@ -395,7 +394,7 @@ async def unload_model(request: ModelUnloadRequest, service: ModelService = Depe
         }
     }
 )
-async def list_loaded_models(service: ModelService = Depends(get_model_service)):
+async def list_loaded_models(service: ModelService = Depends(get_model_service), chat_manager: LLMModelManager = Depends(get_chat_manager), embedding_manager: EmbeddingModelManager = Depends(get_embedding_manager)):
     """Get list of currently loaded models"""
     try:
         loaded_models = []

@@ -72,6 +72,11 @@ class EmbeddingModelManager:
         cls._instance = None
 
 
+def get_embedding_manager() -> EmbeddingModelManager:
+    """Dependency provider for EmbeddingModelManager singleton"""
+    return EmbeddingModelManager()
+
+
 def load_embedding_model(model_path: str) -> Llama:
     """
     Load an embedding model by path

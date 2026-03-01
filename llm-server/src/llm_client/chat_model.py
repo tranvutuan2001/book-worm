@@ -74,6 +74,11 @@ class LLMModelManager:
         cls._instance = None
 
 
+def get_chat_manager() -> LLMModelManager:
+    """Dependency provider for LLMModelManager singleton"""
+    return LLMModelManager()
+
+
 def load_chat_model(model_path: str) -> Llama:
     """
     Load a chat model by path
