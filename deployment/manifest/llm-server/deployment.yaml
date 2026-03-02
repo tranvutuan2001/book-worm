@@ -15,8 +15,6 @@ spec:
       labels:
         app: llm-server
     spec:
-      nodeSelector:
-        ram: high
       containers:
         - name: llm-server
           image: tranvutuan2001/book-worm-llm-server:latest

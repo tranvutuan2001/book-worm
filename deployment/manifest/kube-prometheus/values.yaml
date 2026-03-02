@@ -1,7 +1,5 @@
 prometheus:
   prometheusSpec:
-    nodeSelector:
-      ram: "medium" 
     resources:
       requests:
         memory: "1Gi"
@@ -12,8 +10,6 @@ prometheus:
     retentionSize: "2GB"
 
 grafana:
-  nodeSelector:
-    ram: "medium"
   resources:
     limits:
       memory: "512Mi"
@@ -23,6 +19,3 @@ grafana:
 alertmanager:
   enabled: true
   templateFiles: {}
-  alertmanagerSpec:
-    nodeSelector:
-      ram: "medium"
