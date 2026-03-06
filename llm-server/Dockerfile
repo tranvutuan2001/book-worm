@@ -29,7 +29,11 @@ WORKDIR /wheels
 
 # Copy dependency files and build wheels so final image doesn't need build deps
 COPY requirements.txt ./
+# Disable native CPU-specific SIMD optimizations so the compiled binary runs
+# portably inside Docker/kind/linuxkit VMs where features like i8mm or bf16
+# may be advertised in /proc/cpuinfo but produce SIGILL at runtime.
 RUN python -m pip install --upgrade pip setuptools wheel && \
+    CMAKE_ARGS="-DGGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH=armv8-a" \
     LDFLAGS="$LDFLAGS" CFLAGS="$CFLAGS" pip wheel --wheel-dir /wheels -r requirements.txt
 
 
