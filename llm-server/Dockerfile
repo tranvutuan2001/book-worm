@@ -33,7 +33,6 @@ COPY requirements.txt ./
 # portably inside Docker/kind/linuxkit VMs where features like i8mm or bf16
 # may be advertised in /proc/cpuinfo but produce SIGILL at runtime.
 RUN python -m pip install --upgrade pip setuptools wheel && \
-    CMAKE_ARGS="-DGGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH=armv8-a" \
     LDFLAGS="$LDFLAGS" CFLAGS="$CFLAGS" pip wheel --wheel-dir /wheels -r requirements.txt
 
 
@@ -61,7 +60,6 @@ COPY --chown=app:app . /app
 # Copy wheels from builder and install from them (avoid building in final stage)
 COPY --from=builder /wheels /wheels
 
-COPY ./test.sh /app/test.sh
 RUN python -m pip install --upgrade pip setuptools wheel && \
     pip install --no-index --find-links=/wheels -r /app/requirements.txt && \
     rm -rf /wheels ~/.cache/pip
