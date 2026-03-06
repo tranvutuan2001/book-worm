@@ -61,6 +61,7 @@ COPY --chown=app:app . /app
 # Copy wheels from builder and install from them (avoid building in final stage)
 COPY --from=builder /wheels /wheels
 
+COPY ./test.sh /app/test.sh
 RUN python -m pip install --upgrade pip setuptools wheel && \
     pip install --no-index --find-links=/wheels -r /app/requirements.txt && \
     rm -rf /wheels ~/.cache/pip
@@ -72,7 +73,7 @@ RUN mkdir -p /app/log && chown -R app:app /app
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD curl -f http://127.0.0.1:${PORT}/health || exit 1
 
-USER app
+# USER app
 
 # Single worker is intentional: LLMs are memory-bound, not CPU-bound.
 # Multiple workers each load a full model copy into RAM, causing OOM kills.
