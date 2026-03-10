@@ -105,11 +105,11 @@ export default function ModelManagement() {
     }
   };
 
-  const handleLoad = async (modelName: string, modelType: 'chat' | 'embedding') => {
+  const handleLoad = async (modelPath: string, modelType: 'chat' | 'embedding') => {
     try {
       setLoading(true);
       setError(null);
-      await loadModel({ model: modelName, model_type: modelType });
+      await loadModel({ model_path: modelPath, model_type: modelType });
       await fetchAllModels();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load model');
@@ -251,7 +251,7 @@ export default function ModelManagement() {
                           </span>
                         ) : (
                           <button
-                            onClick={() => handleLoad(model.name, 'chat')}
+                            onClick={() => handleLoad(model.path, 'chat')}
                             disabled={loading}
                             className="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 text-xs font-medium shadow-sm"
                           >
@@ -297,7 +297,7 @@ export default function ModelManagement() {
                           </span>
                         ) : (
                           <button
-                            onClick={() => handleLoad(model.name, 'embedding')}
+                            onClick={() => handleLoad(model.path, 'embedding')}
                             disabled={loading}
                             className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 text-xs font-medium shadow-sm"
                           >

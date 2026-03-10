@@ -75,7 +75,7 @@ export const LoadedModelInfoSchema = z.object({
 });
 
 export const ModelLoadRequestSchema = z.object({
-  model: z.string(),
+  model_path: z.string(),
   model_type: z.enum(['chat', 'embedding']),
 });
 
