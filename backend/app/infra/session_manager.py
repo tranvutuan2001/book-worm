@@ -42,12 +42,13 @@ class SessionManager:
             self.initialized = True
             logger.debug("SessionManager initialized")
     
-    def create_session(self, document_name: str) -> str:
+    def create_session(self, document_name: str, embedding_model: str = "") -> str:
         """
         Create a new session with document context
         
         Args:
             document_name: The name of the document to associate with this session
+            embedding_model: The embedding model name/path for this session
             
         Returns:
             str: Unique session ID
@@ -57,6 +58,7 @@ class SessionManager:
         with self._lock:
             self.sessions[session_id] = {
                 'document_name': document_name,
+                'embedding_model': embedding_model,
                 'created_at': None  # Could add timestamp if needed
             }
         
@@ -117,6 +119,26 @@ class SessionManager:
         logger.debug(f"Retrieved document name '{document_name}' from session {session_id}")
         return document_name
     
+    def get_current_embedding_model(self) -> str:
+        """
+        Get the embedding model from the current session.
+
+        Returns:
+            str: Embedding model name/path for the current session.
+
+        Raises:
+            RuntimeError: If no active session or session not found.
+        """
+        session_id = self.get_current_session_id()
+
+        with self._lock:
+            if session_id not in self.sessions:
+                raise RuntimeError(f"Session {session_id} not found.")
+            embedding_model = self.sessions[session_id].get('embedding_model', '')
+
+        logger.debug(f"Retrieved embedding model '{embedding_model}' from session {session_id}")
+        return embedding_model
+    
     def cleanup_session(self, session_id: str):
         """
         Clean up session when request is done
@@ -133,7 +155,7 @@ class SessionManager:
                 logger.warning(f"Attempted to cleanup non-existent session: {session_id}")
     
     @contextmanager
-    def session_context(self, document_name: str):
+    def session_context(self, document_name: str, embedding_model: str = ""):
         """
         Context manager that creates a session and ensures it's properly cleaned up.
         Also copies the current context to ensure session variables are available
@@ -141,11 +163,12 @@ class SessionManager:
         
         Args:
             document_name: The document name to associate with this session
+            embedding_model: The embedding model name/path for this session
             
         Yields:
             str: The session ID
         """
-        session_id = self.create_session(document_name)
+        session_id = self.create_session(document_name, embedding_model)
         self.set_current_session(session_id)
         
         try:

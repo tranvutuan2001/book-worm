@@ -87,7 +87,9 @@ def get_the_most_relevant_chunks(question: str) -> List[str]:
             print(f"❌ {error_msg}")
             raise
         
-        embedding_model = "Qwen/Qwen3-Embedding-4B-GGUF" # TODO: make this configurable at session level if we want to support different embedding models in the future
+        embedding_model = session_manager.get_current_embedding_model()
+        if not embedding_model:
+            raise RuntimeError("No embedding model configured in the current session")
         
         try:
             chunk_embedding = get_chunk_embedding(document_name)
@@ -166,10 +168,8 @@ def get_document_summary() -> str:
         file_path = PROJECT_ROOT / "0_data" / document_name / f"{document_name}_chapter_summaries.json"
 
         if not file_path.exists():
-            error_msg = f"Chapter summaries file not found: {file_path}"
-            logger.error(error_msg)
-            print(f"❌ {error_msg}")
-            raise FileNotFoundError(f"File {file_path} does not exist")
+            logger.warning(f"Chapter summaries file not found: {file_path}")
+            return "Document summary is not available (chapter summaries have not been generated for this document)."
         
         try:
             logger.info(f"Reading chapter summaries from: {file_path}")

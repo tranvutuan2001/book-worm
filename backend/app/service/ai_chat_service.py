@@ -49,7 +49,7 @@ class AIChatService:
             logger.info(f"Document found: {payload.document_name}")
             
             # Use session context manager to ensure proper session handling
-            with session_manager.session_context(payload.document_name) as session_id:
+            with session_manager.session_context(payload.document_name, payload.embedding_model) as session_id:
                 message_list = payload.message_list
                 logger.info(f"Using session ID: {session_id}")
                 

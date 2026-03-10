@@ -19,6 +19,8 @@ from langchain_core.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.tools import BaseTool
 from pydantic import Field
 
+from mlx_lm import load as mlx_load
+
 from app.infra.llm_connector.mlx_base import MLXModelBase
 from app.infra.llm_connector.parsing_service import ParsingService
 
@@ -45,8 +47,28 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
     parsing_service: ParsingService = Field(description="Shared ParsingService used to parse raw model output")
     template_name: str = Field(default="qwen", description="Chat-template family name forwarded to ParsingService (e.g. 'qwen', 'openai')")
 
+    # Per-class model cache, keyed by resolved absolute path
+    _model_cache: Dict[str, Any] = {}
+
     # Tools bound via bind_tools(); kept as serialisable dicts
     _bound_tools: List[Dict[str, Any]] = []
+
+    @classmethod
+    def _load_model(cls, model_path: str) -> Any:
+        """
+        Load and cache the MLX chat model + tokenizer at *model_path*.
+
+        The resolved absolute path is used as the cache key.
+
+        Returns:
+            A ``(model, tokenizer)`` tuple as returned by ``mlx_lm.load``.
+        """
+        resolved = str(cls._resolve_model_path(model_path))
+        if resolved not in cls._model_cache:
+            logger.info(f"Loading MLX chat model from: {resolved}")
+            cls._model_cache[resolved] = mlx_load(resolved)
+            logger.info(f"MLX chat model loaded successfully: {resolved}")
+        return cls._model_cache[resolved]
 
     @property
     def _llm_type(self) -> str:
@@ -106,7 +128,7 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
         try:
             model, tokenizer = self._load_model(self.model_path)
         except Exception as e:
-            error_msg = f"Failed to load MLX model from '{self.model_path}': {e}"
+            error_msg = f"Failed to load MLX chat model from '{self.model_path}': {e}"
             logger.error(error_msg)
             raise RuntimeError(error_msg) from e
 

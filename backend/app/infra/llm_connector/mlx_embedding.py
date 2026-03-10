@@ -1,7 +1,8 @@
 import logging
-from typing import List
+from typing import Any, Dict, List
 
 import mlx.core as mx
+from mlx_lm import load as mlx_load
 
 from app.infra.llm_connector.mlx_base import MLXModelBase
 
@@ -33,6 +34,26 @@ class MLXEmbeddingModel(MLXModelBase):
                         ``models/...`` directory when running outside Docker.
         """
         self._model_path = model_path
+
+    # Per-class model cache, keyed by resolved absolute path
+    _model_cache: Dict[str, Any] = {}
+
+    @classmethod
+    def _load_model(cls, model_path: str) -> Any:
+        """
+        Load and cache the MLX embedding model + tokenizer at *model_path*.
+
+        The resolved absolute path is used as the cache key.
+
+        Returns:
+            A ``(model, tokenizer)`` tuple as returned by ``mlx_lm.load``.
+        """
+        resolved = str(cls._resolve_model_path(model_path))
+        if resolved not in cls._model_cache:
+            logger.info(f"Loading MLX embedding model from: {resolved}")
+            cls._model_cache[resolved] = mlx_load(resolved)
+            logger.info(f"MLX embedding model loaded successfully: {resolved}")
+        return cls._model_cache[resolved]
 
     def embed(self, text: str) -> List[float]:
         """

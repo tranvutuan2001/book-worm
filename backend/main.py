@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.infra.logging_config import setup_logging
 from app.controller.ai_chat_controller import router as ai_router
 from app.controller.document_controller import router as document_router
+from app.controller.model_controller import router as model_router
 
 setup_logging()
 
@@ -26,6 +27,7 @@ app.add_middleware(
 
 app.include_router(ai_router, tags=["AI"])
 app.include_router(document_router, tags=["Documents"])
+app.include_router(model_router)
 
 if __name__ == "__main__":
     import uvicorn   
