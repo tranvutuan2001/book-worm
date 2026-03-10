@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any, ClassVar, Dict, List
 
 import mlx.core as mx
 from mlx_lm import load as mlx_load
@@ -36,7 +36,7 @@ class MLXEmbeddingModel(MLXModelBase):
         self._model_path = model_path
 
     # Per-class model cache, keyed by resolved absolute path
-    _model_cache: Dict[str, Any] = {}
+    _model_cache: ClassVar[Dict[str, Any]] = {}
 
     @classmethod
     def _load_model(cls, model_path: str) -> Any:

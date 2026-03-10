@@ -1,7 +1,7 @@
 import json
 import logging
 import traceback
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, ClassVar, Dict, List, Optional, Sequence
 
 from mlx_lm import generate
 from mlx_lm.sample_utils import make_sampler
@@ -48,7 +48,7 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
     template_name: str = Field(default="qwen", description="Chat-template family name forwarded to ParsingService (e.g. 'qwen', 'openai')")
 
     # Per-class model cache, keyed by resolved absolute path
-    _model_cache: Dict[str, Any] = {}
+    _model_cache: ClassVar[Dict[str, Any]] = {}
 
     # Tools bound via bind_tools(); kept as serialisable dicts
     _bound_tools: List[Dict[str, Any]] = []
