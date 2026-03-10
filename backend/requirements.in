@@ -12,3 +12,5 @@ langchain
 langchain_openai
 langchain-text-splitters
 python-multipart
+mlx-lm
+pytest

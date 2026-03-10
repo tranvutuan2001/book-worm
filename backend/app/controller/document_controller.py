@@ -1,6 +1,6 @@
 from .dto import UploadResponse, DocumentsResponse
-from fastapi import UploadFile, File, APIRouter, HTTPException
-from app.service.document_service import document_service
+from fastapi import Depends, UploadFile, File, APIRouter, HTTPException
+from app.service.document_service import DocumentService, get_document_service
 import logging
 import traceback
 
@@ -15,10 +15,13 @@ router = APIRouter()
     summary="Upload a PDF document",
     description="Upload a PDF file for analysis. The document will be processed in the background to extract chunks, summaries, and embeddings. Returns the document name with timestamp and processing status."
 )
-async def upload_document(file: UploadFile = File(description="PDF file to upload")) -> UploadResponse:
+async def upload_document(
+    file: UploadFile = File(description="PDF file to upload"),
+    service: DocumentService = Depends(get_document_service),
+) -> UploadResponse:
     try:
         logger.info(f"Document upload endpoint called with file: {file.filename}")
-        result = await document_service.upload_document(file)
+        result = await service.upload_document(file)
         logger.info(f"Document upload completed successfully: {result.document_name}")
         return result
     except HTTPException:
@@ -39,10 +42,12 @@ async def upload_document(file: UploadFile = File(description="PDF file to uploa
     summary="List all documents",
     description="Get a list of all uploaded documents with their processing status. Status can be 'ready' (fully processed) or 'processing' (still being analyzed)."
 )
-async def list_documents() -> DocumentsResponse:
+async def list_documents(
+    service: DocumentService = Depends(get_document_service),
+) -> DocumentsResponse:
     try:
         logger.info("List documents endpoint called")
-        result = await document_service.list_documents()
+        result = await service.list_documents()
         logger.info(f"List documents completed: {len(result.documents)} documents found")
         return result
     except HTTPException:

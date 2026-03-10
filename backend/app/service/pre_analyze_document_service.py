@@ -4,7 +4,8 @@ import time
 import logging
 import traceback
 from typing import List, Optional
-from app.infra.llm_connector.llm_client import embed_text, complete_chat
+from fastapi import Depends
+from app.infra.llm_connector.llm_client import LLMService, get_llm_service
 from app.util import write_json_file
 from app.domain.entity.message import Message
 from app.constant import Role
@@ -12,7 +13,16 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 logger = logging.getLogger('app.service')
 
+
 class PreAnalyzeDocumentService:
+    def __init__(self, llm_service: LLMService) -> None:
+        """
+        Args:
+            llm_service: The LLM service used for text generation and embeddings.
+                         Injected by FastAPI via ``Depends(get_llm_service)``.
+        """
+        self._llm_client = llm_service
+
     def _read_document_by_page(self, path: str) -> List[str]:
         text_by_page: List[str] = []
         try:
@@ -48,7 +58,7 @@ class PreAnalyzeDocumentService:
 
         for attempt in range(3):
             try:
-                embeded_text = embed_text(text =text, model_name="Qwen3-Embedding-4B-Q4_K_M") # TODO: make model name configurable
+                embeded_text = self._llm_client.embed_text(model_name="Qwen3-Embedding-4B-Q4_K_M", text=text) # TODO: make model name configurable
                 return embeded_text
             except Exception as exc:
                 last_exception = exc
@@ -161,7 +171,7 @@ class PreAnalyzeDocumentService:
             message_list = [system_message, user_message]
             
             try:
-                summary = complete_chat(
+                summary = self._llm_client.complete_chat(
                     message_list=message_list, system_prompt=system_prompt, tools=[], model_name="Qwen3-4B-Instruct-2507-Q4_K_M" # TODO: make model name configurable
                 )
                 section_summary.append(summary)
@@ -213,7 +223,7 @@ class PreAnalyzeDocumentService:
             
             print(f"Building chapter summary {len(chapter_summaries) + 1}...")
             try:
-                chapter_summary = complete_chat(
+                chapter_summary = self._llm_client.complete_chat(
                     message_list=message_list, system_prompt=system_prompt, tools=[]
                 )
                 chapter_summaries.append(chapter_summary)
@@ -356,4 +366,24 @@ class PreAnalyzeDocumentService:
             print(f"Stack trace: {traceback.format_exc()}")
             raise
 
-pre_analyze_document_service = PreAnalyzeDocumentService()
+
+def get_pre_analyze_document_service(
+    llm_service: LLMService = Depends(get_llm_service),
+) -> PreAnalyzeDocumentService:
+    """
+    FastAPI dependency factory for ``PreAnalyzeDocumentService``.
+
+    Inject this into route handlers with::
+
+        from fastapi import Depends
+        from app.service.pre_analyze_document_service import (
+            PreAnalyzeDocumentService,
+            get_pre_analyze_document_service,
+        )
+
+        async def my_route(
+            service: PreAnalyzeDocumentService = Depends(get_pre_analyze_document_service)
+        ):
+            ...
+    """
+    return PreAnalyzeDocumentService(llm_service=llm_service)

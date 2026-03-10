@@ -1,141 +1,90 @@
-import os
 import logging
-import traceback
-from typing import List, TypeVar
-from pydantic import BaseModel
-from langchain_openai import ChatOpenAI
+from typing import List
+
+from fastapi import Depends
 from langchain.agents import create_agent
-from app.domain.entity.message import Message
 from langchain.tools import BaseTool
+
+from app.domain.entity.message import Message
 from app.infra.llm_connector.LLMLoggingHandler import LLMLoggingHandler
-from openai import OpenAI
+from app.infra.llm_connector.mlx_chat import MLXChatModel
+from app.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
+from app.infra.llm_connector.parsing_service import ParsingService, get_parsing_service
 
 logger = logging.getLogger('app.llm_connector')
 
-T = TypeVar('T', bound=BaseModel)
-# select base_url depending on environment
-env = os.getenv("ENVIRONMENT", "").lower()
-base_url = "http://llm-server:8000/v1" if env == "production" else "http://localhost:8001/v1"
 
-def complete_chat(model_name: str, message_list: List[Message], system_prompt: str, tools: List[BaseTool], timeout: int = 1500) -> str:
+class LLMService:
     """
-    Complete a chat interaction with LLM using provided tools.
-    All LLM steps and tool calls are automatically logged via LLMLoggingHandler.
+    Service layer wrapping MLX-based LLM inference.
+
+    Receives a ``ParsingService`` instance which is forwarded to every
+    ``MLXChatModel`` created by this client so that raw model output is
+    parsed by the correct parser for the given chat template.
+
+    Obtain an instance via the ``get_llm_service`` FastAPI dependency.
     """
-    try:
-        # Initialize the logging callback handler
-        logging_handler = LLMLoggingHandler()
 
-        logger.info(f"Initializing LLM with model: {model_name}, timeout: {timeout}s")
-        
-        try:
-            llm = ChatOpenAI(
-                model=model_name,
-                base_url=base_url,
-                api_key="custom-api-key",
-                temperature=0.1,
-                timeout=timeout,
-                callbacks=[logging_handler],
-            )
-        except Exception as e:
-            error_msg = f"Failed to initialize LLM client: {str(e)}"
-            logger.error(error_msg)
-            print(f"❌ {error_msg}")
-            print(f"Stack trace: {traceback.format_exc()}")
-            raise
+    def __init__(self, parsing_service: ParsingService) -> None:
+        self._parsing_service = parsing_service
 
-        try:
-            agent = create_agent(
-                model=llm,
-                tools=tools,
-                system_prompt=system_prompt,
-            )
-            logger.info(f"Agent created with {len(tools)} tools")
-        except Exception as e:
-            error_msg = f"Failed to create agent: {str(e)}"
-            logger.error(error_msg)
-            print(f"❌ {error_msg}")
-            print(f"Stack trace: {traceback.format_exc()}")
-            raise
+    def complete_chat(
+        self,
+        model_name: str,
+        message_list: List[Message],
+        system_prompt: str,
+        tools: List[BaseTool],
+        template_name: str = "qwen",
+    ) -> str:
+        """
+        Run a full chat turn with optional tool-calling support.
 
-        try:
-            messages = [
-                {"role": message.role.value, "content": message.content}
-                for message in message_list
-            ]
-            logger.info(f"Invoking agent with {len(messages)} messages")
-        except Exception as e:
-            error_msg = f"Failed to format messages: {str(e)}"
-            logger.error(error_msg)
-            print(f"❌ {error_msg}")
-            raise
+        Args:
+            model_name:    Local path (or HF name) of the MLX chat model.
+            message_list:  Conversation history as ``Message`` objects.
+            system_prompt: System instruction to prepend to the conversation.
+            tools:         LangChain tools made available to the agent.
+            template_name: Chat-template family name used by ``model_name``
+                           (e.g. ``"qwen"``).  Forwarded to
+                           ``ParsingService`` to select the correct output
+                           parser.
+        """
+        llm = MLXChatModel(
+            model_path=model_name,
+            max_tokens=2048,
+            temperature=0.1,
+            parsing_service=self._parsing_service,
+            template_name=template_name,
+        )
+        agent = create_agent(model=llm, tools=tools, system_prompt=system_prompt)
+        messages = [{'role': m.role.value, 'content': m.content} for m in message_list]
 
-        # Invoke agent with callback handler - this will automatically log all steps
-        try:
-            response = agent.invoke(
-                input={"messages": messages},
-                config={"callbacks": [logging_handler]}
-            )
-            logger.info("Agent invocation completed successfully")
-        except TimeoutError as e:
-            error_msg = f"LLM request timed out after {timeout}s: {str(e)}"
-            logger.error(error_msg)
-            print(f"❌ {error_msg}")
-            raise
-        except Exception as e:
-            error_msg = f"Agent invocation failed: {str(e)}"
-            logger.error(error_msg)
-            print(f"❌ {error_msg}")
-            print(f"Stack trace: {traceback.format_exc()}")
-            raise
+        response = agent.invoke(
+            input={"messages": messages},
+            config={"callbacks": [LLMLoggingHandler()]},
+        )
+        return response["messages"][-1].content
 
-        try:
-            last_message = response["messages"][-1]
-            return last_message.content
-        except (KeyError, IndexError) as e:
-            error_msg = f"Failed to extract response content: {str(e)}"
-            logger.error(error_msg)
-            print(f"❌ {error_msg}")
-            print(f"Response structure: {response}")
-            raise
-    
-    except Exception as e:
-        error_msg = f"Unexpected error in complete_chat: {str(e)}"
-        logger.error(error_msg)
-        print(f"❌ {error_msg}")
-        raise
+    def embed_text(self, model_name: str, text: str) -> List[float]:
+        """
+        Create a text embedding using the local MLX embedding model.
+        ``model_name`` is the local path to the MLX embedding model directory.
+        """
+        return MLXEmbeddingModel(model_name).embed(text)
 
 
-def embed_text(model_name: str, text: str):
-    try:
-        logger.info(f"Creating embedding with model: {model_name}, text length: {len(text)}")
-        
-        try:
-            client = OpenAI(base_url=base_url, api_key="custom-api-key")
-        except Exception as e:
-            error_msg = f"Failed to initialize OpenAI client for embedding: {str(e)}"
-            logger.error(error_msg)
-            print(f"❌ {error_msg}")
-            raise
+def get_llm_service(
+    parsing_service: ParsingService = Depends(get_parsing_service),
+) -> LLMService:
+    """
+    FastAPI dependency factory for ``LLMService``.
 
-        try:
-            response = client.embeddings.create(input=text, model=model_name, encoding_format='float')
-            logger.info("Embedding created successfully")
-            return response.data[0].embedding
-        except TimeoutError as e:
-            error_msg = f"Embedding request timed out: {str(e)}"
-            logger.error(error_msg)
-            print(f"❌ {error_msg}")
-            raise
-        except Exception as e:
-            error_msg = f"Embedding API call failed: {str(e)}"
-            logger.error(error_msg)
-            print(f"❌ {error_msg}")
-            print(f"Stack trace: {traceback.format_exc()}")
-            raise
-    
-    except Exception as e:
-        error_msg = f"Unexpected error in embed_text: {str(e)}"
-        logger.error(error_msg)
-        print(f"❌ {error_msg}")
-        raise
+    Usage::
+
+        from fastapi import Depends
+        from app.infra.llm_connector.llm_client import LLMService, get_llm_service
+
+        async def my_route(llm_service: LLMService = Depends(get_llm_service)):
+            ...
+    """
+    return LLMService(parsing_service=parsing_service)

@@ -1,6 +1,9 @@
 from app.controller.dto import UploadResponse, DocumentsResponse, DocumentInfo, DocumentStatus
-from fastapi import UploadFile, File, HTTPException
-from app.service.pre_analyze_document_service import pre_analyze_document_service
+from fastapi import Depends, UploadFile, File, HTTPException
+from app.service.pre_analyze_document_service import (
+    PreAnalyzeDocumentService,
+    get_pre_analyze_document_service,
+)
 from datetime import datetime
 from pathlib import Path
 import logging
@@ -8,7 +11,17 @@ import traceback
 
 logger = logging.getLogger('app.service')
 
+
 class DocumentService:
+    def __init__(self, pre_analyze_service: PreAnalyzeDocumentService) -> None:
+        """
+        Args:
+            pre_analyze_service: The document pre-analysis service.
+                                 Injected by FastAPI via
+                                 ``Depends(get_pre_analyze_document_service)``.
+        """
+        self._pre_analyze_service = pre_analyze_service
+
     async def upload_document(self, file: UploadFile = File(description="PDF file to upload")) -> UploadResponse:
         """Upload a PDF document and trigger pre-analysis"""
         try:
@@ -64,7 +77,7 @@ class DocumentService:
                 try:
                     logger.info(f"Starting background pre-analysis for: {doc_name}")
                     print(f"🔍 Starting background analysis for: {doc_name}")
-                    pre_analyze_document_service.pre_analyze_document(str(pdf_path), doc_name)
+                    self._pre_analyze_service.pre_analyze_document(str(pdf_path), doc_name)
                     logger.info(f"Background pre-analysis completed successfully for: {doc_name}")
                     print(f"✅ Background analysis completed for: {doc_name}")
                 except Exception as e:
@@ -149,4 +162,23 @@ class DocumentService:
             print(f"Stack trace: {traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=error_msg)
     
-document_service = DocumentService()
+
+def get_document_service(
+    pre_analyze_service: PreAnalyzeDocumentService = Depends(
+        get_pre_analyze_document_service
+    ),
+) -> DocumentService:
+    """
+    FastAPI dependency factory for ``DocumentService``.
+
+    Inject this into route handlers with::
+
+        from fastapi import Depends
+        from app.service.document_service import DocumentService, get_document_service
+
+        async def my_route(
+            service: DocumentService = Depends(get_document_service)
+        ):
+            ...
+    """
+    return DocumentService(pre_analyze_service=pre_analyze_service)

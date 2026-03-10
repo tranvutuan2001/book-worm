@@ -1,11 +1,11 @@
 from time import time
 from typing import List
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from app.constant import Role
 from app.domain.entity.conversation import Conversation
 from app.controller.dto import AskResponse
 from app.domain.entity.message import Message
-from app.infra.llm_connector.llm_client import complete_chat
+from app.infra.llm_connector.llm_client import LLMService, get_llm_service
 from app.infra.llm_tool.document_analyzing_tool import get_the_most_relevant_chunks, get_document_summary
 from app.infra.session_manager import session_manager
 from app.infra.logging_config import start_request_logging, end_request_logging, get_request_logger
@@ -14,6 +14,14 @@ import time
 import traceback
 
 class AIChatService:
+    def __init__(self, llm_service: LLMService) -> None:
+        """
+        Args:
+            llm_service: The LLM service to use for chat completions.
+                         Injected by FastAPI via ``Depends(get_llm_service)``.
+        """
+        self._llm_client = llm_service
+
     async def ask(self, payload: Conversation) -> AskResponse:
         # Start request logging
         user_query = payload.message_list[-1].content if payload.message_list else "No query"
@@ -58,8 +66,10 @@ class AIChatService:
 
                 logger.info("Starting initial LLM completion...")
                 try:
-                    answer = complete_chat(message_list=message_list, system_prompt=system_prompt,
-                                        tools=[get_the_most_relevant_chunks, get_document_summary], model_name=payload.chat_model)
+                    answer = self._llm_client.complete_chat(
+                                        message_list=message_list, system_prompt=system_prompt,
+                                        tools=[get_the_most_relevant_chunks, get_document_summary],
+                                        model_name=payload.chat_model)
                     logger.info(f"Initial answer generated: {len(answer)} characters")
                 except Exception as e:
                     error_msg = f"Failed to generate initial answer: {str(e)}"
@@ -128,7 +138,7 @@ class AIChatService:
 
             logger.info("Starting verification step...")
             try:
-                verified_answer = complete_chat(
+                verified_answer = self._llm_client.complete_chat(
                     message_list=verification_message,
                     system_prompt="""You are a strict verification assistant. Your job is to fact-check answers against the document using tools.
 
@@ -142,9 +152,9 @@ class AIChatService:
                 - If the answer is accurate and verified, return it as-is
                 
                 Return only the fact-checked final answer with no meta-commentary.""",
-            tools=[get_the_most_relevant_chunks, get_document_summary],
-            model_name=chat_model
-        )
+                    tools=[get_the_most_relevant_chunks, get_document_summary],
+                    model_name=chat_model,
+                )
                 logger.info(f"Verification completed: {len(verified_answer)} characters")
             except Exception as e:
                 error_msg = f"LLM verification call failed: {str(e)}"
@@ -164,4 +174,19 @@ class AIChatService:
             print(f"❌ {error_msg}")
             raise
 
-ai_service = AIChatService()
+
+def get_ai_chat_service(
+    llm_service: LLMService = Depends(get_llm_service),
+) -> AIChatService:
+    """
+    FastAPI dependency factory for ``AIChatService``.
+
+    Inject this into route handlers with::
+
+        from fastapi import Depends
+        from app.service.ai_chat_service import get_ai_chat_service, AIChatService
+
+        async def my_route(service: AIChatService = Depends(get_ai_chat_service)):
+            ...
+    """
+    return AIChatService(llm_service=llm_service)

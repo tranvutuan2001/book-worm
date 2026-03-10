@@ -6,7 +6,7 @@ from typing import List
 import faiss
 import numpy as np
 from langchain.tools import tool
-from app.infra.llm_connector.llm_client import embed_text
+from app.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
 from app.infra.session_manager import session_manager
 
 logger = logging.getLogger('app.llm_tool')
@@ -111,7 +111,7 @@ def get_the_most_relevant_chunks(question: str) -> List[str]:
             raise
 
         try:
-            embedded_question = embed_text(question, model_name=embedding_model)
+            embedded_question = MLXEmbeddingModel(embedding_model).embed(question)
             query_vec = np.array([embedded_question], dtype="float32")
         except Exception as e:
             error_msg = f"Failed to embed question: {str(e)}"
