@@ -23,8 +23,7 @@ import { z } from 'zod';
 //   /llm/*  -> llm-server service
 // This keeps the browser code using relative paths only, so no URL is baked
 // into the browser bundle at build time.
-const API_BASE_URL = '/api';
-const LLM_BASE_URL = '/llm';
+const API_BASE_URL = 'http://localhost:8000';
 
 export async function sendMessage(request: Conversation): Promise<AskResponse> {
   const response = await fetch(`${API_BASE_URL}/ask`, {
@@ -79,7 +78,7 @@ export async function listDocuments(): Promise<DocumentsResponse> {
 // LLM Backend API Functions
 
 export async function listChatModels(): Promise<ModelInfo[]> {
-  const response = await fetch(`${LLM_BASE_URL}/v1/models/chat`, {
+  const response = await fetch(`${API_BASE_URL}/v1/models/chat`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -95,7 +94,7 @@ export async function listChatModels(): Promise<ModelInfo[]> {
 }
 
 export async function listEmbeddingModels(): Promise<ModelInfo[]> {
-  const response = await fetch(`${LLM_BASE_URL}/v1/models/embeddings`, {
+  const response = await fetch(`${API_BASE_URL}/v1/models/embeddings`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -111,7 +110,7 @@ export async function listEmbeddingModels(): Promise<ModelInfo[]> {
 }
 
 export async function listDownloadableChatModels(): Promise<DownloadableModelInfo[]> {
-  const response = await fetch(`${LLM_BASE_URL}/v1/models/chat/downloadable`, {
+  const response = await fetch(`${API_BASE_URL}/v1/models/chat/downloadable`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -127,7 +126,7 @@ export async function listDownloadableChatModels(): Promise<DownloadableModelInf
 }
 
 export async function listDownloadableEmbeddingModels(): Promise<DownloadableModelInfo[]> {
-  const response = await fetch(`${LLM_BASE_URL}/v1/models/embeddings/downloadable`, {
+  const response = await fetch(`${API_BASE_URL}/v1/models/embeddings/downloadable`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -143,7 +142,7 @@ export async function listDownloadableEmbeddingModels(): Promise<DownloadableMod
 }
 
 export async function listLoadedModels(): Promise<LoadedModelInfo[]> {
-  const response = await fetch(`${LLM_BASE_URL}/v1/models/loaded`, {
+  const response = await fetch(`${API_BASE_URL}/v1/models/loaded`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -159,7 +158,7 @@ export async function listLoadedModels(): Promise<LoadedModelInfo[]> {
 }
 
 export async function downloadModel(request: ModelDownloadRequest): Promise<void> {
-  const response = await fetch(`${LLM_BASE_URL}/v1/models/download`, {
+  const response = await fetch(`${API_BASE_URL}/v1/models/download`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -174,7 +173,7 @@ export async function downloadModel(request: ModelDownloadRequest): Promise<void
 }
 
 export async function loadModel(request: ModelLoadRequest): Promise<void> {
-  const response = await fetch(`${LLM_BASE_URL}/v1/models/load`, {
+  const response = await fetch(`${API_BASE_URL}/v1/models/load`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -189,7 +188,7 @@ export async function loadModel(request: ModelLoadRequest): Promise<void> {
 }
 
 export async function unloadModel(request: ModelUnloadRequest): Promise<void> {
-  const response = await fetch(`${LLM_BASE_URL}/v1/models/unload`, {
+  const response = await fetch(`${API_BASE_URL}/v1/models/unload`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
