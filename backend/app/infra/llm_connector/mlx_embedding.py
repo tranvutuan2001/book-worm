@@ -1,10 +1,22 @@
 import logging
-from typing import Any, ClassVar, Dict, List
+from typing import ClassVar, Protocol, runtime_checkable
 
 import mlx.core as mx
+import mlx.nn as nn
 from mlx_lm import load as mlx_load
 
 from app.infra.llm_connector.mlx_base import MLXModelBase
+
+
+@runtime_checkable
+class _Tokenizer(Protocol):
+    """Structural interface for the tokenizer returned by ``mlx_lm.load``."""
+
+    def encode(self, text: str, **kwargs: object) -> mx.array: ...
+
+
+# (backbone, tokenizer) pair as returned by mlx_lm.load
+_ModelPair = tuple[nn.Module, _Tokenizer]
 
 logger = logging.getLogger("app.llm_connector")
 
@@ -36,10 +48,10 @@ class MLXEmbeddingModel(MLXModelBase):
         self._model_path = model_path
 
     # Per-class model cache, keyed by resolved absolute path
-    _model_cache: ClassVar[Dict[str, Any]] = {}
+    _model_cache: ClassVar[dict[str, _ModelPair]] = {}
 
     @classmethod
-    def _load_model(cls, model_path: str) -> Any:
+    def _load_model(cls, model_path: str) -> _ModelPair:
         """
         Load and cache the MLX embedding model + tokenizer at *model_path*.
 
@@ -55,7 +67,7 @@ class MLXEmbeddingModel(MLXModelBase):
             logger.info(f"MLX embedding model loaded successfully: {resolved}")
         return cls._model_cache[resolved]
 
-    def embed(self, text: str) -> List[float]:
+    def embed(self, text: str) -> list[float]:
         """
         Embed *text* and return a normalised float vector.
 

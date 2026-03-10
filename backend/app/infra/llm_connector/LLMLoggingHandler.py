@@ -1,4 +1,3 @@
-from typing import Any, Dict
 from langchain_core.callbacks.base import BaseCallbackHandler
 import logging
 
@@ -48,7 +47,7 @@ class LLMLoggingHandler(BaseCallbackHandler):
     #     """Log when LLM errors"""
     #     logger.error(f"❌ LLM Error: {error}")
 
-    def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs) -> None:
+    def on_tool_start(self, serialized: dict[str, object], input_str: str, **kwargs: object) -> None:
         """Log when a tool starts"""
         logger.info("-" * 60)
         logger.info(f"🔧 Tool Called: {serialized.get('name', 'unknown')}")
@@ -74,7 +73,7 @@ class LLMLoggingHandler(BaseCallbackHandler):
         logger.info(f"Final Output: {str(finish.return_values)[:300]}...")
         logger.info("=" * 80)
 
-    def on_chain_start(self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs) -> None:
+    def on_chain_start(self, serialized: dict[str, object], inputs: dict[str, object], **kwargs: object) -> None:
         """Log when a chain starts"""
         # Handle case where serialized might be None
         chain_name = "unknown"
@@ -86,7 +85,7 @@ class LLMLoggingHandler(BaseCallbackHandler):
         logger.info(f"⛓️  Chain Starting: {chain_name}")
         logger.info(f"Chain inputs: {str(inputs)[:200]}...")
 
-    def on_chain_end(self, outputs: Dict[str, Any], **kwargs) -> None:
+    def on_chain_end(self, outputs: dict[str, object], **kwargs: object) -> None:
         """Log when a chain ends"""
         logger.info(f"⛓️  Chain Finished")
         logger.info(f"Chain outputs: {str(outputs)[:200]}...")

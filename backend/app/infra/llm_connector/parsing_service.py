@@ -5,7 +5,7 @@ import logging
 import re
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Type
+
 
 from langchain_core.messages import AIMessage
 from langchain_core.messages.tool import ToolCall
@@ -46,7 +46,7 @@ class Qwen3ResponseParser(BaseResponseParser):
         text = self._THINK_RE.sub("", raw)
         # text = re.sub(r"</think>", "", text).strip()
 
-        tool_calls: List[ToolCall] = []
+        tool_calls: list[ToolCall] = []
         for match in self._TOOL_CALL_RE.finditer(text):
             block = match.group(1).strip()
             tc = self._parse_tool_call_block(block)
@@ -54,7 +54,7 @@ class Qwen3ResponseParser(BaseResponseParser):
                 tool_calls.append(tc)
 
         content = self._TOOL_CALL_RE.sub("", text).strip()
-        additional_kwargs: Dict[str, Any] = {}
+        additional_kwargs: dict[str, str] = {}
         if thinking_text:
             additional_kwargs["thinking"] = thinking_text
 
@@ -76,7 +76,7 @@ class Qwen3ResponseParser(BaseResponseParser):
         fn_match = self._FUNCTION_RE.search(block)
         if fn_match:
             fn_name = fn_match.group(1).strip()
-            args: Dict[str, Any] = {}
+            args: dict[str, object] = {}
             for p in self._PARAM_RE.finditer(block):
                 key = p.group(1).strip()
                 value_raw = p.group(2).strip()
@@ -98,7 +98,7 @@ class Qwen3ResponseParser(BaseResponseParser):
 # Registry  —  template_name (lowercase) → parser class
 # ---------------------------------------------------------------------------
 
-_REGISTRY: Dict[str, Type[BaseResponseParser]] = {
+_REGISTRY: dict[str, type[BaseResponseParser]] = {
     "qwen": Qwen3ResponseParser,
     # "openai":  OpenAIResponseParser,
     # "llama":   LlamaResponseParser,
@@ -125,7 +125,7 @@ class ParsingService:
     """
 
     def __init__(self) -> None:
-        self._parsers: Dict[str, BaseResponseParser] = {
+        self._parsers: dict[str, BaseResponseParser] = {
             name: cls() for name, cls in _REGISTRY.items()
         }
 

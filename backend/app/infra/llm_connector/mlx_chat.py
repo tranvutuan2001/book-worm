@@ -1,8 +1,9 @@
 import json
 import logging
 import traceback
-from typing import Any, ClassVar, Dict, List, Optional, Sequence
+from typing import ClassVar, Optional, Protocol, Sequence, runtime_checkable
 
+import mlx.nn as nn
 from mlx_lm import generate
 from mlx_lm.sample_utils import make_sampler
 
@@ -27,6 +28,21 @@ from app.infra.llm_connector.parsing_service import ParsingService
 logger = logging.getLogger("app.llm_connector")
 
 
+@runtime_checkable
+class _ChatTokenizer(Protocol):
+    """Structural interface for the chat tokenizer returned by ``mlx_lm.load``."""
+
+    def apply_chat_template(
+        self,
+        conversation: list[dict[str, object]],
+        **kwargs: object,
+    ) -> str: ...
+
+
+# (backbone, tokenizer) pair as returned by mlx_lm.load
+_ModelPair = tuple[nn.Module, _ChatTokenizer]
+
+
 class MLXChatModel(MLXModelBase, BaseChatModel):
     """
     LangChain BaseChatModel implementation backed by a locally-stored MLX model.
@@ -48,13 +64,13 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
     template_name: str = Field(default="qwen", description="Chat-template family name forwarded to ParsingService (e.g. 'qwen', 'openai')")
 
     # Per-class model cache, keyed by resolved absolute path
-    _model_cache: ClassVar[Dict[str, Any]] = {}
+    _model_cache: ClassVar[dict[str, _ModelPair]] = {}
 
     # Tools bound via bind_tools(); kept as serialisable dicts
-    _bound_tools: List[Dict[str, Any]] = []
+    _bound_tools: list[dict[str, object]] = []
 
     @classmethod
-    def _load_model(cls, model_path: str) -> Any:
+    def _load_model(cls, model_path: str) -> _ModelPair:
         """
         Load and cache the MLX chat model + tokenizer at *model_path*.
 
@@ -80,8 +96,8 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
 
     def bind_tools(
         self,
-        tools: Sequence[Any],
-        **kwargs: Any,
+        tools: Sequence[BaseTool | dict[str, object]],
+        **kwargs: object,
     ) -> "MLXChatModel":
         """
         Return a copy of this model with the given tools attached.
@@ -120,10 +136,10 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
 
     def _generate(
         self,
-        messages: List[BaseMessage],
-        stop: Optional[List[str]] = None,
+        messages: list[BaseMessage],
+        stop: Optional[list[str]] = None,
         run_manager: Optional[CallbackManagerForLLMRun] = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> ChatResult:
         try:
             model, tokenizer = self._load_model(self.model_path)
@@ -136,7 +152,7 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
 
         # Build the prompt string via the tokenizer chat-template
         try:
-            template_kwargs: Dict[str, Any] = {
+            template_kwargs: dict[str, object] = {
                 "tokenize": False,
                 "add_generation_prompt": True,
             }
@@ -194,7 +210,7 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _to_chat_dicts(messages: List[BaseMessage]) -> List[Dict[str, Any]]:
+    def _to_chat_dicts(messages: list[BaseMessage]) -> list[dict[str, object]]:
         """Convert LangChain message objects to plain dicts for the tokenizer."""
         result = []
         for msg in messages:
@@ -203,7 +219,7 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
             elif isinstance(msg, HumanMessage):
                 result.append({"role": "user", "content": str(msg.content)})
             elif isinstance(msg, AIMessage):
-                d: Dict[str, Any] = {
+                d: dict[str, object] = {
                     "role": "assistant",
                     "content": str(msg.content),
                 }
@@ -232,9 +248,9 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
 
     @staticmethod
     def _inject_tools_into_system(
-        chat_messages: List[Dict[str, Any]],
-        tool_schemas: Optional[List[Dict[str, Any]]] = None,
-    ) -> List[Dict[str, Any]]:
+        chat_messages: list[dict[str, object]],
+        tool_schemas: Optional[list[dict[str, object]]] = None,
+    ) -> list[dict[str, object]]:
         """Prepend (or append to) the system message with JSON tool schemas."""
         if not tool_schemas:
             return chat_messages
