@@ -5,15 +5,15 @@ import { listLoadedModels } from '@/lib/api';
 import type { LoadedModelInfo } from '@/lib/schemas';
 
 interface ModelSelectorProps {
-  selectedChatModel: string | null;
-  selectedEmbeddingModel: string | null;
-  onChatModelChange: (modelName: string) => void;
-  onEmbeddingModelChange: (modelName: string) => void;
+  selectedChatModelPath: string | null;
+  selectedEmbeddingModelPath: string | null;
+  onChatModelChange: (modelPath: string) => void;
+  onEmbeddingModelChange: (modelPath: string) => void;
 }
 
 export default function ModelSelector({
-  selectedChatModel,
-  selectedEmbeddingModel,
+  selectedChatModelPath,
+  selectedEmbeddingModelPath,
   onChatModelChange,
   onEmbeddingModelChange,
 }: ModelSelectorProps) {
@@ -32,11 +32,11 @@ export default function ModelSelector({
       setLoadedEmbeddingModels(embeddingModels);
 
       // Auto-select first model if none selected
-      if (!selectedChatModel && chatModels.length > 0) {
-        onChatModelChange(chatModels[0].model_name);
+      if (!selectedChatModelPath && chatModels.length > 0) {
+        onChatModelChange(chatModels[0].model_path);
       }
-      if (!selectedEmbeddingModel && embeddingModels.length > 0) {
-        onEmbeddingModelChange(embeddingModels[0].model_name);
+      if (!selectedEmbeddingModelPath && embeddingModels.length > 0) {
+        onEmbeddingModelChange(embeddingModels[0].model_path);
       }
     } catch (err) {
       console.error('Failed to fetch loaded models:', err);
@@ -53,7 +53,7 @@ export default function ModelSelector({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const isReady = selectedChatModel && selectedEmbeddingModel;
+  const isReady = selectedChatModelPath && selectedEmbeddingModelPath;
 
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-purple-200 p-4">
@@ -86,14 +86,14 @@ export default function ModelSelector({
             </div>
           ) : (
             <select
-              value={selectedChatModel || ''}
+              value={selectedChatModelPath || ''}
               onChange={(e) => onChatModelChange(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
             >
               <option value="">Select chat model</option>
               {loadedChatModels.map((model) => (
-                <option key={model.model_name} value={model.model_name}>
-                  {model.model_name}
+                <option key={model.model_path} value={model.model_path}>
+                  {model.model_path}
                 </option>
               ))}
             </select>
@@ -112,14 +112,14 @@ export default function ModelSelector({
             </div>
           ) : (
             <select
-              value={selectedEmbeddingModel || ''}
+              value={selectedEmbeddingModelPath || ''}
               onChange={(e) => onEmbeddingModelChange(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               <option value="">Select embedding model</option>
               {loadedEmbeddingModels.map((model) => (
-                <option key={model.model_name} value={model.model_name}>
-                  {model.model_name}
+                <option key={model.model_path} value={model.model_path}>
+                  {model.model_path}
                 </option>
               ))}
             </select>

@@ -77,10 +77,9 @@ EMBEDDING_MODEL_PATH=$(echo "$EMBEDDING_MODELS" | jq -r '.[0].path')
 EMBEDDING_MODEL_NAME=$(echo "$EMBEDDING_MODELS" | jq -r '.[0].path')
 
 CHAT_MODEL_PATH=$(echo "$CHAT_MODELS" | jq -r '.[0].path')
-CHAT_MODEL_NAME=$(echo "$CHAT_MODELS" | jq -r '.[0].path')
 
 echo -e "\nSelected embedding model : ${EMBEDDING_MODEL_NAME}  (path: ${EMBEDDING_MODEL_PATH})"
-echo -e "Selected chat model      : ${CHAT_MODEL_NAME}  (path: ${CHAT_MODEL_PATH})"
+echo -e "Selected chat model      : ${CHAT_MODEL_PATH}"
 
 echo -e "\n${GREEN}► POST /v1/models/load  (embedding)${NC}"
 LOAD_EMBEDDING_RESPONSE=$(curl -sf -X POST "${BASE_URL}/v1/models/load" \
@@ -106,7 +105,7 @@ QUESTION="What is snp500"
 
 PAYLOAD=$(jq -n \
   --arg doc   "$DOCUMENT_NAME" \
-  --arg chat  "$CHAT_MODEL_NAME" \
+  --arg chat  "$CHAT_MODEL_PATH" \
   --arg emb   "$EMBEDDING_MODEL_NAME" \
   --argjson ts "$TIMESTAMP" \
   '{

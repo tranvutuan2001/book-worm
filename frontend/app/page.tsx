@@ -19,8 +19,8 @@ export default function Home() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [selectedChatModel, setSelectedChatModel] = useState<string | null>(null);
-  const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState<string | null>(null);
+  const [selectedChatModelPath, setSelectedChatModelPath] = useState<string | null>(null);
+  const [selectedEmbeddingModelPath, setSelectedEmbeddingModelPath] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -33,7 +33,7 @@ export default function Home() {
 
   const handleSendMessage = async (content: string) => {
     // Check if models are selected
-    if (!selectedChatModel || !selectedEmbeddingModel) {
+    if (!selectedChatModelPath || !selectedEmbeddingModelPath) {
       alert('Please select both chat and embedding models before sending a message');
       return;
     }
@@ -61,8 +61,8 @@ export default function Home() {
         message_list: [...messages, userMessage],
         timestamp: Date.now(),
         document_name: selectedDocument,
-        chat_model: selectedChatModel,
-        embedding_model: selectedEmbeddingModel,
+        chat_model: selectedChatModelPath,
+        embedding_model: selectedEmbeddingModelPath,
       };
 
       // Call the document analysis API
@@ -193,10 +193,10 @@ export default function Home() {
                 {/* Model Selector - Compact at top */}
                 <div className="mb-4">
                   <ModelSelector
-                    selectedChatModel={selectedChatModel}
-                    selectedEmbeddingModel={selectedEmbeddingModel}
-                    onChatModelChange={setSelectedChatModel}
-                    onEmbeddingModelChange={setSelectedEmbeddingModel}
+                    selectedChatModelPath={selectedChatModelPath}
+                    selectedEmbeddingModelPath={selectedEmbeddingModelPath}
+                    onChatModelChange={setSelectedChatModelPath}
+                    onEmbeddingModelChange={setSelectedEmbeddingModelPath}
                   />
                 </div>
 
@@ -219,12 +219,12 @@ export default function Home() {
                       </svg>
                     </div>
                     <h2 className="text-3xl font-bold bg-linear-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-3">
-                      {selectedChatModel && selectedEmbeddingModel 
+                      {selectedChatModelPath && selectedEmbeddingModelPath 
                         ? 'Ready to chat!' 
                         : 'Select models to get started'}
                     </h2>
                     <p className="text-gray-600 max-w-md text-lg">
-                      {selectedChatModel && selectedEmbeddingModel
+                      {selectedChatModelPath && selectedEmbeddingModelPath
                         ? 'Ask me anything! I\'m using your selected models to provide intelligent responses.'
                         : 'Please select both a chat model and an embedding model to begin.'}
                     </p>
@@ -259,7 +259,7 @@ export default function Home() {
 
             <ChatInput 
               onSendMessage={handleSendMessage} 
-              disabled={isLoading || !selectedChatModel || !selectedEmbeddingModel} 
+              disabled={isLoading || !selectedChatModelPath || !selectedEmbeddingModelPath} 
               selectedDocument={selectedDocument}
             />
           </div>

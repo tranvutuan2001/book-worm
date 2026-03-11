@@ -191,12 +191,12 @@ export default function ModelManagement() {
           ) : (
             loadedModels.map((model) => (
               <div
-                key={model.model_name}
+                key={model.model_path}
                 className="border border-green-300 rounded-lg p-3 bg-linear-to-br from-green-50 to-emerald-50 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm text-gray-800 truncate">{model.model_name}</h3>
+                    <h3 className="font-semibold text-sm text-gray-800 truncate">{model.model_path}</h3>
                     <p className="text-xs text-gray-600 mt-1">
                       <span className="inline-flex items-center px-2 py-0.5 rounded bg-green-100 text-green-800 font-medium">
                         {model.model_type}
@@ -231,7 +231,7 @@ export default function ModelManagement() {
               <div className="space-y-2">
                 {chatModels.map((model) => {
                   const isLoaded = loadedModels.some(
-                    (m) => m.model_name === model.name && m.model_type === 'chat'
+                    (m) => m.model_path === model.path && m.model_type === 'chat'
                   );
                   return (
                     <div
@@ -277,7 +277,7 @@ export default function ModelManagement() {
               <div className="space-y-2">
                 {embeddingModels.map((model) => {
                   const isLoaded = loadedModels.some(
-                    (m) => m.model_name === model.name && m.model_type === 'embedding'
+                    (m) => m.model_path === model.path && m.model_type === 'embedding'
                   );
                   return (
                     <div
