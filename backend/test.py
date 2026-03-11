@@ -10,8 +10,8 @@ from app.constant import Role
 
 _llm_client = LLMService(ParsingService())
 
-CHAT_MODEL = "/models/mlx-community/Qwen3.5-35B-A3B-4bit"
-EMBED_MODEL = "/models/mlx-community/Qwen3-Embedding-4B-4bit-DWQ"
+CHAT_MODEL = "./models/chat/mlx-community/Qwen3.5-35B-A3B-4bit"
+EMBED_MODEL = "./models/embedding/mlx-community/Qwen3-Embedding-4B-4bit-DWQ"
 
 # ---------------------------------------------------------------------------
 # Dummy tools for tool-binding test
