@@ -58,7 +58,7 @@ class PreAnalyzeDocumentService:
 
         for attempt in range(3):
             try:
-                embeded_text = self._llm_client.embed_text(model_path="models/embedding/mlx-community/Qwen3-Embedding-4B-4bit-DWQ", text=text) # TODO: make model name configurable
+                embeded_text = self._llm_client.embed_text(model_path="models/embedding/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ", text=text) # TODO: make model name configurable
                 return embeded_text
             except Exception as exc:
                 last_exception = exc
@@ -156,19 +156,15 @@ class PreAnalyzeDocumentService:
             user_prompt = f"Analyze and summarize the following document section, focusing on its role within the larger work:\n\n{section_text}"
             
             # Create proper Message objects
-            system_message = Message(
-                id="system",
-                content=system_prompt,
-                role=Role.SYSTEM,
-                timestamp=int(time.time())
-            )
+            # Note: system_prompt is passed separately to complete_chat, so only include
+            # the user message here to avoid a duplicate system message in the conversation.
             user_message = Message(
                 id="user", 
                 content=user_prompt,
                 role=Role.USER,
                 timestamp=int(time.time())
             )
-            message_list = [system_message, user_message]
+            message_list = [user_message]
             
             try:
                 summary = self._llm_client.complete_chat(
@@ -207,23 +203,20 @@ class PreAnalyzeDocumentService:
             user_prompt = f"Create a comprehensive chapter summary from the following section summaries:\n\n{combined_sections}"
             
             # Create proper Message objects
-            system_message = Message(
-                id="system",
-                content=system_prompt,
-                role=Role.SYSTEM,
-                timestamp=int(time.time())
-            )
+            # Note: system_prompt is passed separately to complete_chat, so only include
+            # the user message here to avoid a duplicate system message in the conversation.
             user_message = Message(
                 id="user",
                 content=user_prompt,
                 role=Role.USER,
                 timestamp=int(time.time())
             )
-            message_list = [system_message, user_message]
+            message_list = [user_message]
             
             print(f"Building chapter summary {len(chapter_summaries) + 1}...")
             try:
                 chapter_summary = self._llm_client.complete_chat(
+                    model_path="models/chat/mlx-community/Qwen3.5-35B-A3B-4bit", # TODO: make model name configurable
                     message_list=message_list, system_prompt=system_prompt, tools=[]
                 )
                 chapter_summaries.append(chapter_summary)

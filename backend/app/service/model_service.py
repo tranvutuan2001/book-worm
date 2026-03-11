@@ -48,8 +48,8 @@ _DOWNLOADABLE_CHAT_MODELS: List[DownloadableModelInfo] = [
 _DOWNLOADABLE_EMBEDDING_MODELS: List[DownloadableModelInfo] = [
     DownloadableModelInfo(
         name="Qwen3-Embedding-4B (4-bit DWQ)",
-        repository="mlx-community/Qwen3-Embedding-4B-4bit-DWQ",
-        filename="mlx-community/Qwen3-Embedding-4B-4bit-DWQ",
+        repository="mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ",
+        filename="mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ",
     ),
 ]
 

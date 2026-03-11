@@ -30,7 +30,7 @@ class MLXEmbeddingModel(MLXModelBase):
 
     Example::
 
-        model = MLXEmbeddingModel("/models/mlx-community/Qwen3-Embedding-4B-4bit-DWQ")
+        model = MLXEmbeddingModel("/models/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ")
         vector = model.embed("What is domain-driven design?")
 
     The model is loaded lazily on the first call to :meth:`embed` and then
