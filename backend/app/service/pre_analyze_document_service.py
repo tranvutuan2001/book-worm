@@ -1,17 +1,21 @@
 import pdfplumber
-import argparse
 import time
 import logging
 import traceback
 from typing import List, Optional
 from fastapi import Depends
 from app.infra.llm_connector.llm_client import LLMService, get_llm_service
+from app.infra.llm_connector.mlx_chat import MLXChatModel
+from app.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
 from app.util import write_json_file
 from app.domain.entity.message import Message
 from app.constant import Role
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 logger = logging.getLogger('app.service')
+
+_CHAT_MODEL_PATH = "models/chat/mlx-community/Qwen3.5-35B-A3B-4bit"
+_EMBEDDING_MODEL_PATH = "models/embedding/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"
 
 
 class PreAnalyzeDocumentService:
@@ -53,74 +57,50 @@ class PreAnalyzeDocumentService:
         return text_by_page
 
 
+    def _prepare_models(self) -> None:
+        """Unload all cached models then eagerly load the models needed for pre-analysis."""
+        logger.info("Unloading all models from memory before pre-analysis")
+        MLXChatModel._model_cache.clear()
+        MLXEmbeddingModel._model_cache.clear()
+
+        logger.info(f"Loading chat model: {_CHAT_MODEL_PATH}")
+        print(f"🔄 Loading chat model: {_CHAT_MODEL_PATH}...")
+        MLXChatModel._load_model(_CHAT_MODEL_PATH)
+
+        logger.info(f"Loading embedding model: {_EMBEDDING_MODEL_PATH}")
+        print(f"🔄 Loading embedding model: {_EMBEDDING_MODEL_PATH}...")
+        MLXEmbeddingModel._load_model(_EMBEDDING_MODEL_PATH)
+        print("✓ Models ready.")
+
     def _embed_text_by_llm(self, text: str) -> List[float]:
         last_exception: Optional[Exception] = None
-
         for attempt in range(3):
             try:
-                embeded_text = self._llm_client.embed_text(model_path="models/embedding/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ", text=text) # TODO: make model name configurable
-                return embeded_text
+                return self._llm_client.embed_text(model_path=_EMBEDDING_MODEL_PATH, text=text)
             except Exception as exc:
                 last_exception = exc
                 error_msg = f"Embedding attempt {attempt + 1}/3 failed: {str(exc)}"
                 logger.warning(error_msg)
                 print(f"⚠️  {error_msg}")
-                if attempt < 2:  # Don't sleep on the last attempt
-                    time.sleep(1)  # Wait before retry
-
+                if attempt < 2:
+                    time.sleep(1)
         error_msg = f"Failed to embed text after 3 attempts. Last error: {str(last_exception)}"
         logger.error(error_msg)
         print(f"❌ {error_msg}")
-        print(f"Stack trace: {traceback.format_exc()}")
         raise RuntimeError("Failed to embed text after 3 attempts.") from last_exception
 
-
-    def _embed_chunk(self, chunks: List[str]) -> List[List[float]]:
-        res: List[List[float]] = []
-        for index, chunk in enumerate(chunks):
+    def _embed_texts(self, texts: List[str], label: str = "text") -> List[List[float]]:
+        """Embed a list of texts, logging progress with the given *label*."""
+        result: List[List[float]] = []
+        for index, text in enumerate(texts):
             try:
-                print(f"Embedding chunk {index + 1}/{len(chunks)}...")
-                vector = self._embed_text_by_llm(text=chunk)
-                res.append(vector)
+                print(f"Embedding {label} {index + 1}/{len(texts)}...")
+                result.append(self._embed_text_by_llm(text=text))
             except Exception as e:
-                error_msg = f"Failed to embed chunk {index + 1}/{len(chunks)}: {str(e)}"
-                logger.error(error_msg)
-                print(f"❌ {error_msg}")
-                print(f"Chunk preview (first 100 chars): {chunk[:100]}...")
+                logger.error(f"Failed to embed {label} {index + 1}/{len(texts)}: {e}")
+                print(f"❌ Failed to embed {label} {index + 1}/{len(texts)}: {e}")
                 raise
-
-        return res
-
-    def _embed_section_summary(self, section_summary: List[str]) -> List[List[float]]:
-        res: List[List[float]] = []
-        for index, summary in enumerate(section_summary):
-            try:
-                print(f"Embedding section summary {index + 1}/{len(section_summary)}...")
-                vector = self._embed_text_by_llm(text=summary)
-                res.append(vector)
-            except Exception as e:
-                error_msg = f"Failed to embed section summary {index + 1}/{len(section_summary)}: {str(e)}"
-                logger.error(error_msg)
-                print(f"❌ {error_msg}")
-                raise
-        
-        return res
-
-
-    def _embed_chapter_summary(self, chapter_summary: List[str]) -> List[List[float]]:
-        res: List[List[float]] = []
-        for index, summary in enumerate(chapter_summary):
-            try:
-                print(f"Embedding chapter summary {index + 1}/{len(chapter_summary)}...")
-                vector = self._embed_text_by_llm(text=summary)
-                res.append(vector)
-            except Exception as e:
-                error_msg = f"Failed to embed chapter summary {index + 1}/{len(chapter_summary)}: {str(e)}"
-                logger.error(error_msg)
-                print(f"❌ {error_msg}")
-                raise
-        
-        return res
+        return result
 
     def _build_section_summaries(self, all_chunks: List[str]) -> List:
         numb_chunk_per_section = 10
@@ -168,7 +148,7 @@ class PreAnalyzeDocumentService:
             
             try:
                 summary = self._llm_client.complete_chat(
-                    message_list=message_list, system_prompt=system_prompt, tools=[], model_path="models/chat/mlx-community/Qwen3.5-35B-A3B-4bit" # TODO: make model name configurable
+                    message_list=message_list, system_prompt=system_prompt, tools=[], model_path=_CHAT_MODEL_PATH
                 )
                 section_summary.append(summary)
             except Exception as e:
@@ -216,7 +196,7 @@ class PreAnalyzeDocumentService:
             print(f"Building chapter summary {len(chapter_summaries) + 1}...")
             try:
                 chapter_summary = self._llm_client.complete_chat(
-                    model_path="models/chat/mlx-community/Qwen3.5-35B-A3B-4bit", # TODO: make model name configurable
+                    model_path=_CHAT_MODEL_PATH,
                     message_list=message_list, system_prompt=system_prompt, tools=[]
                 )
                 chapter_summaries.append(chapter_summary)
@@ -251,6 +231,7 @@ class PreAnalyzeDocumentService:
         
         logger.info(f"Starting document pre-analysis for: {document_name}")
         print(f"\n🚀 Starting document pre-analysis for: {document_name}")
+        self._prepare_models()
         
         try:
             document_by_page = self._read_document_by_page(pdf_path)
@@ -271,7 +252,7 @@ class PreAnalyzeDocumentService:
                 try:
                     write_json_file(all_chunks, f"./0_data/{document_name}/{document_name}_chunks.json")
                     logger.info("Successfully saved chunks to file")
-                    embeded_chunks = self._embed_chunk(all_chunks)
+                    embeded_chunks = self._embed_texts(all_chunks, label="chunk")
                     write_json_file(embeded_chunks, f"./0_data/{document_name}/{document_name}_chunk_embeddings.json")
                     logger.info("Successfully saved chunk embeddings to file")
                     print(f"✓ Chunk processing completed")
@@ -290,7 +271,7 @@ class PreAnalyzeDocumentService:
                     section_summary = self._build_section_summaries(all_chunks)
                     write_json_file(section_summary, f"./0_data/{document_name}/{document_name}_section_summaries.json")
                     logger.info("Successfully saved section summaries to file")
-                    embeded_section_summaries = self._embed_section_summary(section_summary)
+                    embeded_section_summaries = self._embed_texts(section_summary, label="section summary")
                     write_json_file(embeded_section_summaries, f"./0_data/{document_name}/{document_name}_section_summary_embeddings.json")
                     logger.info("Successfully saved section summary embeddings to file")
                     print(f"✓ Section processing completed")
@@ -327,7 +308,7 @@ class PreAnalyzeDocumentService:
                     chapter_summaries = self._build_chapter_summary(section_summary)
                     write_json_file(chapter_summaries, f"./0_data/{document_name}/{document_name}_chapter_summaries.json")
                     logger.info("Successfully saved chapter summaries to file")
-                    embeded_chapter_summaries = self._embed_chapter_summary(chapter_summaries)
+                    embeded_chapter_summaries = self._embed_texts(chapter_summaries, label="chapter summary")
                     write_json_file(embeded_chapter_summaries, f"./0_data/{document_name}/{document_name}_chapter_summary_embeddings.json")
                     logger.info("Successfully saved chapter summary embeddings to file")
                     print(f"✓ Chapter processing completed")
