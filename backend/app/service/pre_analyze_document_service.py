@@ -58,7 +58,7 @@ class PreAnalyzeDocumentService:
 
         for attempt in range(3):
             try:
-                embeded_text = self._llm_client.embed_text(model_name="Qwen3-Embedding-4B-Q4_K_M", text=text) # TODO: make model name configurable
+                embeded_text = self._llm_client.embed_text(model_path="models/embedding/mlx-community/Qwen3-Embedding-4B-4bit-DWQ", text=text) # TODO: make model name configurable
                 return embeded_text
             except Exception as exc:
                 last_exception = exc
@@ -172,7 +172,7 @@ class PreAnalyzeDocumentService:
             
             try:
                 summary = self._llm_client.complete_chat(
-                    message_list=message_list, system_prompt=system_prompt, tools=[], model_name="Qwen3-4B-Instruct-2507-Q4_K_M" # TODO: make model name configurable
+                    message_list=message_list, system_prompt=system_prompt, tools=[], model_path="models/chat/mlx-community/Qwen3.5-35B-A3B-4bit" # TODO: make model name configurable
                 )
                 section_summary.append(summary)
             except Exception as e:

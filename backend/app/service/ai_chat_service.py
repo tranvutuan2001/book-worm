@@ -69,7 +69,7 @@ class AIChatService:
                     answer = self._llm_client.complete_chat(
                                         message_list=message_list, system_prompt=system_prompt,
                                         tools=[get_the_most_relevant_chunks, get_document_summary],
-                                        model_name=payload.chat_model)
+                                        model_path=payload.chat_model)
                     logger.info(f"Initial answer generated: {len(answer)} characters")
                 except Exception as e:
                     error_msg = f"Failed to generate initial answer: {str(e)}"
@@ -153,7 +153,7 @@ class AIChatService:
                 
                 Return only the fact-checked final answer with no meta-commentary.""",
                     tools=[get_the_most_relevant_chunks, get_document_summary],
-                    model_name=chat_model,
+                    model_path=chat_model,
                 )
                 logger.info(f"Verification completed: {len(verified_answer)} characters")
             except Exception as e:

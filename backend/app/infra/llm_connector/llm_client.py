@@ -30,7 +30,7 @@ class LLMService:
 
     def complete_chat(
         self,
-        model_name: str,
+        model_path: str,
         message_list: List[Message],
         system_prompt: str,
         tools: List[BaseTool],
@@ -50,7 +50,7 @@ class LLMService:
                            parser.
         """
         llm = MLXChatModel(
-            model_path=model_name,
+            model_path=model_path,
             max_tokens=2048,
             temperature=0.1,
             parsing_service=self._parsing_service,
@@ -65,12 +65,12 @@ class LLMService:
         )
         return response["messages"][-1].content
 
-    def embed_text(self, model_name: str, text: str) -> List[float]:
+    def embed_text(self, model_path: str, text: str) -> List[float]:
         """
         Create a text embedding using the local MLX embedding model.
         ``model_name`` is the local path to the MLX embedding model directory.
         """
-        return MLXEmbeddingModel(model_name).embed(text)
+        return MLXEmbeddingModel(model_path).embed(text)
 
 
 def get_llm_service(
