@@ -15,6 +15,12 @@ import {
   ModelLoadRequest,
   ModelUnloadRequest,
   ModelDownloadRequest,
+  ModelDownloadResponse,
+  ModelDownloadResponseSchema,
+  ModelLoadResponse,
+  ModelLoadResponseSchema,
+  ModelUnloadResponse,
+  ModelUnloadResponseSchema,
 } from '@/lib/schemas';
 import { z } from 'zod';
 
@@ -157,7 +163,7 @@ export async function listLoadedModels(): Promise<LoadedModelInfo[]> {
   return z.array(LoadedModelInfoSchema).parse(data);
 }
 
-export async function downloadModel(request: ModelDownloadRequest): Promise<void> {
+export async function downloadModel(request: ModelDownloadRequest): Promise<ModelDownloadResponse> {
   const response = await fetch(`${API_BASE_URL}/v1/models/download`, {
     method: 'POST',
     headers: {
@@ -170,9 +176,12 @@ export async function downloadModel(request: ModelDownloadRequest): Promise<void
     const error = await response.json();
     throw new Error(error.detail || `Failed to download model: ${response.statusText}`);
   }
+
+  const data = await response.json();
+  return ModelDownloadResponseSchema.parse(data);
 }
 
-export async function loadModel(request: ModelLoadRequest): Promise<void> {
+export async function loadModel(request: ModelLoadRequest): Promise<ModelLoadResponse> {
   const response = await fetch(`${API_BASE_URL}/v1/models/load`, {
     method: 'POST',
     headers: {
@@ -185,9 +194,12 @@ export async function loadModel(request: ModelLoadRequest): Promise<void> {
     const error = await response.json();
     throw new Error(error.detail || `Failed to load model: ${response.statusText}`);
   }
+
+  const data = await response.json();
+  return ModelLoadResponseSchema.parse(data);
 }
 
-export async function unloadModel(request: ModelUnloadRequest): Promise<void> {
+export async function unloadModel(request: ModelUnloadRequest): Promise<ModelUnloadResponse> {
   const response = await fetch(`${API_BASE_URL}/v1/models/unload`, {
     method: 'POST',
     headers: {
@@ -200,4 +212,7 @@ export async function unloadModel(request: ModelUnloadRequest): Promise<void> {
     const error = await response.json();
     throw new Error(error.detail || `Failed to unload model: ${response.statusText}`);
   }
+
+  const data = await response.json();
+  return ModelUnloadResponseSchema.parse(data);
 }

@@ -80,12 +80,34 @@ export const ModelLoadRequestSchema = z.object({
 });
 
 export const ModelUnloadRequestSchema = z.object({
-  model: z.string(),
+  model_path: z.string(),
   model_type: z.enum(['chat', 'embedding']),
 });
 
 export const ModelDownloadRequestSchema = z.object({
   repository: z.string(),
+});
+
+export const ModelDownloadResponseSchema = z.object({
+  repository: z.string(),
+  status: z.string(),
+  path: z.string(),
+  message: z.string(),
+});
+
+export const ModelLoadResponseSchema = z.object({
+  model: z.string(),
+  model_type: z.string(),
+  status: z.string(),
+  message: z.string(),
+  model_path: z.string(),
+});
+
+export const ModelUnloadResponseSchema = z.object({
+  model_path: z.string(),
+  model_type: z.string(),
+  status: z.string(),
+  message: z.string(),
 });
 
 export type ModelInfo = z.infer<typeof ModelInfoSchema>;
@@ -94,3 +116,6 @@ export type LoadedModelInfo = z.infer<typeof LoadedModelInfoSchema>;
 export type ModelLoadRequest = z.infer<typeof ModelLoadRequestSchema>;
 export type ModelUnloadRequest = z.infer<typeof ModelUnloadRequestSchema>;
 export type ModelDownloadRequest = z.infer<typeof ModelDownloadRequestSchema>;
+export type ModelDownloadResponse = z.infer<typeof ModelDownloadResponseSchema>;
+export type ModelLoadResponse = z.infer<typeof ModelLoadResponseSchema>;
+export type ModelUnloadResponse = z.infer<typeof ModelUnloadResponseSchema>;

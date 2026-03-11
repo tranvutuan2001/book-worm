@@ -118,11 +118,11 @@ export default function ModelManagement() {
     }
   };
 
-  const handleUnload = async (modelName: string, modelType: 'chat' | 'embedding') => {
+  const handleUnload = async (modelPath: string, modelType: 'chat' | 'embedding') => {
     try {
       setLoading(true);
       setError(null);
-      await unloadModel({ model: modelName, model_type: modelType });
+      await unloadModel({ model_path: modelPath, model_type: modelType });
       await fetchAllModels();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to unload model');
@@ -204,7 +204,7 @@ export default function ModelManagement() {
                     </p>
                   </div>
                   <button
-                    onClick={() => handleUnload(model.model_name, model.model_type as 'chat' | 'embedding')}
+                    onClick={() => handleUnload(model.model_path, model.model_type as 'chat' | 'embedding')}
                     disabled={loading}
                     className="px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-400 text-xs font-medium shadow-sm"
                   >
