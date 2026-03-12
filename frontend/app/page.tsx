@@ -113,7 +113,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen bg-linear-to-br from-purple-50 via-white to-blue-50">
+    <div className="flex flex-1 overflow-hidden bg-linear-to-br from-purple-50 via-white to-blue-50">
       {/* Left Sidebar - Documents */}
       <div className={`
         fixed inset-y-0 left-0 z-50 w-80 bg-white/95 backdrop-blur-sm border-r border-purple-200 transform transition-transform duration-300 ease-in-out shadow-xl

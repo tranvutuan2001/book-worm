@@ -57,7 +57,7 @@ export default function ChatHeader({ onToggleSidebar, selectedDocument }: ChatHe
           {/* Current Book Section */}
           {selectedDocument && (
             <div className="flex-1 flex justify-center">
-              <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-xl shadow-lg">
+              <div className="bg-linear-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-xl shadow-lg">
                 <div className="flex items-center gap-3">
                   <svg
                     className="w-5 h-5 text-purple-200"
