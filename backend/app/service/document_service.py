@@ -1,171 +1,158 @@
-from app.controller.dto import UploadResponse, DocumentsResponse, DocumentInfo, DocumentStatus
-from fastapi import UploadFile, File, HTTPException
-from app.service.pre_analyze_document_service import (
-    PreAnalyzeDocumentService,
-    _pre_analyze_document_service,
-)
-from datetime import datetime
-from pathlib import Path
-import logging
-import traceback
+"""
+Document service — handles upload and listing of documents.
 
-logger = logging.getLogger('app.service')
+No FastAPI or HTTP concerns live here; exceptions are domain-level and
+translated to HTTP responses by the API route layer.
+"""
+
+import logging
+import threading
+import traceback
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+
+from fastapi import UploadFile
+
+from app.core.config import DATA_DIR
+from app.core.exceptions import DocumentProcessingError, InvalidDocumentError
+from app.service.document_analysis_service import (
+    DocumentAnalysisService,
+    _document_analysis_service,
+)
+
+logger = logging.getLogger("app.service")
+
+
+# ---------------------------------------------------------------------------
+# Service-level data containers (no FastAPI / schema dependency)
+# ---------------------------------------------------------------------------
+
+class DocumentStatus(str, Enum):
+    READY = "ready"
+    PROCESSING = "processing"
+    ANALYZING = "analyzing"
+    ERROR = "error"
+
+
+@dataclass
+class DocumentUploadResult:
+    document_name: str
+    status: DocumentStatus
+
+
+@dataclass
+class DocumentRecord:
+    name: str
+    status: DocumentStatus
+    path: str
+
+
+@dataclass
+class DocumentListResult:
+    documents: list[DocumentRecord] = field(default_factory=list)
+
+
 
 
 class DocumentService:
-    def __init__(self, pre_analyze_service: PreAnalyzeDocumentService) -> None:
-        """
-        Args:
-            pre_analyze_service: The document pre-analysis service.
-                                 Injected by FastAPI via
-                                 ``Depends(get_pre_analyze_document_service)``.
-        """
-        self._pre_analyze_service = pre_analyze_service
+    def __init__(self, analysis_service: DocumentAnalysisService) -> None:
+        self._analysis_service = analysis_service
 
-    async def upload_document(self, file: UploadFile = File(description="PDF file to upload")) -> UploadResponse:
-        """Upload a PDF document and trigger pre-analysis"""
-        try:
-            # Validate file type
-            if not file.filename:
-                error_msg = "No filename provided"
-                logger.error(error_msg)
-                print(f"❌ {error_msg}")
-                raise HTTPException(status_code=400, detail=error_msg)
-            
-            if not file.filename.endswith('.pdf'):
-                error_msg = f"Invalid file type: {file.filename}. Only PDF files are allowed"
-                logger.error(error_msg)
-                print(f"❌ {error_msg}")
-                raise HTTPException(status_code=400, detail="Only PDF files are allowed")
-            
-            # Generate timestamp-based folder name
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            doc_name = f"{file.filename.replace('.pdf', '')}_{timestamp}"
-            doc_folder = Path(f"0_data/{doc_name}")
-            
-            logger.info(f"Starting upload for document: {doc_name}")
-            print(f"\n📄 Uploading document: {doc_name}")
-            
-            # Create document folder
-            try:
-                doc_folder.mkdir(parents=True, exist_ok=True)
-                logger.info(f"Created document folder: {doc_folder}")
-            except Exception as e:
-                error_msg = f"Failed to create document folder {doc_folder}: {str(e)}"
-                logger.error(error_msg)
-                print(f"❌ {error_msg}")
-                print(f"Stack trace: {traceback.format_exc()}")
-                raise HTTPException(status_code=500, detail=f"Error creating document folder: {str(e)}")
-            
-            # Save the PDF file
-            pdf_path = doc_folder / f"{doc_name}.pdf"
-            try:
-                content = await file.read()
-                with open(pdf_path, "wb") as buffer:
-                    buffer.write(content)
-                logger.info(f"Successfully saved PDF file: {pdf_path}")
-                print(f"✓ Successfully saved PDF file")
-            except Exception as e:
-                error_msg = f"Failed to save PDF file {pdf_path}: {str(e)}"
-                logger.error(error_msg)
-                print(f"❌ {error_msg}")
-                print(f"Stack trace: {traceback.format_exc()}")
-                raise HTTPException(status_code=500, detail=f"Error saving file: {str(e)}")
-            
-            # Run pre-analysis in the background
-            def run_analysis():
-                try:
-                    logger.info(f"Starting background pre-analysis for: {doc_name}")
-                    print(f"🔍 Starting background analysis for: {doc_name}")
-                    self._pre_analyze_service.pre_analyze_document(str(pdf_path), doc_name)
-                    logger.info(f"Background pre-analysis completed successfully for: {doc_name}")
-                    print(f"✅ Background analysis completed for: {doc_name}")
-                except Exception as e:
-                    error_msg = f"Error during pre-analysis for {doc_name}: {str(e)}"
-                    logger.error(error_msg)
-                    print(f"❌ {error_msg}")
-                    print(f"Stack trace: {traceback.format_exc()}")
-            
-            # Start analysis in background
-            import threading
-            try:
-                analysis_thread = threading.Thread(target=run_analysis)
-                analysis_thread.start()
-                logger.info(f"Background analysis thread started for: {doc_name}")
-                print(f"✓ Background analysis thread started")
-            except Exception as e:
-                error_msg = f"Failed to start background analysis thread: {str(e)}"
-                logger.error(error_msg)
-                print(f"❌ {error_msg}")
-                # Don't fail the upload if background thread fails to start
-            
-            logger.info(f"Document upload successful: {doc_name}")
-            print(f"✅ Document uploaded successfully: {doc_name}\n")
-            
-            return UploadResponse(
-                message="Document uploaded successfully and analysis started",
-                document_name=doc_name,
-                status=DocumentStatus.ANALYZING
+    async def upload_document(self, file: UploadFile) -> DocumentUploadResult:
+        """Upload a PDF document and trigger background pre-analysis.
+
+        Raises:
+            InvalidDocumentError: For unsupported file type or missing filename.
+            DocumentProcessingError: If saving the file or starting analysis fails.
+        """
+        if not file.filename:
+            raise InvalidDocumentError("No filename provided")
+
+        if not file.filename.lower().endswith(".pdf"):
+            raise InvalidDocumentError(
+                f"Unsupported file type: '{file.filename}'. Only PDF files are accepted."
             )
-        except HTTPException:
-            # Re-raise HTTP exceptions as-is
-            raise
-        except Exception as e:
-            error_msg = f"Unexpected error during document upload: {str(e)}"
-            logger.error(error_msg)
-            print(f"❌ {error_msg}")
-            print(f"Stack trace: {traceback.format_exc()}")
-            raise HTTPException(status_code=500, detail=f"Error uploading file: {str(e)}")
 
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        doc_name = f"{file.filename.replace('.pdf', '')}_{timestamp}"
+        doc_folder = DATA_DIR / doc_name
 
-    async def list_documents(self) -> DocumentsResponse:
-        """Get list of all available documents"""
+        logger.info("Starting upload for document: %s", doc_name)
+
         try:
-            data_dir = Path("0_data")
-            documents = []
-            
-            if not data_dir.exists():
-                logger.info("Data directory does not exist, returning empty list")
-                return DocumentsResponse(documents=[])
-            
-            logger.info("Scanning for documents")
-            
-            for item in data_dir.iterdir():
-                try:
-                    if item.is_dir():
-                        # Check if required analysis files exist
-                        doc_name = item.name
-                        chunks_file = item / f"{doc_name}_chunks.json"
-                        embeddings_file = item / f"{doc_name}_chunk_embeddings.json"
-                        
-                        status = DocumentStatus.READY if chunks_file.exists() and embeddings_file.exists() else DocumentStatus.PROCESSING
-                        
-                        documents.append(DocumentInfo(
-                            name=doc_name,
-                            status=status,
-                            path=str(item)
-                        ))
-                except Exception as e:
-                    error_msg = f"Error processing document folder {item}: {str(e)}"
-                    logger.warning(error_msg)
-                    print(f"⚠️  {error_msg}")
-                    # Continue with other documents
-                    continue
-            
-            logger.info(f"Found {len(documents)} documents")
-            return DocumentsResponse(documents=documents)
-            
-        except Exception as e:
-            error_msg = f"Error listing documents: {str(e)}"
-            logger.error(error_msg)
-            print(f"❌ {error_msg}")
-            print(f"Stack trace: {traceback.format_exc()}")
-            raise HTTPException(status_code=500, detail=error_msg)
-    
+            doc_folder.mkdir(parents=True, exist_ok=True)
+        except Exception as exc:
+            raise DocumentProcessingError(
+                f"Failed to create document folder: {exc}"
+            ) from exc
 
-# Singleton instance
-_document_service: DocumentService = DocumentService(pre_analyze_service=_pre_analyze_document_service)
+        pdf_path = doc_folder / f"{doc_name}.pdf"
+        try:
+            content = await file.read()
+            pdf_path.write_bytes(content)
+            logger.info("Saved PDF: %s", pdf_path)
+        except Exception as exc:
+            raise DocumentProcessingError(f"Failed to save PDF: {exc}") from exc
 
+        def _run_analysis() -> None:
+            try:
+                logger.info("Background analysis started: %s", doc_name)
+                self._analysis_service.pre_analyze_document(str(pdf_path), doc_name)
+                logger.info("Background analysis done: %s", doc_name)
+            except Exception as exc:
+                logger.error(
+                    "Background analysis failed for %s: %s\n%s",
+                    doc_name,
+                    exc,
+                    traceback.format_exc(),
+                )
+
+        thread = threading.Thread(target=_run_analysis, daemon=True)
+        thread.start()
+        logger.info("Analysis thread started for: %s", doc_name)
+
+        return DocumentUploadResult(
+            document_name=doc_name,
+            status=DocumentStatus.ANALYZING,
+        )
+
+    async def list_documents(self) -> DocumentListResult:
+        """Return metadata for all documents stored in the data directory."""
+        if not DATA_DIR.exists():
+            return DocumentListResult()
+
+        documents: list[DocumentRecord] = []
+        for item in DATA_DIR.iterdir():
+            if not item.is_dir():
+                continue
+            doc_name = item.name
+            chunks_file = item / f"{doc_name}_chunks.json"
+            embeddings_file = item / f"{doc_name}_chunk_embeddings.json"
+            status = (
+                DocumentStatus.READY
+                if chunks_file.exists() and embeddings_file.exists()
+                else DocumentStatus.PROCESSING
+            )
+            documents.append(DocumentRecord(name=doc_name, status=status, path=str(item)))
+
+        logger.info("Found %d documents", len(documents))
+        return DocumentListResult(documents=documents)
+
+
+# ---------------------------------------------------------------------------
+# Singleton & dependency factory
+# ---------------------------------------------------------------------------
+
+_document_service: DocumentService = DocumentService(
+    analysis_service=_document_analysis_service
+)
+
+
+def get_document_service() -> DocumentService:
+    """FastAPI dependency that provides the shared ``DocumentService`` instance."""
+    return _document_service
 
 def get_document_service() -> DocumentService:
     """

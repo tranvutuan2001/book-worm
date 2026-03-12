@@ -1,22 +1,28 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.infra.logging_config import setup_logging
-from app.controller.ai_chat_controller import router as ai_router
-from app.controller.document_controller import router as document_router
-from app.controller.model_controller import router as model_router
+from app.api.routes.chat import router as chat_router
+from app.api.routes.document import router as document_router
+from app.api.routes.model import router as model_router
 
 setup_logging()
 
 app = FastAPI(
-    title="Book Worm Document Analysis API",
-    description="API for uploading PDF documents, analyzing them, and querying their content using AI",
-    version="1.0.0",
+    title="Book Worm — Document Analysis API",
+    description=(
+        "Upload PDF documents, trigger AI-powered analysis, and ask questions "
+        "about their content using locally-running LLM models."
+    ),
+    version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
-# Enable CORS for the API. Change `allow_origins` to a more restrictive list in
-# production if needed.
+# ---------------------------------------------------------------------------
+# CORS
+# Note: tighten ``allow_origins`` in production.
+# ---------------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,10 +31,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(ai_router, tags=["AI"])
-app.include_router(document_router, tags=["Documents"])
+app.include_router(chat_router)
+app.include_router(document_router)
 app.include_router(model_router)
 
 if __name__ == "__main__":
-    import uvicorn   
+    import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+

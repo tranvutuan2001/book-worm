@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import List
 
-from app.controller.dto import (
+from app.api.schemas.model import (
     DownloadableModelInfo,
     LoadedModelInfo,
     ModelDownloadResponse,
