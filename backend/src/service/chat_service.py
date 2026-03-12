@@ -13,19 +13,19 @@ import time
 import traceback
 from typing import List
 
-from app.core.exceptions import DocumentNotFoundError, LLMError
-from app.core.config import DATA_DIR
-from app.domain.entity.conversation import Conversation
-from app.domain.entity.message import Message
-from app.domain.enums import Role
-from app.infra.llm_connector.llm_client import LLMService, _llm_service
-from app.infra.logging_config import (
+from src.core.exceptions import DocumentNotFoundError, LLMError
+from src.core.config import DATA_DIR
+from src.domain.entity.conversation import Conversation
+from src.domain.entity.message import Message
+from src.domain.enums import Role
+from src.infra.llm_connector.llm_client import LLMService, _llm_service
+from src.infra.logging_config import (
     end_request_logging,
     get_request_logger,
     start_request_logging,
 )
-from app.infra.session_manager import session_manager
-from app.service.tools.document_retrieval_tool import (
+from src.infra.session_manager import session_manager
+from src.service.tools.document_retrieval_tool import (
     get_document_summary,
     get_the_most_relevant_chunks,
 )

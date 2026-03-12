@@ -4,11 +4,11 @@ from typing import List
 from langchain.agents import create_agent
 from langchain.tools import BaseTool
 
-from app.domain.entity.message import Message
-from app.infra.llm_connector.llm_logging_handler import LLMLoggingHandler
-from app.infra.llm_connector.mlx_chat import MLXChatModel
-from app.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
-from app.infra.llm_connector.parsing_service import ParsingService, _parsing_service
+from src.domain.entity.message import Message
+from src.infra.llm_connector.llm_logging_handler import LLMLoggingHandler
+from src.infra.llm_connector.mlx_chat import MLXChatModel
+from src.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
+from src.infra.llm_connector.parsing_service import ParsingService, _parsing_service
 
 logger = logging.getLogger('app.llm_connector')
 

@@ -15,7 +15,7 @@ from typing import List, Optional
 import pdfplumber
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from app.core.config import (
+from src.core.config import (
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     CHUNKS_PER_SECTION,
@@ -31,13 +31,13 @@ from app.core.config import (
     SUFFIX_SECTION_EMBEDDINGS,
     SUFFIX_SECTION_SUMMARIES,
 )
-from app.core.exceptions import DocumentProcessingError
-from app.core.utils import write_json_file
-from app.domain.entity.message import Message
-from app.domain.enums import Role
-from app.infra.llm_connector.llm_client import LLMService, _llm_service
-from app.infra.llm_connector.mlx_chat import MLXChatModel
-from app.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
+from src.core.exceptions import DocumentProcessingError
+from src.core.utils import write_json_file
+from src.domain.entity.message import Message
+from src.domain.enums import Role
+from src.infra.llm_connector.llm_client import LLMService, _llm_service
+from src.infra.llm_connector.mlx_chat import MLXChatModel
+from src.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
 
 logger = logging.getLogger("app.service")
 

@@ -3,10 +3,10 @@ from typing import Type
 from pydantic import BaseModel, Field
 from langchain.tools import BaseTool
 
-from app.infra.llm_connector.llm_client import LLMService
-from app.infra.llm_connector.parsing_service import ParsingService
-from app.domain.entity.message import Message
-from app.constant import Role
+from src.infra.llm_connector.llm_client import LLMService
+from src.infra.llm_connector.parsing_service import ParsingService
+from src.domain.entity.message import Message
+from src.constant import Role
 
 _llm_client = LLMService(ParsingService())
 

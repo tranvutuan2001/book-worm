@@ -16,9 +16,9 @@ import faiss
 import numpy as np
 from langchain.tools import tool
 
-from app.core.config import DATA_DIR, TOP_K_CHUNKS
-from app.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
-from app.infra.session_manager import session_manager
+from src.core.config import DATA_DIR, TOP_K_CHUNKS
+from src.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
+from src.infra.session_manager import session_manager
 
 logger = logging.getLogger("app.service.tools")
 

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from app.domain.entity.message import Message
+from src.domain.entity.message import Message
 from typing import List, Optional
 
 

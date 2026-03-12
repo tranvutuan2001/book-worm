@@ -6,8 +6,8 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.deps import get_model_service
-from app.api.schemas.model import (
+from src.api.deps import get_model_service
+from src.api.schemas.model import (
     DownloadableModelInfo,
     LoadedModelInfo,
     ModelDownloadRequest,
@@ -18,7 +18,7 @@ from app.api.schemas.model import (
     ModelUnloadRequest,
     ModelUnloadResponse,
 )
-from app.service.model_service import ModelService
+from src.service.model_service import ModelService
 
 logger = logging.getLogger("app.api")
 

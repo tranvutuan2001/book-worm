@@ -15,9 +15,9 @@ from pathlib import Path
 
 from fastapi import UploadFile
 
-from app.core.config import DATA_DIR
-from app.core.exceptions import DocumentProcessingError, InvalidDocumentError
-from app.service.document_analysis_service import (
+from src.core.config import DATA_DIR
+from src.core.exceptions import DocumentProcessingError, InvalidDocumentError
+from src.service.document_analysis_service import (
     DocumentAnalysisService,
     _document_analysis_service,
 )

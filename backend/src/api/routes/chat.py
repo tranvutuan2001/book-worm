@@ -5,11 +5,11 @@ import traceback
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.deps import get_chat_service
-from app.api.schemas.chat import AskResponse
-from app.core.exceptions import DocumentNotFoundError, LLMError
-from app.domain.entity.conversation import Conversation
-from app.service.chat_service import ChatService
+from src.api.deps import get_chat_service
+from src.api.schemas.chat import AskResponse
+from src.core.exceptions import DocumentNotFoundError, LLMError
+from src.domain.entity.conversation import Conversation
+from src.service.chat_service import ChatService
 
 logger = logging.getLogger("app.api")
 

@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import List
 
-from app.api.schemas.model import (
+from src.api.schemas.model import (
     DownloadableModelInfo,
     LoadedModelInfo,
     ModelDownloadResponse,
@@ -12,9 +12,9 @@ from app.api.schemas.model import (
     ModelLoadResponse,
     ModelUnloadResponse,
 )
-from app.infra.llm_connector.mlx_base import MLXModelBase
-from app.infra.llm_connector.mlx_chat import MLXChatModel
-from app.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
+from src.infra.llm_connector.mlx_base import MLXModelBase
+from src.infra.llm_connector.mlx_chat import MLXChatModel
+from src.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
 
 logger = logging.getLogger("app.model_service")
 _downloading: set[str] = set()

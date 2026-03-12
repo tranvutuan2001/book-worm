@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.infra.logging_config import setup_logging
-from app.api.routes.chat import router as chat_router
-from app.api.routes.document import router as document_router
-from app.api.routes.model import router as model_router
+from src.infra.logging_config import setup_logging
+from src.api.routes.chat import router as chat_router
+from src.api.routes.document import router as document_router
+from src.api.routes.model import router as model_router
 
 setup_logging()
 

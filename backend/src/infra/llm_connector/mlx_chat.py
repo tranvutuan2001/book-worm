@@ -22,8 +22,8 @@ from pydantic import Field
 
 from mlx_lm import load as mlx_load
 
-from app.infra.llm_connector.mlx_base import MLXModelBase
-from app.infra.llm_connector.parsing_service import ParsingService
+from src.infra.llm_connector.mlx_base import MLXModelBase
+from src.infra.llm_connector.parsing_service import ParsingService
 
 logger = logging.getLogger("app.llm_connector")
 

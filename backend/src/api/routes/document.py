@@ -5,15 +5,15 @@ import traceback
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
-from app.api.deps import get_document_service
-from app.api.schemas.document import (
+from src.api.deps import get_document_service
+from src.api.schemas.document import (
     DocumentInfo,
     DocumentStatus,
     DocumentsResponse,
     UploadResponse,
 )
-from app.core.exceptions import DocumentProcessingError, InvalidDocumentError
-from app.service.document_service import DocumentService
+from src.core.exceptions import DocumentProcessingError, InvalidDocumentError
+from src.service.document_service import DocumentService
 
 logger = logging.getLogger("app.api")
 
