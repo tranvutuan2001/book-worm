@@ -1,8 +1,8 @@
 from app.controller.dto import UploadResponse, DocumentsResponse, DocumentInfo, DocumentStatus
-from fastapi import Depends, UploadFile, File, HTTPException
+from fastapi import UploadFile, File, HTTPException
 from app.service.pre_analyze_document_service import (
     PreAnalyzeDocumentService,
-    get_pre_analyze_document_service,
+    _pre_analyze_document_service,
 )
 from datetime import datetime
 from pathlib import Path
@@ -163,11 +163,11 @@ class DocumentService:
             raise HTTPException(status_code=500, detail=error_msg)
     
 
-def get_document_service(
-    pre_analyze_service: PreAnalyzeDocumentService = Depends(
-        get_pre_analyze_document_service
-    ),
-) -> DocumentService:
+# Singleton instance
+_document_service: DocumentService = DocumentService(pre_analyze_service=_pre_analyze_document_service)
+
+
+def get_document_service() -> DocumentService:
     """
     FastAPI dependency factory for ``DocumentService``.
 
@@ -181,4 +181,4 @@ def get_document_service(
         ):
             ...
     """
-    return DocumentService(pre_analyze_service=pre_analyze_service)
+    return _document_service

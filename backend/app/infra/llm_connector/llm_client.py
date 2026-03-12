@@ -1,7 +1,6 @@
 import logging
 from typing import List
 
-from fastapi import Depends
 from langchain.agents import create_agent
 from langchain.tools import BaseTool
 
@@ -9,7 +8,7 @@ from app.domain.entity.message import Message
 from app.infra.llm_connector.LLMLoggingHandler import LLMLoggingHandler
 from app.infra.llm_connector.mlx_chat import MLXChatModel
 from app.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
-from app.infra.llm_connector.parsing_service import ParsingService, get_parsing_service
+from app.infra.llm_connector.parsing_service import ParsingService, _parsing_service
 
 logger = logging.getLogger('app.llm_connector')
 
@@ -73,9 +72,11 @@ class LLMService:
         return MLXEmbeddingModel(model_path).embed(text)
 
 
-def get_llm_service(
-    parsing_service: ParsingService = Depends(get_parsing_service),
-) -> LLMService:
+# Singleton instance
+_llm_service: LLMService = LLMService(parsing_service=_parsing_service)
+
+
+def get_llm_service() -> LLMService:
     """
     FastAPI dependency factory for ``LLMService``.
 
@@ -87,4 +88,4 @@ def get_llm_service(
         async def my_route(llm_service: LLMService = Depends(get_llm_service)):
             ...
     """
-    return LLMService(parsing_service=parsing_service)
+    return _llm_service

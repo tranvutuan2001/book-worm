@@ -1,11 +1,11 @@
 from time import time
 from typing import List
-from fastapi import Depends, HTTPException
+from fastapi import HTTPException
 from app.constant import Role
 from app.domain.entity.conversation import Conversation
 from app.controller.dto import AskResponse
 from app.domain.entity.message import Message
-from app.infra.llm_connector.llm_client import LLMService, get_llm_service
+from app.infra.llm_connector.llm_client import LLMService, _llm_service
 from app.service.llm_tool.document_analyzing_tool import get_the_most_relevant_chunks, get_document_summary
 from app.infra.session_manager import session_manager
 from app.infra.logging_config import start_request_logging, end_request_logging, get_request_logger
@@ -175,9 +175,11 @@ class AIChatService:
             raise
 
 
-def get_ai_chat_service(
-    llm_service: LLMService = Depends(get_llm_service),
-) -> AIChatService:
+# Singleton instance
+_ai_chat_service: AIChatService = AIChatService(llm_service=_llm_service)
+
+
+def get_ai_chat_service() -> AIChatService:
     """
     FastAPI dependency factory for ``AIChatService``.
 
@@ -189,4 +191,4 @@ def get_ai_chat_service(
         async def my_route(service: AIChatService = Depends(get_ai_chat_service)):
             ...
     """
-    return AIChatService(llm_service=llm_service)
+    return _ai_chat_service

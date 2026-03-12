@@ -3,8 +3,7 @@ import time
 import logging
 import traceback
 from typing import List, Optional
-from fastapi import Depends
-from app.infra.llm_connector.llm_client import LLMService, get_llm_service
+from app.infra.llm_connector.llm_client import LLMService, _llm_service
 from app.infra.llm_connector.mlx_chat import MLXChatModel
 from app.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
 from app.util import write_json_file
@@ -341,9 +340,11 @@ class PreAnalyzeDocumentService:
             raise
 
 
-def get_pre_analyze_document_service(
-    llm_service: LLMService = Depends(get_llm_service),
-) -> PreAnalyzeDocumentService:
+# Singleton instance
+_pre_analyze_document_service: PreAnalyzeDocumentService = PreAnalyzeDocumentService(llm_service=_llm_service)
+
+
+def get_pre_analyze_document_service() -> PreAnalyzeDocumentService:
     """
     FastAPI dependency factory for ``PreAnalyzeDocumentService``.
 
@@ -360,4 +361,4 @@ def get_pre_analyze_document_service(
         ):
             ...
     """
-    return PreAnalyzeDocumentService(llm_service=llm_service)
+    return _pre_analyze_document_service
