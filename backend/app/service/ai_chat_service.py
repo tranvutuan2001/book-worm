@@ -6,7 +6,7 @@ from app.domain.entity.conversation import Conversation
 from app.controller.dto import AskResponse
 from app.domain.entity.message import Message
 from app.infra.llm_connector.llm_client import LLMService, get_llm_service
-from app.infra.llm_tool.document_analyzing_tool import get_the_most_relevant_chunks, get_document_summary
+from app.service.llm_tool.document_analyzing_tool import get_the_most_relevant_chunks, get_document_summary
 from app.infra.session_manager import session_manager
 from app.infra.logging_config import start_request_logging, end_request_logging, get_request_logger
 from pathlib import Path
