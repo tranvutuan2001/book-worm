@@ -56,10 +56,8 @@ export function createBlankDocument(title = 'Untitled Document'): PdfDocument {
 /** Creates a minimal valid blank page. */
 const createBlankPage = (): PdfPage => {
   return {
-    id: crypto.randomUUID(),
-    sections: [
+    components: [
       {
-        id: crypto.randomUUID(),
         layout: 'block',
         children: [
           {

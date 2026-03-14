@@ -7,7 +7,7 @@
  *   • Content nodes  (heading, paragraph, image, table, list, …)
  *     → what is on the page  (like HTML elements)
  *
- *   • Layout containers  (sections with block / flex / grid / absolute layout)
+ *   • Layout containers  (page components with block / flex / grid / absolute layout)
  *     → how content is positioned and arranged  (like CSS)
  *
  *   • Document-level settings  (page size, margins, default typography)
@@ -144,8 +144,6 @@ export const PdfHeadingLevelSchema = z.union([
 ]);
 
 const baseElementFields = {
-  /** Optional stable identifier for cross-referencing. */
-  id:       z.string().optional(),
   /** Spacing *outside* the element (mm). */
   margin:   PdfSpacingSchema.optional(),
   /** Spacing *inside* the element (mm). */
@@ -392,23 +390,22 @@ export const PdfAbsolutePositionSchema = z.object({
   y:      PdfMmSchema,
   width:  PdfMmSchema,
   height: PdfMmSchema,
-  /** Z-order for stacking overlapping sections. */
+  /** Z-order for stacking overlapping page components. */
   zIndex: z.number().int().default(0),
 });
 
 /**
- * A Section is the layout primitive — the equivalent of a `<div>` in HTML.
- * Sections can be nested to build complex responsive grids or side-by-side
+ * A PageComponent is the layout primitive — the equivalent of a `<div>` in HTML.
+ * PageComponents can be nested to build complex responsive grids or side-by-side
  * columns.
  */
-export type PdfSection = {
-  id?:          string;
+export type PdfPageComponent = {
   layout:       z.infer<typeof PdfLayoutTypeSchema>;
   flex?:        z.infer<typeof PdfFlexOptionsSchema>;
   grid?:        z.infer<typeof PdfGridOptionsSchema>;
   multiColumn?: z.infer<typeof PdfColumnsOptionsSchema>;
   absolute?:    z.infer<typeof PdfAbsolutePositionSchema>;
-  /** Flex item: how much this section grows (only relevant when parent is flex). */
+  /** Flex item: how much this page component grows (only relevant when parent is flex). */
   flexGrow?:    number;
   /** Fixed width in mm; omit to fill the available container width. */
   width?:       number;
@@ -420,16 +417,15 @@ export type PdfSection = {
   border?:      z.infer<typeof PdfBorderSidesSchema>;
   /** Border radius in mm. */
   borderRadius?: number;
-  /** Keep this section on the same page as the next section (no page break between them). */
+  /** Keep this page component on the same page as the next page component (no page break between them). */
   keepWithNext?: boolean;
-  /** Children can be either content elements or nested sections. */
-  children:     Array<PdfContentElement | PdfSection>;
+  /** Children can be either content elements or nested page components. */
+  children:     Array<PdfContentElement | PdfPageComponent>;
 };
 
-// Zod schema for PdfSection (recursive — uses z.lazy for self-reference)
-export const PdfSectionSchema: z.ZodType<PdfSection> = z.lazy(() =>
+// Zod schema for PdfPageComponent (recursive — uses z.lazy for self-reference)
+export const PdfPageComponentSchema: z.ZodType<PdfPageComponent> = z.lazy(() =>
   z.object({
-    id:           z.string().optional(),
     layout:       PdfLayoutTypeSchema,
     flex:         PdfFlexOptionsSchema.optional(),
     grid:         PdfGridOptionsSchema.optional(),
@@ -444,7 +440,7 @@ export const PdfSectionSchema: z.ZodType<PdfSection> = z.lazy(() =>
     border:       PdfBorderSidesSchema.optional(),
     borderRadius: PdfMmSchema.optional(),
     keepWithNext: z.boolean().optional(),
-    children:     z.array(z.union([PdfContentElementSchema, PdfSectionSchema])),
+    children:     z.array(z.union([PdfContentElementSchema, PdfPageComponentSchema])),
   }),
 );
 
@@ -485,8 +481,6 @@ export const PdfPageSettingsSchema = z.object({
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const PdfPageSchema = z.object({
-  /** Unique identifier within the document. */
-  id:         z.string(),
   /** Per-page overrides of the document-level page settings. */
   settings:   PdfPageSettingsSchema.partial().optional(),
   /** Page-level background colour or image URL. */
@@ -494,8 +488,8 @@ export const PdfPageSchema = z.object({
     PdfColorSchema,
     z.object({ src: z.string(), opacity: z.number().min(0).max(1).optional() }),
   ]).optional(),
-  /** The root section(s) that fill this page. */
-  sections:   z.array(PdfSectionSchema),
+  /** The root page component(s) that fill this page. */
+  components:   z.array(PdfPageComponentSchema),
 });
 
 export type PdfPage = z.infer<typeof PdfPageSchema>;
@@ -533,9 +527,9 @@ export const PdfDocumentMetaSchema = z.object({
  * ├── namedStyles     — reusable named style presets (like CSS classes)
  * └── pages[]
  *     ├── settings?   — per-page overrides
- *     └── sections[]  — recursive layout tree
+ *     └── components[]  — recursive layout tree
  *         └── children[]
- *             ├── PdfSection   (nested layout container)
+ *             ├── PdfPageComponent   (nested layout container)
  *             └── PdfContentElement
  *                 ├── heading | paragraph | image | table
  *                 ├── list | code | blockquote | divider
@@ -544,8 +538,6 @@ export const PdfDocumentMetaSchema = z.object({
 export const PdfDocumentSchema = z.object({
   /** Schema version — bump when the shape changes in a breaking way. */
   schemaVersion: z.literal('1.0').default('1.0'),
-  /** Stable document UUID. */
-  id:            z.string().uuid(),
   meta:          PdfDocumentMetaSchema,
   /** Document-wide page settings (can be overridden per page). */
   pageSettings:  PdfPageSettingsSchema,
@@ -578,8 +570,8 @@ export type PdfPageSettings = z.infer<typeof PdfPageSettingsSchema>;
  *
  * Uses Zod v4's built-in `z.toJSONSchema()` — no extra dependency required.
  */
-export function getPdfDocumentJsonSchema(): Record<string, unknown> {
-  return z.toJSONSchema(PdfDocumentSchema) as Record<string, unknown>;
+export function getMinifiedJsonSchema(): Record<string, unknown> {
+  return z.toJSONSchema(z.array(PdfPageComponentSchema)) as Record<string, unknown>;
 }
 
 

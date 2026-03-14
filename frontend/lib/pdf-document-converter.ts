@@ -14,7 +14,7 @@
 import type {
   PdfDocument,
   PdfPage,
-  PdfSection,
+  PdfPageComponent,
   PdfContentElement,
   PdfTextRun,
 } from './pdf-document-schema';
@@ -139,11 +139,11 @@ function renderElement(el: PdfContentElement): string {
   }
 }
 
-function renderSection(section: PdfSection): string {
-  return section.children
+function renderPageComponent(component: PdfPageComponent): string {
+  return component.children
     .map((child) =>
       'layout' in child
-        ? renderSection(child as PdfSection)
+        ? renderPageComponent(child as PdfPageComponent)
         : renderElement(child as PdfContentElement),
     )
     .join('');
@@ -152,7 +152,7 @@ function renderSection(section: PdfSection): string {
 /** Renders a PdfDocument into an HTML string for the contentEditable editor. */
 export function pdfDocumentToHtml(doc: PdfDocument): string {
   return doc.pages
-    .map((page: PdfPage) => page.sections.map(renderSection).join(''))
+    .map((page: PdfPage) => page.components.map(renderPageComponent).join(''))
     .join('<div style="page-break-after:always"></div>');
 }
 
@@ -405,12 +405,10 @@ export function htmlToPdfDocument(html: string, options: HtmlToDocOptions = {}):
 
   // Build the first page (content replaced, layout metadata preserved)
   const firstPage: PdfPage = {
-    id: existingDoc?.pages[0]?.id ?? crypto.randomUUID(),
     settings: existingDoc?.pages[0]?.settings,
     background: existingDoc?.pages[0]?.background,
-    sections: [
+    components: [
       {
-        id: existingDoc?.pages[0]?.sections[0]?.id ?? crypto.randomUUID(),
         layout: 'block',
         children: elements,
       },
@@ -422,7 +420,6 @@ export function htmlToPdfDocument(html: string, options: HtmlToDocOptions = {}):
 
   return {
     schemaVersion: '1.0',
-    id: existingDoc?.id ?? crypto.randomUUID(),
     meta: {
       language: 'en',
       ...existingDoc?.meta,

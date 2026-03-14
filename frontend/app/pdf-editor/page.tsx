@@ -8,7 +8,7 @@ import DocumentPreview from '@/app/pdf-editor/_components/DocumentPreview';
 import { exportPdf } from '@/config/exportPdf';
 import {
   type PdfDocument,
-  getPdfDocumentJsonSchema,
+  getMinifiedJsonSchema,
 } from '@/lib/pdf-document-schema';
 import { htmlToPdfDocument, pdfDocumentToHtml } from '@/lib/pdf-document-converter';
 import { createBlankDocument, safeParsePdfDocument, serializePdfDocument } from './_utils/serializer';
@@ -178,7 +178,7 @@ export default function PdfEditorPage() {
 
   // ── JSON Schema download ──────────────────────────────────────────────────
   const handleDownloadJsonSchema = useCallback(() => {
-    const schema = getPdfDocumentJsonSchema();
+    const schema = getMinifiedJsonSchema();
     const json = JSON.stringify(schema, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
