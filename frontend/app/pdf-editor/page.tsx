@@ -11,7 +11,7 @@ import {
   getMinifiedJsonSchema,
 } from '@/lib/pdf-document-schema';
 import { htmlToPdfDocument, pdfDocumentToHtml } from '@/lib/pdf-document-converter';
-import { createBlankDocument, safeParsePdfDocument, serializePdfDocument } from './_utils/serializer';
+import { createBlankDocument, safeParsePdfDocument, safeParseMinifiedComponents, serializePdfDocument } from './_utils/serializer';
 
 const DEFAULT_FORMATS: ActiveFormats = {
   bold: false,
@@ -176,6 +176,40 @@ export default function PdfEditorPage() {
     reader.readAsText(file);
   }, []);
 
+  // ── Minified-version upload ─────────────────────────────────────────────────
+  const handleUploadMinifiedVersion = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result;
+      if (typeof text !== 'string') return;
+
+      const [doc, err] = safeParseMinifiedComponents(text);
+      if (err || !doc) {
+        alert(
+          `Invalid minified document.\n\n${err?.issues.map((i) => i.message).join('\n') ?? 'Unknown error'}`,
+        );
+        return;
+      }
+
+      const loadedFont = doc.defaultStyles?.fontFamily ?? 'Georgia, serif';
+      const loadedSize = doc.defaultStyles?.fontSize
+        ? String(doc.defaultStyles.fontSize)
+        : '12';
+
+      setTitle(doc.meta.title ?? 'Untitled Document');
+      setFontFamily(loadedFont);
+      setFontSize(loadedSize);
+      setPdfDoc(doc);
+
+      const html = pdfDocumentToHtml(doc);
+      if (editorRef.current) {
+        editorRef.current.innerHTML = html || '<p><br></p>';
+        setPreviewHtml(editorRef.current.innerHTML);
+      }
+    };
+    reader.readAsText(file);
+  }, []);
+
   // ── JSON Schema download ──────────────────────────────────────────────────
   const handleDownloadJsonSchema = useCallback(() => {
     const schema = getMinifiedJsonSchema();
@@ -220,6 +254,7 @@ export default function PdfEditorPage() {
         onTitleChange={handleTitleChange}
         onExport={handleExport}
         onUploadDefinition={handleUploadDefinition}
+        onUploadMinifiedVersion={handleUploadMinifiedVersion}
         onDownloadDefinition={handleDownloadDefinition}
         onDownloadJsonSchema={handleDownloadJsonSchema}
       />

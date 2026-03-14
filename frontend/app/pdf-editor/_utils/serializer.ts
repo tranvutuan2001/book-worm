@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { PdfDocument, PdfDocumentSchema, PdfPage } from "@/lib/schemas";
+import { PdfPageComponentSchema, PdfPageComponent } from "@/lib/pdf-document-schema";
 import z from "zod";
 
 /**
@@ -68,4 +69,49 @@ const createBlankPage = (): PdfPage => {
       },
     ],
   };
+}
+
+/**
+ * Parses an uploaded minified JSON (an array of `PdfPageComponent`) and wraps
+ * it in a full `PdfDocument` with all missing attributes filled in with their
+ * schema default values.
+ *
+ * Returns `[doc, null]` on success, or `[null, error]` on failure.
+ */
+export function safeParseMinifiedComponents(
+  input: string | unknown,
+): [PdfDocument, null] | [null, z.ZodError] {
+  try {
+    const raw = typeof input === 'string' ? JSON.parse(input) : input;
+    const componentsResult = z.array(PdfPageComponentSchema).safeParse(raw);
+    if (!componentsResult.success) return [null, componentsResult.error];
+
+    const components: PdfPageComponent[] = componentsResult.data;
+
+    // Wrap the components in a full document, letting PdfDocumentSchema.parse
+    // fill every field that has a Zod default value.
+    const docResult = PdfDocumentSchema.safeParse({
+      schemaVersion: '1.0',
+      meta: {
+        title: 'Untitled Document',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      pageSettings: {
+        size: 'A4',
+        orientation: 'portrait',
+        margins: { top: 20, right: 20, bottom: 20, left: 20 },
+      },
+      pages: [{ components }],
+    });
+
+    if (!docResult.success) return [null, docResult.error];
+    return [docResult.data, null];
+  } catch {
+    return [null, new z.ZodError([{
+      code: 'custom',
+      path: [],
+      message: 'Input is not valid JSON',
+    }])];
+  }
 }

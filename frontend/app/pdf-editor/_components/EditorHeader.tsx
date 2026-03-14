@@ -5,6 +5,7 @@ interface EditorHeaderProps {
   onTitleChange: (value: string) => void;
   onExport: () => void;
   onUploadDefinition: (file: File) => void;
+  onUploadMinifiedVersion: (file: File) => void;
   onDownloadDefinition: () => void;
   onDownloadJsonSchema: () => void;
 }
@@ -14,10 +15,12 @@ export default function EditorHeader({
   onTitleChange,
   onExport,
   onUploadDefinition,
+  onUploadMinifiedVersion,
   onDownloadDefinition,
   onDownloadJsonSchema,
 }: EditorHeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const minifiedFileInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="bg-white border-b border-purple-200 px-6 py-3 flex items-center justify-between shadow-sm shrink-0">
@@ -59,6 +62,19 @@ export default function EditorHeader({
           }}
         />
 
+        {/* Hidden file input for minified-version upload */}
+        <input
+          ref={minifiedFileInputRef}
+          type="file"
+          accept=".json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onUploadMinifiedVersion(file);
+            e.target.value = '';
+          }}
+        />
+
         {/* Upload definition */}
         <button
           onClick={() => fileInputRef.current?.click()}
@@ -96,6 +112,19 @@ export default function EditorHeader({
               d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
           </svg>
           JSON Schema
+        </button>
+
+        {/* Upload minified version */}
+        <button
+          onClick={() => minifiedFileInputRef.current?.click()}
+          title="Upload minified version (array of page components)"
+          className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          Upload Minified
         </button>
 
         {/* Divider */}
