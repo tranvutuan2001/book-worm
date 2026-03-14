@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { A4_W, A4_H } from '@/lib/pdf-editor/constants';
+import { A4_W, A4_H } from '@/config/pdf-editor-font';
 
 interface DocumentPreviewProps {
   previewHtml: string;

@@ -5,7 +5,7 @@ import EditorHeader from '@/app/pdf-editor/_components/EditorHeader';
 import EditorToolbar, { ActiveFormats } from '@/app/pdf-editor/_components/EditorToolbar';
 import DocumentEditor from '@/app/pdf-editor/_components/DocumentEditor';
 import DocumentPreview from '@/app/pdf-editor/_components/DocumentPreview';
-import { exportPdf } from '@/lib/pdf-editor/exportPdf';
+import { exportPdf } from '@/config/exportPdf';
 
 const DEFAULT_FORMATS: ActiveFormats = {
   bold: false,

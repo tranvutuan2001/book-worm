@@ -1,4 +1,4 @@
-import { A4_W, A4_H, PAGE_MARGIN_MM } from './constants';
+import { A4_W, A4_H, PAGE_MARGIN_MM } from './pdf-editor-font';
 
 export interface ExportPdfOptions {
   title: string;

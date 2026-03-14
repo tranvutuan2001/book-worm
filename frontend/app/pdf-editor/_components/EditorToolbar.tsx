@@ -1,4 +1,4 @@
-import { FONTS, FONT_SIZES } from '@/lib/pdf-editor/constants';
+import { FONTS, FONT_SIZES } from '@/config/pdf-editor-font';
 import { ToolbarButton, ToolbarDivider } from './ToolbarButton';
 
 export interface ActiveFormats {
