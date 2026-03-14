@@ -568,4 +568,18 @@ export type PdfDocument = z.infer<typeof PdfDocumentSchema>;
 export type PdfDocumentMeta = z.infer<typeof PdfDocumentMetaSchema>;
 export type PdfPageSettings = z.infer<typeof PdfPageSettingsSchema>;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// JSON Schema export
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Returns the formal JSON Schema representation of `PdfDocumentSchema`.
+ * Useful for editor tooling, external validation, or documentation.
+ *
+ * Uses Zod v4's built-in `z.toJSONSchema()` — no extra dependency required.
+ */
+export function getPdfDocumentJsonSchema(): Record<string, unknown> {
+  return z.toJSONSchema(PdfDocumentSchema) as Record<string, unknown>;
+}
+
 

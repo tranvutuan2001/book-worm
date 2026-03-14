@@ -6,6 +6,7 @@ interface EditorHeaderProps {
   onExport: () => void;
   onUploadDefinition: (file: File) => void;
   onDownloadDefinition: () => void;
+  onDownloadJsonSchema: () => void;
 }
 
 export default function EditorHeader({
@@ -14,6 +15,7 @@ export default function EditorHeader({
   onExport,
   onUploadDefinition,
   onDownloadDefinition,
+  onDownloadJsonSchema,
 }: EditorHeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -81,6 +83,19 @@ export default function EditorHeader({
               d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
           </svg>
           Save
+        </button>
+
+        {/* Download JSON Schema */}
+        <button
+          onClick={onDownloadJsonSchema}
+          title="Download the formal JSON Schema for the document definition format"
+          className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+          </svg>
+          JSON Schema
         </button>
 
         {/* Divider */}
