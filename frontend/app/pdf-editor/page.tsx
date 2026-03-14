@@ -6,6 +6,11 @@ import EditorToolbar, { ActiveFormats } from '@/app/pdf-editor/_components/Edito
 import DocumentEditor from '@/app/pdf-editor/_components/DocumentEditor';
 import DocumentPreview from '@/app/pdf-editor/_components/DocumentPreview';
 import { exportPdf } from '@/config/exportPdf';
+import {
+  type PdfDocument,
+} from '@/lib/pdf-document-schema';
+import { htmlToPdfDocument, pdfDocumentToHtml } from '@/lib/pdf-document-converter';
+import { createBlankDocument, safeParsePdfDocument, serializePdfDocument } from './_utils/serializer';
 
 const DEFAULT_FORMATS: ActiveFormats = {
   bold: false,
@@ -29,11 +34,33 @@ export default function PdfEditorPage() {
   const [fontSize, setFontSize] = useState('12');
   const [activeFormats, setActiveFormats] = useState<ActiveFormats>(DEFAULT_FORMATS);
 
-  /* ── Sync preview HTML from the editor DOM ── */
+  /** Live PdfDocument definition — kept in sync with every editor change. */
+  const [pdfDoc, setPdfDoc] = useState<PdfDocument>(() => createBlankDocument('Untitled Document'));
+
+  /* ── Sync preview HTML + schema from the editor DOM ── */
   const syncPreview = useCallback(() => {
-    if (editorRef.current) {
-      setPreviewHtml(editorRef.current.innerHTML);
-    }
+    if (!editorRef.current) return;
+    const html = editorRef.current.innerHTML;
+    setPreviewHtml(html);
+    // Update the schema definition in the background (uses current state via
+    // functional update to avoid stale closure on pdfDoc)
+    setPdfDoc((prev) =>
+      htmlToPdfDocument(html, {
+        title,
+        fontFamily,
+        fontSize,
+        existingDoc: prev,
+      }),
+    );
+  }, [title, fontFamily, fontSize]);
+
+  /* ── Keep schema in sync when title changes ── */
+  const handleTitleChange = useCallback((value: string) => {
+    setTitle(value);
+    setPdfDoc((prev) => ({
+      ...prev,
+      meta: { ...prev.meta, title: value, updatedAt: new Date().toISOString() },
+    }));
   }, []);
 
   /* ── Refresh toolbar active-state indicators on every selection change ── */
@@ -58,38 +85,50 @@ export default function PdfEditorPage() {
   }, [updateActiveFormats]);
 
   /* ── execCommand wrapper ── */
-  const exec = useCallback((command: string, value?: string) => {
-    editorRef.current?.focus();
-    document.execCommand(command, false, value);
-    syncPreview();
-    updateActiveFormats();
-  }, [syncPreview, updateActiveFormats]);
+  const exec = useCallback(
+    (command: string, value?: string) => {
+      editorRef.current?.focus();
+      document.execCommand(command, false, value);
+      syncPreview();
+      updateActiveFormats();
+    },
+    [syncPreview, updateActiveFormats],
+  );
 
   /* ── Block/paragraph style ── */
-  const handleBlockFormat = useCallback((tag: string) => {
-    exec('formatBlock', tag);
-  }, [exec]);
+  const handleBlockFormat = useCallback(
+    (tag: string) => {
+      exec('formatBlock', tag);
+    },
+    [exec],
+  );
 
   /* ── Font family ── */
-  const handleFontFamilyChange = useCallback((family: string) => {
-    setFontFamily(family);
-    exec('fontName', family);
-  }, [exec]);
+  const handleFontFamilyChange = useCallback(
+    (family: string) => {
+      setFontFamily(family);
+      exec('fontName', family);
+    },
+    [exec],
+  );
 
   /* ── Font size (execCommand only accepts 1-7; we inject a styled <span>) ── */
-  const handleFontSizeChange = useCallback((size: string) => {
-    setFontSize(size);
-    exec('fontSize', '7');
-    editorRef.current?.querySelectorAll('font[size="7"]').forEach((el) => {
-      const span = document.createElement('span');
-      span.style.fontSize = `${size}pt`;
-      span.innerHTML = el.innerHTML;
-      el.replaceWith(span);
-    });
-    syncPreview();
-  }, [exec, syncPreview]);
+  const handleFontSizeChange = useCallback(
+    (size: string) => {
+      setFontSize(size);
+      exec('fontSize', '7');
+      editorRef.current?.querySelectorAll('font[size="7"]').forEach((el) => {
+        const span = document.createElement('span');
+        span.style.fontSize = `${size}pt`;
+        span.innerHTML = el.innerHTML;
+        el.replaceWith(span);
+      });
+      syncPreview();
+    },
+    [exec, syncPreview],
+  );
 
-  /* ── Export ── */
+  /* ── Export PDF ── */
   const handleExport = useCallback(() => {
     exportPdf({
       title,
@@ -98,6 +137,59 @@ export default function PdfEditorPage() {
       fontSize,
     });
   }, [title, fontFamily, fontSize]);
+
+  // ── Definition upload ──────────────────────────────────────────────────────
+  const handleUploadDefinition = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result;
+      if (typeof text !== 'string') return;
+
+      const [doc, err] = safeParsePdfDocument(text);
+      if (err || !doc) {
+        alert(
+          `Invalid document definition.\n\n${err?.issues.map((i) => i.message).join('\n') ?? 'Unknown error'}`,
+        );
+        return;
+      }
+
+      // Restore title and default typography from the loaded document
+      const loadedTitle = doc.meta.title ?? 'Untitled Document';
+      const loadedFont = doc.defaultStyles?.fontFamily ?? 'Georgia, serif';
+      const loadedSize = doc.defaultStyles?.fontSize
+        ? String(doc.defaultStyles.fontSize)
+        : '12';
+
+      setTitle(loadedTitle);
+      setFontFamily(loadedFont);
+      setFontSize(loadedSize);
+      setPdfDoc(doc);
+
+      // Render the schema back to HTML and inject into the contentEditable editor
+      const html = pdfDocumentToHtml(doc);
+      if (editorRef.current) {
+        editorRef.current.innerHTML = html || '<p><br></p>';
+        setPreviewHtml(editorRef.current.innerHTML);
+      }
+    };
+    reader.readAsText(file);
+  }, []);
+
+  // ── Definition download ────────────────────────────────────────────────────
+  const handleDownloadDefinition = useCallback(() => {
+    const json = serializePdfDocument(pdfDoc);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = (pdfDoc.meta.title ?? 'document')
+      .replace(/[^a-z0-9_\-. ]/gi, '_')
+      .trim()
+      .replace(/\s+/g, '_');
+    a.href = url;
+    a.download = `${safeName}.bkwpdf.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [pdfDoc]);
 
   /* ── Ref callback: initialise the editor with an empty paragraph ── */
   const initEditor = useCallback((node: HTMLDivElement | null) => {
@@ -111,8 +203,10 @@ export default function PdfEditorPage() {
     <div className="flex flex-col flex-1 overflow-hidden bg-gray-50">
       <EditorHeader
         title={title}
-        onTitleChange={setTitle}
+        onTitleChange={handleTitleChange}
         onExport={handleExport}
+        onUploadDefinition={handleUploadDefinition}
+        onDownloadDefinition={handleDownloadDefinition}
       />
 
       <EditorToolbar

@@ -119,3 +119,6 @@ export type ModelDownloadRequest = z.infer<typeof ModelDownloadRequestSchema>;
 export type ModelDownloadResponse = z.infer<typeof ModelDownloadResponseSchema>;
 export type ModelLoadResponse = z.infer<typeof ModelLoadResponseSchema>;
 export type ModelUnloadResponse = z.infer<typeof ModelUnloadResponseSchema>;
+
+// ── PDF Document schema ───────────────────────────────────────────────────────
+export * from './pdf-document-schema';
