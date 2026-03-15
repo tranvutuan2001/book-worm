@@ -24,11 +24,7 @@ from src.infra.logging_config import (
     get_request_logger,
     start_request_logging,
 )
-from src.infra.session_manager import session_manager
-from src.service.tools.document_retrieval_tool import (
-    get_document_summary,
-    get_the_most_relevant_chunks,
-)
+from src.service.tools.document_retrieval_tool import make_retrieval_tools
 
 logger = logging.getLogger("app.service")
 
@@ -102,14 +98,15 @@ class ChatService:
         try:
             self._validate_document(conversation.document_name)
 
-            with session_manager.session_context(
-                conversation.document_name, conversation.embedding_model
-            ) as session_id:
-                req_logger.info("Session: %s", session_id)
-                answer = self._generate_answer(conversation)
-                verified = await self._verify_answer(
-                    conversation.message_list, answer, conversation.chat_model
-                )
+            tools = make_retrieval_tools(conversation.embedding_model)
+            answer = self._generate_answer(conversation, tools)
+            verified = await self._verify_answer(
+                conversation.message_list,
+                answer,
+                conversation.chat_model,
+                conversation.document_name,
+                tools,
+            )
 
             end_request_logging(response_summary=verified, success=True)
             return verified
@@ -134,12 +131,13 @@ class ChatService:
                 f"Document '{document_name}' not found at {doc_path}"
             )
 
-    def _generate_answer(self, conversation: Conversation) -> str:
+    def _generate_answer(self, conversation: Conversation, tools: tuple) -> str:
         try:
+            system_prompt = f"{_SYSTEM_PROMPT}\n\nDocument: {conversation.document_name}"
             return self._llm.complete_chat(
                 message_list=conversation.message_list,
-                system_prompt=_SYSTEM_PROMPT,
-                tools=[get_the_most_relevant_chunks, get_document_summary],
+                system_prompt=system_prompt,
+                tools=list(tools),
                 model_path=conversation.chat_model,
             )
         except Exception as exc:
@@ -147,7 +145,12 @@ class ChatService:
             raise LLMError(f"Failed to generate answer: {exc}") from exc
 
     async def _verify_answer(
-        self, message_list: List[Message], answer: str, chat_model: str
+        self,
+        message_list: List[Message],
+        answer: str,
+        chat_model: str,
+        document_name: str,
+        tools: tuple,
     ) -> str:
         req_logger = get_request_logger("app.api")
 
@@ -176,10 +179,11 @@ class ChatService:
 
         req_logger.info("Starting verification step…")
         try:
+            verification_system_prompt = f"{_VERIFICATION_SYSTEM_PROMPT}\n\nDocument: {document_name}"
             verified = self._llm.complete_chat(
                 message_list=verification_message,
-                system_prompt=_VERIFICATION_SYSTEM_PROMPT,
-                tools=[get_the_most_relevant_chunks, get_document_summary],
+                system_prompt=verification_system_prompt,
+                tools=list(tools),
                 model_path=chat_model,
             )
             req_logger.info("Verification complete (%d chars)", len(verified))
