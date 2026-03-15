@@ -34,7 +34,7 @@ class LLMService:
         system_prompt: str,
         tools: List[BaseTool],
         template_name: str = "qwen",
-        max_iterations: int = 5,
+        max_iterations: int = 25,
     ) -> str:
         """
         Run a full chat turn with optional tool-calling support.
@@ -50,7 +50,7 @@ class LLMService:
                             parser.
             max_iterations: Maximum number of agent reasoning/tool-call cycles
                             before the agent is forced to stop.  Maps to
-                            LangGraph's ``recursion_limit`` (default ``10``).
+                            LangGraph's ``recursion_limit`` (default ``25``).
         """
         llm = MLXChatModel(
             model_path=model_path,
