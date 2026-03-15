@@ -120,7 +120,7 @@ export const PdfHeadingSchema = z.object({
   runs:         z.array(PdfTextRunSchema).min(1),
   typography:   PdfTypographySchema.optional(),
   includeInToc: z.boolean().default(true),
-});
+}).describe('A section heading at levels 1–6. Supports inline text runs with optional typography overrides and automatic table-of-contents inclusion.');
 
 export const PdfParagraphSchema = z.object({
   ...blockBase,
@@ -128,7 +128,7 @@ export const PdfParagraphSchema = z.object({
   runs:       z.array(PdfTextRunSchema),
   typography: PdfTypographySchema.optional(),
   textIndent: PdfMmSchema.optional(),
-});
+}).describe('A block of flowing text composed of one or more inline text runs. Supports per-block typography and optional first-line indent.');
 
 export const PdfImageSchema = z.object({
   ...blockBase,
@@ -146,7 +146,7 @@ export const PdfImageSchema = z.object({
   border:       PdfBorderSchema.optional(),
   borderRadius: PdfMmSchema.optional(),
   opacity:      z.number().min(0).max(1).optional(),
-});
+}).describe('An embedded image from a URL, file path, or base-64 data URI. Width and height are in mm; omit either to auto-size. Never split across pages by default.');
 
 export const PdfTableCellSchema = z.object({
   runs:          z.array(PdfTextRunSchema),
@@ -177,7 +177,7 @@ export const PdfTableSchema = z.object({
   /** Repeat header rows on every page. */
   repeatHeader: z.boolean().default(true),
   widthPercent: z.number().min(0).max(100).optional(),
-});
+}).describe('A table of rows and cells with optional header rows, column widths (mm), borders, and a caption. Header rows repeat on every page by default. Never split across pages by default.');
 
 export type PdfListItem = {
   runs:      PdfTextRun[];
@@ -200,7 +200,7 @@ export const PdfListSchema = z.object({
   typography:     PdfTypographySchema.optional(),
   indentPerLevel: PdfMmSchema.optional(),
   listStyleType:  z.string().optional(),
-});
+}).describe('A bulleted or numbered list with unlimited nesting depth. Set ordered to true for a numbered list and start to change the initial counter value.');
 
 export const PdfCodeSchema = z.object({
   ...blockBase,
@@ -211,7 +211,7 @@ export const PdfCodeSchema = z.object({
   typography:  PdfTypographySchema.optional(),
   background:  PdfColorSchema.optional(),
   border:      PdfBorderSchema.optional(),
-});
+}).describe('A preformatted code block rendered in a monospace font. Optionally specify the language identifier for syntax highlighting and enable line numbers. Never split across pages by default.');
 
 export const PdfBlockquoteSchema = z.object({
   ...blockBase,
@@ -221,24 +221,24 @@ export const PdfBlockquoteSchema = z.object({
   typography:  PdfTypographySchema.optional(),
   accent:      PdfColorSchema.optional(),
   background:  PdfColorSchema.optional(),
-});
+}).describe('A pull-quote or cited excerpt displayed with a left accent bar. Optional attribution line rendered below the quote text. Never split across pages by default.');
 
 export const PdfDividerSchema = z.object({
   ...blockBase,
   type:         z.literal('divider'),
   border:       PdfBorderSchema.optional(),
   widthPercent: z.number().min(0).max(100).default(100),
-});
+}).describe('A horizontal rule used to visually separate sections. Width is expressed as a percentage of the available content area (default 100%).');
 
 export const PdfSpacerSchema = z.object({
   type:   z.literal('spacer'),
   /** Height in mm. */
   height: PdfMmSchema,
-});
+}).describe('An invisible vertical gap of a fixed height (mm). Use to add whitespace between blocks without relying on margins.');
 
 export const PdfPageBreakSchema = z.object({
   type: z.literal('pageBreak'),
-});
+}).describe('An explicit page break. All content following this block starts at the top of the next page.');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PdfBlock — the single union used in document.content
