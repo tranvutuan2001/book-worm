@@ -1,0 +1,2363 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "minItems": 1,
+  "type": "array",
+  "items": {
+    "oneOf": [
+      {
+        "description": "A section heading at levels 1–6. Supports inline text runs with optional typography overrides and automatic table-of-contents inclusion.",
+        "type": "object",
+        "properties": {
+          "margin": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "padding": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "breakInside": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "avoid"
+            ]
+          },
+          "breakBefore": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "breakAfter": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "const": "heading"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "number",
+                "const": 1
+              },
+              {
+                "type": "number",
+                "const": 2
+              },
+              {
+                "type": "number",
+                "const": 3
+              },
+              {
+                "type": "number",
+                "const": 4
+              },
+              {
+                "type": "number",
+                "const": 5
+              },
+              {
+                "type": "number",
+                "const": 6
+              }
+            ]
+          },
+          "runs": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "bold": {
+                  "type": "boolean"
+                },
+                "italic": {
+                  "type": "boolean"
+                },
+                "underline": {
+                  "type": "boolean"
+                },
+                "strikethrough": {
+                  "type": "boolean"
+                },
+                "color": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                },
+                "fontSize": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "fontFamily": {
+                  "type": "string"
+                },
+                "verticalAlign": {
+                  "type": "string",
+                  "enum": [
+                    "baseline",
+                    "super",
+                    "sub"
+                  ]
+                },
+                "link": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "highlight": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "typography": {
+            "type": "object",
+            "properties": {
+              "fontFamily": {
+                "type": "string"
+              },
+              "fontSize": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "fontWeight": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 900
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "normal",
+                      "bold",
+                      "lighter",
+                      "bolder"
+                    ]
+                  }
+                ]
+              },
+              "fontStyle": {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "italic",
+                  "oblique"
+                ]
+              },
+              "color": {
+                "description": "CSS-compatible color string",
+                "type": "string"
+              },
+              "textAlign": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "center",
+                  "right",
+                  "justify"
+                ]
+              },
+              "textDecoration": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "underline",
+                  "line-through",
+                  "overline"
+                ]
+              },
+              "textTransform": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "uppercase",
+                  "lowercase",
+                  "capitalize"
+                ]
+              },
+              "lineHeight": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "letterSpacing": {
+                "type": "number"
+              },
+              "wordSpacing": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false
+          },
+          "includeInToc": {
+            "default": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "type",
+          "level",
+          "runs",
+          "includeInToc"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "description": "A block of flowing text composed of one or more inline text runs. Supports per-block typography and optional first-line indent.",
+        "type": "object",
+        "properties": {
+          "margin": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "padding": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "breakInside": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "avoid"
+            ]
+          },
+          "breakBefore": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "breakAfter": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "const": "paragraph"
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "bold": {
+                  "type": "boolean"
+                },
+                "italic": {
+                  "type": "boolean"
+                },
+                "underline": {
+                  "type": "boolean"
+                },
+                "strikethrough": {
+                  "type": "boolean"
+                },
+                "color": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                },
+                "fontSize": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "fontFamily": {
+                  "type": "string"
+                },
+                "verticalAlign": {
+                  "type": "string",
+                  "enum": [
+                    "baseline",
+                    "super",
+                    "sub"
+                  ]
+                },
+                "link": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "highlight": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "typography": {
+            "type": "object",
+            "properties": {
+              "fontFamily": {
+                "type": "string"
+              },
+              "fontSize": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "fontWeight": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 900
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "normal",
+                      "bold",
+                      "lighter",
+                      "bolder"
+                    ]
+                  }
+                ]
+              },
+              "fontStyle": {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "italic",
+                  "oblique"
+                ]
+              },
+              "color": {
+                "description": "CSS-compatible color string",
+                "type": "string"
+              },
+              "textAlign": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "center",
+                  "right",
+                  "justify"
+                ]
+              },
+              "textDecoration": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "underline",
+                  "line-through",
+                  "overline"
+                ]
+              },
+              "textTransform": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "uppercase",
+                  "lowercase",
+                  "capitalize"
+                ]
+              },
+              "lineHeight": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "letterSpacing": {
+                "type": "number"
+              },
+              "wordSpacing": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false
+          },
+          "textIndent": {
+            "description": "Measurement in mm",
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "runs"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "description": "An embedded image from a URL, file path, or base-64 data URI. Width and height are in mm; omit either to auto-size. Never split across pages by default.",
+        "type": "object",
+        "properties": {
+          "margin": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "padding": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "breakInside": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "avoid"
+            ]
+          },
+          "breakBefore": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "breakAfter": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "const": "image"
+          },
+          "src": {
+            "type": "string"
+          },
+          "alt": {
+            "type": "string"
+          },
+          "width": {
+            "description": "Measurement in mm",
+            "type": "number"
+          },
+          "height": {
+            "description": "Measurement in mm",
+            "type": "number"
+          },
+          "objectFit": {
+            "type": "string",
+            "enum": [
+              "fill",
+              "contain",
+              "cover",
+              "none",
+              "scale-down"
+            ]
+          },
+          "align": {
+            "type": "string",
+            "enum": [
+              "left",
+              "center",
+              "right"
+            ]
+          },
+          "caption": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "bold": {
+                  "type": "boolean"
+                },
+                "italic": {
+                  "type": "boolean"
+                },
+                "underline": {
+                  "type": "boolean"
+                },
+                "strikethrough": {
+                  "type": "boolean"
+                },
+                "color": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                },
+                "fontSize": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "fontFamily": {
+                  "type": "string"
+                },
+                "verticalAlign": {
+                  "type": "string",
+                  "enum": [
+                    "baseline",
+                    "super",
+                    "sub"
+                  ]
+                },
+                "link": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "highlight": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "border": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "default": 0.3,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "style": {
+                "default": "solid",
+                "type": "string",
+                "enum": [
+                  "none",
+                  "solid",
+                  "dashed",
+                  "dotted",
+                  "double"
+                ]
+              },
+              "color": {
+                "default": "#cccccc",
+                "description": "CSS-compatible color string",
+                "type": "string"
+              }
+            },
+            "required": [
+              "width",
+              "style",
+              "color"
+            ],
+            "additionalProperties": false
+          },
+          "borderRadius": {
+            "description": "Measurement in mm",
+            "type": "number"
+          },
+          "opacity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "type",
+          "src"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "description": "A table of rows and cells with optional header rows, column widths (mm), borders, and a caption. Header rows repeat on every page by default. Never split across pages by default.",
+        "type": "object",
+        "properties": {
+          "margin": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "padding": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "breakInside": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "avoid"
+            ]
+          },
+          "breakBefore": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "breakAfter": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "const": "table"
+          },
+          "rows": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "cells": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "runs": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "text": {
+                              "type": "string"
+                            },
+                            "bold": {
+                              "type": "boolean"
+                            },
+                            "italic": {
+                              "type": "boolean"
+                            },
+                            "underline": {
+                              "type": "boolean"
+                            },
+                            "strikethrough": {
+                              "type": "boolean"
+                            },
+                            "color": {
+                              "description": "CSS-compatible color string",
+                              "type": "string"
+                            },
+                            "fontSize": {
+                              "type": "number",
+                              "exclusiveMinimum": 0
+                            },
+                            "fontFamily": {
+                              "type": "string"
+                            },
+                            "verticalAlign": {
+                              "type": "string",
+                              "enum": [
+                                "baseline",
+                                "super",
+                                "sub"
+                              ]
+                            },
+                            "link": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "highlight": {
+                              "description": "CSS-compatible color string",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "text"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "typography": {
+                        "type": "object",
+                        "properties": {
+                          "fontFamily": {
+                            "type": "string"
+                          },
+                          "fontSize": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "fontWeight": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 100,
+                                "maximum": 900
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "normal",
+                                  "bold",
+                                  "lighter",
+                                  "bolder"
+                                ]
+                              }
+                            ]
+                          },
+                          "fontStyle": {
+                            "type": "string",
+                            "enum": [
+                              "normal",
+                              "italic",
+                              "oblique"
+                            ]
+                          },
+                          "color": {
+                            "description": "CSS-compatible color string",
+                            "type": "string"
+                          },
+                          "textAlign": {
+                            "type": "string",
+                            "enum": [
+                              "left",
+                              "center",
+                              "right",
+                              "justify"
+                            ]
+                          },
+                          "textDecoration": {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "underline",
+                              "line-through",
+                              "overline"
+                            ]
+                          },
+                          "textTransform": {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "uppercase",
+                              "lowercase",
+                              "capitalize"
+                            ]
+                          },
+                          "lineHeight": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "letterSpacing": {
+                            "type": "number"
+                          },
+                          "wordSpacing": {
+                            "type": "number"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "padding": {
+                        "type": "object",
+                        "properties": {
+                          "top": {
+                            "default": 0,
+                            "description": "Measurement in mm",
+                            "type": "number"
+                          },
+                          "right": {
+                            "default": 0,
+                            "description": "Measurement in mm",
+                            "type": "number"
+                          },
+                          "bottom": {
+                            "default": 0,
+                            "description": "Measurement in mm",
+                            "type": "number"
+                          },
+                          "left": {
+                            "default": 0,
+                            "description": "Measurement in mm",
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "top",
+                          "right",
+                          "bottom",
+                          "left"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "background": {
+                        "description": "CSS-compatible color string",
+                        "type": "string"
+                      },
+                      "border": {
+                        "type": "object",
+                        "properties": {
+                          "top": {
+                            "type": "object",
+                            "properties": {
+                              "width": {
+                                "default": 0.3,
+                                "description": "Measurement in mm",
+                                "type": "number"
+                              },
+                              "style": {
+                                "default": "solid",
+                                "type": "string",
+                                "enum": [
+                                  "none",
+                                  "solid",
+                                  "dashed",
+                                  "dotted",
+                                  "double"
+                                ]
+                              },
+                              "color": {
+                                "default": "#cccccc",
+                                "description": "CSS-compatible color string",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "width",
+                              "style",
+                              "color"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "right": {
+                            "type": "object",
+                            "properties": {
+                              "width": {
+                                "default": 0.3,
+                                "description": "Measurement in mm",
+                                "type": "number"
+                              },
+                              "style": {
+                                "default": "solid",
+                                "type": "string",
+                                "enum": [
+                                  "none",
+                                  "solid",
+                                  "dashed",
+                                  "dotted",
+                                  "double"
+                                ]
+                              },
+                              "color": {
+                                "default": "#cccccc",
+                                "description": "CSS-compatible color string",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "width",
+                              "style",
+                              "color"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "bottom": {
+                            "type": "object",
+                            "properties": {
+                              "width": {
+                                "default": 0.3,
+                                "description": "Measurement in mm",
+                                "type": "number"
+                              },
+                              "style": {
+                                "default": "solid",
+                                "type": "string",
+                                "enum": [
+                                  "none",
+                                  "solid",
+                                  "dashed",
+                                  "dotted",
+                                  "double"
+                                ]
+                              },
+                              "color": {
+                                "default": "#cccccc",
+                                "description": "CSS-compatible color string",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "width",
+                              "style",
+                              "color"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "left": {
+                            "type": "object",
+                            "properties": {
+                              "width": {
+                                "default": 0.3,
+                                "description": "Measurement in mm",
+                                "type": "number"
+                              },
+                              "style": {
+                                "default": "solid",
+                                "type": "string",
+                                "enum": [
+                                  "none",
+                                  "solid",
+                                  "dashed",
+                                  "dotted",
+                                  "double"
+                                ]
+                              },
+                              "color": {
+                                "default": "#cccccc",
+                                "description": "CSS-compatible color string",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "width",
+                              "style",
+                              "color"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "all": {
+                            "type": "object",
+                            "properties": {
+                              "width": {
+                                "default": 0.3,
+                                "description": "Measurement in mm",
+                                "type": "number"
+                              },
+                              "style": {
+                                "default": "solid",
+                                "type": "string",
+                                "enum": [
+                                  "none",
+                                  "solid",
+                                  "dashed",
+                                  "dotted",
+                                  "double"
+                                ]
+                              },
+                              "color": {
+                                "default": "#cccccc",
+                                "description": "CSS-compatible color string",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "width",
+                              "style",
+                              "color"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "colSpan": {
+                        "default": 1,
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "rowSpan": {
+                        "default": 1,
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "verticalAlign": {
+                        "type": "string",
+                        "enum": [
+                          "top",
+                          "middle",
+                          "bottom"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "runs",
+                      "colSpan",
+                      "rowSpan"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "background": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                },
+                "height": {
+                  "description": "Measurement in mm",
+                  "type": "number"
+                },
+                "isHeader": {
+                  "default": false,
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "cells",
+                "isHeader"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "columnWidths": {
+            "type": "array",
+            "items": {
+              "description": "Measurement in mm",
+              "type": "number"
+            }
+          },
+          "cellPadding": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "border": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "default": 0.3,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "style": {
+                "default": "solid",
+                "type": "string",
+                "enum": [
+                  "none",
+                  "solid",
+                  "dashed",
+                  "dotted",
+                  "double"
+                ]
+              },
+              "color": {
+                "default": "#cccccc",
+                "description": "CSS-compatible color string",
+                "type": "string"
+              }
+            },
+            "required": [
+              "width",
+              "style",
+              "color"
+            ],
+            "additionalProperties": false
+          },
+          "caption": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "bold": {
+                  "type": "boolean"
+                },
+                "italic": {
+                  "type": "boolean"
+                },
+                "underline": {
+                  "type": "boolean"
+                },
+                "strikethrough": {
+                  "type": "boolean"
+                },
+                "color": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                },
+                "fontSize": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "fontFamily": {
+                  "type": "string"
+                },
+                "verticalAlign": {
+                  "type": "string",
+                  "enum": [
+                    "baseline",
+                    "super",
+                    "sub"
+                  ]
+                },
+                "link": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "highlight": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "repeatHeader": {
+            "default": true,
+            "type": "boolean"
+          },
+          "widthPercent": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "type",
+          "rows",
+          "repeatHeader"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "description": "A bulleted or numbered list with unlimited nesting depth. Set ordered to true for a numbered list and start to change the initial counter value.",
+        "type": "object",
+        "properties": {
+          "margin": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "padding": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "breakInside": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "avoid"
+            ]
+          },
+          "breakBefore": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "breakAfter": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "const": "list"
+          },
+          "ordered": {
+            "default": false,
+            "type": "boolean"
+          },
+          "start": {
+            "default": 1,
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "items": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/__schema0"
+            }
+          },
+          "typography": {
+            "type": "object",
+            "properties": {
+              "fontFamily": {
+                "type": "string"
+              },
+              "fontSize": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "fontWeight": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 900
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "normal",
+                      "bold",
+                      "lighter",
+                      "bolder"
+                    ]
+                  }
+                ]
+              },
+              "fontStyle": {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "italic",
+                  "oblique"
+                ]
+              },
+              "color": {
+                "description": "CSS-compatible color string",
+                "type": "string"
+              },
+              "textAlign": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "center",
+                  "right",
+                  "justify"
+                ]
+              },
+              "textDecoration": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "underline",
+                  "line-through",
+                  "overline"
+                ]
+              },
+              "textTransform": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "uppercase",
+                  "lowercase",
+                  "capitalize"
+                ]
+              },
+              "lineHeight": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "letterSpacing": {
+                "type": "number"
+              },
+              "wordSpacing": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false
+          },
+          "indentPerLevel": {
+            "description": "Measurement in mm",
+            "type": "number"
+          },
+          "listStyleType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "ordered",
+          "start",
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "description": "A preformatted code block rendered in a monospace font. Optionally specify the language identifier for syntax highlighting and enable line numbers. Never split across pages by default.",
+        "type": "object",
+        "properties": {
+          "margin": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "padding": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "breakInside": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "avoid"
+            ]
+          },
+          "breakBefore": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "breakAfter": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "const": "code"
+          },
+          "content": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "lineNumbers": {
+            "default": false,
+            "type": "boolean"
+          },
+          "typography": {
+            "type": "object",
+            "properties": {
+              "fontFamily": {
+                "type": "string"
+              },
+              "fontSize": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "fontWeight": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 900
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "normal",
+                      "bold",
+                      "lighter",
+                      "bolder"
+                    ]
+                  }
+                ]
+              },
+              "fontStyle": {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "italic",
+                  "oblique"
+                ]
+              },
+              "color": {
+                "description": "CSS-compatible color string",
+                "type": "string"
+              },
+              "textAlign": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "center",
+                  "right",
+                  "justify"
+                ]
+              },
+              "textDecoration": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "underline",
+                  "line-through",
+                  "overline"
+                ]
+              },
+              "textTransform": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "uppercase",
+                  "lowercase",
+                  "capitalize"
+                ]
+              },
+              "lineHeight": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "letterSpacing": {
+                "type": "number"
+              },
+              "wordSpacing": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false
+          },
+          "background": {
+            "description": "CSS-compatible color string",
+            "type": "string"
+          },
+          "border": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "default": 0.3,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "style": {
+                "default": "solid",
+                "type": "string",
+                "enum": [
+                  "none",
+                  "solid",
+                  "dashed",
+                  "dotted",
+                  "double"
+                ]
+              },
+              "color": {
+                "default": "#cccccc",
+                "description": "CSS-compatible color string",
+                "type": "string"
+              }
+            },
+            "required": [
+              "width",
+              "style",
+              "color"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "type",
+          "content",
+          "lineNumbers"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "description": "A pull-quote or cited excerpt displayed with a left accent bar. Optional attribution line rendered below the quote text. Never split across pages by default.",
+        "type": "object",
+        "properties": {
+          "margin": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "padding": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "breakInside": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "avoid"
+            ]
+          },
+          "breakBefore": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "breakAfter": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "const": "blockquote"
+          },
+          "runs": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "bold": {
+                  "type": "boolean"
+                },
+                "italic": {
+                  "type": "boolean"
+                },
+                "underline": {
+                  "type": "boolean"
+                },
+                "strikethrough": {
+                  "type": "boolean"
+                },
+                "color": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                },
+                "fontSize": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "fontFamily": {
+                  "type": "string"
+                },
+                "verticalAlign": {
+                  "type": "string",
+                  "enum": [
+                    "baseline",
+                    "super",
+                    "sub"
+                  ]
+                },
+                "link": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "highlight": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "attribution": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "bold": {
+                  "type": "boolean"
+                },
+                "italic": {
+                  "type": "boolean"
+                },
+                "underline": {
+                  "type": "boolean"
+                },
+                "strikethrough": {
+                  "type": "boolean"
+                },
+                "color": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                },
+                "fontSize": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "fontFamily": {
+                  "type": "string"
+                },
+                "verticalAlign": {
+                  "type": "string",
+                  "enum": [
+                    "baseline",
+                    "super",
+                    "sub"
+                  ]
+                },
+                "link": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "highlight": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "typography": {
+            "type": "object",
+            "properties": {
+              "fontFamily": {
+                "type": "string"
+              },
+              "fontSize": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "fontWeight": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 900
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "normal",
+                      "bold",
+                      "lighter",
+                      "bolder"
+                    ]
+                  }
+                ]
+              },
+              "fontStyle": {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "italic",
+                  "oblique"
+                ]
+              },
+              "color": {
+                "description": "CSS-compatible color string",
+                "type": "string"
+              },
+              "textAlign": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "center",
+                  "right",
+                  "justify"
+                ]
+              },
+              "textDecoration": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "underline",
+                  "line-through",
+                  "overline"
+                ]
+              },
+              "textTransform": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "uppercase",
+                  "lowercase",
+                  "capitalize"
+                ]
+              },
+              "lineHeight": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "letterSpacing": {
+                "type": "number"
+              },
+              "wordSpacing": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false
+          },
+          "accent": {
+            "description": "CSS-compatible color string",
+            "type": "string"
+          },
+          "background": {
+            "description": "CSS-compatible color string",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "runs"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "description": "A horizontal rule used to visually separate sections. Width is expressed as a percentage of the available content area (default 100%).",
+        "type": "object",
+        "properties": {
+          "margin": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "padding": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "right": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "bottom": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "left": {
+                "default": 0,
+                "description": "Measurement in mm",
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "additionalProperties": false
+          },
+          "breakInside": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "avoid"
+            ]
+          },
+          "breakBefore": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "breakAfter": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "always",
+              "avoid"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "const": "divider"
+          },
+          "border": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "default": 0.3,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "style": {
+                "default": "solid",
+                "type": "string",
+                "enum": [
+                  "none",
+                  "solid",
+                  "dashed",
+                  "dotted",
+                  "double"
+                ]
+              },
+              "color": {
+                "default": "#cccccc",
+                "description": "CSS-compatible color string",
+                "type": "string"
+              }
+            },
+            "required": [
+              "width",
+              "style",
+              "color"
+            ],
+            "additionalProperties": false
+          },
+          "widthPercent": {
+            "default": 100,
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "type",
+          "widthPercent"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "description": "An invisible vertical gap of a fixed height (mm). Use to add whitespace between blocks without relying on margins.",
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "spacer"
+          },
+          "height": {
+            "description": "Measurement in mm",
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "height"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "description": "An explicit page break. All content following this block starts at the top of the next page.",
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "pageBreak"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false
+      }
+    ]
+  },
+  "$defs": {
+    "__schema0": {
+      "type": "object",
+      "properties": {
+        "runs": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "bold": {
+                "type": "boolean"
+              },
+              "italic": {
+                "type": "boolean"
+              },
+              "underline": {
+                "type": "boolean"
+              },
+              "strikethrough": {
+                "type": "boolean"
+              },
+              "color": {
+                "description": "CSS-compatible color string",
+                "type": "string"
+              },
+              "fontSize": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "fontFamily": {
+                "type": "string"
+              },
+              "verticalAlign": {
+                "type": "string",
+                "enum": [
+                  "baseline",
+                  "super",
+                  "sub"
+                ]
+              },
+              "link": {
+                "type": "string",
+                "format": "uri"
+              },
+              "highlight": {
+                "description": "CSS-compatible color string",
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema0"
+          }
+        }
+      },
+      "required": [
+        "runs"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
