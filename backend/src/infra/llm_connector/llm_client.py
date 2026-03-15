@@ -34,19 +34,23 @@ class LLMService:
         system_prompt: str,
         tools: List[BaseTool],
         template_name: str = "qwen",
+        max_iterations: int = 5,
     ) -> str:
         """
         Run a full chat turn with optional tool-calling support.
 
         Args:
-            model_name:    Local path (or HF name) of the MLX chat model.
-            message_list:  Conversation history as ``Message`` objects.
-            system_prompt: System instruction to prepend to the conversation.
-            tools:         LangChain tools made available to the agent.
-            template_name: Chat-template family name used by ``model_name``
-                           (e.g. ``"qwen"``).  Forwarded to
-                           ``ParsingService`` to select the correct output
-                           parser.
+            model_name:     Local path (or HF name) of the MLX chat model.
+            message_list:   Conversation history as ``Message`` objects.
+            system_prompt:  System instruction to prepend to the conversation.
+            tools:          LangChain tools made available to the agent.
+            template_name:  Chat-template family name used by ``model_name``
+                            (e.g. ``"qwen"``).  Forwarded to
+                            ``ParsingService`` to select the correct output
+                            parser.
+            max_iterations: Maximum number of agent reasoning/tool-call cycles
+                            before the agent is forced to stop.  Maps to
+                            LangGraph's ``recursion_limit`` (default ``10``).
         """
         llm = MLXChatModel(
             model_path=model_path,
@@ -60,7 +64,10 @@ class LLMService:
 
         response = agent.invoke(
             input={"messages": messages},
-            config={"callbacks": [LLMLoggingHandler()]},
+            config={
+                "callbacks": [LLMLoggingHandler()],
+                "recursion_limit": max_iterations,
+            },
         )
         return response["messages"][-1].content
 
