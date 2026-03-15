@@ -13,9 +13,7 @@
 
 import type {
   PdfDocument,
-  PdfPage,
-  PdfPageComponent,
-  PdfContentElement,
+  PdfBlock,
   PdfTextRun,
 } from './pdf-document-schema';
 
@@ -72,7 +70,7 @@ function renderListItems(items: ListItem[], ordered: boolean): string {
   return `<${tag}>${inner}</${tag}>`;
 }
 
-function renderElement(el: PdfContentElement): string {
+function renderElement(el: PdfBlock): string {
   switch (el.type) {
     case 'heading':
       return `<h${el.level}>${renderRuns(el.runs)}</h${el.level}>`;
@@ -139,21 +137,9 @@ function renderElement(el: PdfContentElement): string {
   }
 }
 
-function renderPageComponent(component: PdfPageComponent): string {
-  return component.children
-    .map((child) =>
-      'layout' in child
-        ? renderPageComponent(child as PdfPageComponent)
-        : renderElement(child as PdfContentElement),
-    )
-    .join('');
-}
-
 /** Renders a PdfDocument into an HTML string for the contentEditable editor. */
 export function pdfDocumentToHtml(doc: PdfDocument): string {
-  return doc.pages
-    .map((page: PdfPage) => page.components.map(renderPageComponent).join(''))
-    .join('<div style="page-break-after:always"></div>');
+  return doc.content.map(renderElement).join('');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -223,7 +209,7 @@ function parseListItems(list: Element): ListItem[] {
   return items;
 }
 
-function parseBlockNode(node: Node): PdfContentElement | null {
+function parseBlockNode(node: Node): PdfBlock | null {
   if (node.nodeType !== Node.ELEMENT_NODE) {
     // Top-level text nodes → paragraph
     const text = node.textContent?.trim();
@@ -339,7 +325,7 @@ function parseBlockNode(node: Node): PdfContentElement | null {
     if (mmMatch) return { type: 'spacer', height: parseFloat(mmMatch[1]) };
 
     // Recurse: a div might contain block children (e.g. pasted content)
-    const children: PdfContentElement[] = [];
+    const children: PdfBlock[] = [];
     el.childNodes.forEach((child) => {
       const parsed = parseBlockNode(child);
       if (parsed) children.push(parsed);
@@ -384,7 +370,7 @@ export function htmlToPdfDocument(html: string, options: HtmlToDocOptions = {}):
   const parsed = parser.parseFromString(`<div id="r">${html}</div>`, 'text/html');
   const root = parsed.getElementById('r')!;
 
-  const elements: PdfContentElement[] = [];
+  const elements: PdfBlock[] = [];
   root.childNodes.forEach((node) => {
     const el = parseBlockNode(node);
     if (el) elements.push(el);
@@ -403,21 +389,6 @@ export function htmlToPdfDocument(html: string, options: HtmlToDocOptions = {}):
     ...(fontSize ? { fontSize: parseFloat(fontSize) } : {}),
   };
 
-  // Build the first page (content replaced, layout metadata preserved)
-  const firstPage: PdfPage = {
-    settings: existingDoc?.pages[0]?.settings,
-    background: existingDoc?.pages[0]?.background,
-    components: [
-      {
-        layout: 'block',
-        children: elements,
-      },
-    ],
-  };
-
-  // Extra pages beyond the first are preserved as-is
-  const extraPages = existingDoc?.pages.slice(1) ?? [];
-
   return {
     schemaVersion: '1.0',
     meta: {
@@ -434,6 +405,7 @@ export function htmlToPdfDocument(html: string, options: HtmlToDocOptions = {}):
     },
     defaultStyles: Object.keys(defaultStyles).length ? defaultStyles : undefined,
     namedStyles: existingDoc?.namedStyles,
-    pages: [firstPage, ...extraPages],
+    background: existingDoc?.background,
+    content: elements,
   };
 }

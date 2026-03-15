@@ -2,8 +2,7 @@
 // Serialisation helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { PdfDocument, PdfDocumentSchema, PdfPage } from "@/lib/schemas";
-import { PdfPageComponentSchema, PdfPageComponent } from "@/lib/pdf-document-schema";
+import { PdfDocument, PdfDocumentSchema, PdfBlock, PdfBlockArraySchema } from "@/lib/pdf-document-schema";
 import z from "zod";
 
 /**
@@ -43,38 +42,21 @@ export function safeParsePdfDocument(
 export function createBlankDocument(title = 'Untitled Document'): PdfDocument {
   return PdfDocumentSchema.parse({
     schemaVersion: '1.0',
-    id: crypto.randomUUID(),
     meta: { title, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
     pageSettings: {
       size: 'A4',
       orientation: 'portrait',
       margins: { top: 20, right: 20, bottom: 20, left: 20 },
     },
-    pages: [createBlankPage()],
+    content: [
+      { type: 'paragraph', runs: [{ text: '' }] },
+    ],
   });
 }
 
-/** Creates a minimal valid blank page. */
-const createBlankPage = (): PdfPage => {
-  return {
-    components: [
-      {
-        layout: 'block',
-        children: [
-          {
-            type: 'paragraph',
-            runs: [{ text: '' }],
-          },
-        ],
-      },
-    ],
-  };
-}
-
 /**
- * Parses an uploaded minified JSON (an array of `PdfPageComponent`) and wraps
- * it in a full `PdfDocument` with all missing attributes filled in with their
- * schema default values.
+ * Parses an uploaded JSON (an array of `PdfBlock`) and wraps it in a full
+ * `PdfDocument` with all missing attributes filled in with their schema defaults.
  *
  * Returns `[doc, null]` on success, or `[null, error]` on failure.
  */
@@ -83,13 +65,11 @@ export function safeParseMinifiedComponents(
 ): [PdfDocument, null] | [null, z.ZodError] {
   try {
     const raw = typeof input === 'string' ? JSON.parse(input) : input;
-    const componentsResult = z.array(PdfPageComponentSchema).safeParse(raw);
-    if (!componentsResult.success) return [null, componentsResult.error];
+    const blocksResult = PdfBlockArraySchema.safeParse(raw);
+    if (!blocksResult.success) return [null, blocksResult.error];
 
-    const components: PdfPageComponent[] = componentsResult.data;
+    const blocks: PdfBlock[] = blocksResult.data;
 
-    // Wrap the components in a full document, letting PdfDocumentSchema.parse
-    // fill every field that has a Zod default value.
     const docResult = PdfDocumentSchema.safeParse({
       schemaVersion: '1.0',
       meta: {
@@ -102,7 +82,7 @@ export function safeParseMinifiedComponents(
         orientation: 'portrait',
         margins: { top: 20, right: 20, bottom: 20, left: 20 },
       },
-      pages: [{ components }],
+      content: blocks,
     });
 
     if (!docResult.success) return [null, docResult.error];

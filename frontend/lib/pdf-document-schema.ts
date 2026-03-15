@@ -1,35 +1,25 @@
 /**
  * PDF Document Schema
  *
- * Defines the full structure of a PDF document that can be saved to / loaded
- * from a local JSON file.  The design mirrors the HTML / CSS split:
+ * A document is a flat list of blocks rendered top-to-bottom.  The browser /
+ * renderer automatically splits the content into pages based on `pageSettings`.
  *
- *   • Content nodes  (heading, paragraph, image, table, list, …)
- *     → what is on the page  (like HTML elements)
+ * To prevent a block from being cut across pages set `breakInside: 'avoid'`.
+ * Images, tables, code blocks, and blockquotes carry a renderer-level default
+ * of `breakInside: 'avoid'` even when the field is omitted.
  *
- *   • Layout containers  (page components with block / flex / grid / absolute layout)
- *     → how content is positioned and arranged  (like CSS)
- *
- *   • Document-level settings  (page size, margins, default typography)
- *     → like a <head> stylesheet applied to the whole document
- *
- * All measurements are in millimetres (mm) unless otherwise noted, so they
- * map directly to physical print dimensions.
+ * All measurements are in millimetres (mm) unless otherwise noted.
  */
 
 import { z } from 'zod';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Primitive / shared primitives
+// Primitives
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Any CSS-compatible colour string: hex, rgb(), rgba(), hsl(), named colour. */
 export const PdfColorSchema = z.string().describe('CSS-compatible color string');
+export const PdfMmSchema    = z.number().describe('Measurement in mm');
 
-/** Physical measurement in mm. */
-export const PdfMmSchema = z.number().describe('Measurement in mm');
-
-/** TRBL (top / right / bottom / left) box model in mm. */
 export const PdfSpacingSchema = z.object({
   top:    PdfMmSchema.default(0),
   right:  PdfMmSchema.default(0),
@@ -37,465 +27,260 @@ export const PdfSpacingSchema = z.object({
   left:   PdfMmSchema.default(0),
 });
 
-export const PdfBorderStyleSchema = z.enum([
-  'none', 'solid', 'dashed', 'dotted', 'double',
-]);
-
 export const PdfBorderSchema = z.object({
   width: PdfMmSchema.default(0.3),
-  style: PdfBorderStyleSchema.default('solid'),
+  style: z.enum(['none', 'solid', 'dashed', 'dotted', 'double']).default('solid'),
   color: PdfColorSchema.default('#cccccc'),
 });
 
-/** Explicit per-side borders — any side can be omitted. */
 export const PdfBorderSidesSchema = z.object({
-  top:    PdfBorderSchema.optional(),
-  right:  PdfBorderSchema.optional(),
+  top:   PdfBorderSchema.optional(),
+  right: PdfBorderSchema.optional(),
   bottom: PdfBorderSchema.optional(),
-  left:   PdfBorderSchema.optional(),
-  all:    PdfBorderSchema.optional(), // shorthand; per-side overrides `all`
+  left:  PdfBorderSchema.optional(),
+  all:   PdfBorderSchema.optional(),
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Typography
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const PdfFontWeightSchema = z.union([
-  z.number().int().min(100).max(900),
-  z.enum(['normal', 'bold', 'lighter', 'bolder']),
-]);
-
-export const PdfFontStyleEnumSchema = z.enum(['normal', 'italic', 'oblique']);
-
-export const PdfTextAlignSchema = z.enum(['left', 'center', 'right', 'justify']);
-
-export const PdfTextDecorationSchema = z.enum([
-  'none', 'underline', 'line-through', 'overline',
-]);
-
-export const PdfTextTransformSchema = z.enum([
-  'none', 'uppercase', 'lowercase', 'capitalize',
-]);
-
-/**
- * All typographic properties that can be applied either globally (as a default
- * style) or locally on any content element.
- */
 export const PdfTypographySchema = z.object({
-  fontFamily:      z.string().optional(),
+  fontFamily:     z.string().optional(),
   /** Point size (pt). */
-  fontSize:        z.number().positive().optional(),
-  fontWeight:      PdfFontWeightSchema.optional(),
-  fontStyle:       PdfFontStyleEnumSchema.optional(),
-  color:           PdfColorSchema.optional(),
-  textAlign:       PdfTextAlignSchema.optional(),
-  textDecoration:  PdfTextDecorationSchema.optional(),
-  textTransform:   PdfTextTransformSchema.optional(),
+  fontSize:       z.number().positive().optional(),
+  fontWeight:     z.union([z.number().int().min(100).max(900), z.enum(['normal', 'bold', 'lighter', 'bolder'])]).optional(),
+  fontStyle:      z.enum(['normal', 'italic', 'oblique']).optional(),
+  color:          PdfColorSchema.optional(),
+  textAlign:      z.enum(['left', 'center', 'right', 'justify']).optional(),
+  textDecoration: z.enum(['none', 'underline', 'line-through', 'overline']).optional(),
+  textTransform:  z.enum(['none', 'uppercase', 'lowercase', 'capitalize']).optional(),
   /** Unitless multiplier (e.g. 1.5). */
-  lineHeight:      z.number().positive().optional(),
-  /** In pt. */
-  letterSpacing:   z.number().optional(),
-  /** In pt. */
-  wordSpacing:     z.number().optional(),
+  lineHeight:     z.number().positive().optional(),
+  letterSpacing:  z.number().optional(),
+  wordSpacing:    z.number().optional(),
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Inline text runs  (rich text without raw HTML)
+// Inline text runs
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * A single run of text that shares the same inline formatting.
- * Multiple runs compose a paragraph, heading, list item, etc.
- *
- * Inspired by the OOXML run model: each run carries its own overrides on top
- * of the parent element's typography.
- */
 export const PdfTextRunSchema = z.object({
-  /** The literal text content. Use '\n' only for forced line-breaks. */
-  text:            z.string(),
-  bold:            z.boolean().optional(),
-  italic:          z.boolean().optional(),
-  underline:       z.boolean().optional(),
-  strikethrough:   z.boolean().optional(),
-  /** Overrides the parent element's color. */
-  color:           PdfColorSchema.optional(),
-  /** Override font size (pt). */
-  fontSize:        z.number().positive().optional(),
-  /** Override font family. */
-  fontFamily:      z.string().optional(),
-  /** Superscript / subscript. */
-  verticalAlign:   z.enum(['baseline', 'super', 'sub']).optional(),
-  /** If set, the run is rendered as a hyperlink. */
-  link:            z.string().url().optional(),
-  /** Inline background highlight. */
-  highlight:       PdfColorSchema.optional(),
+  text:          z.string(),
+  bold:          z.boolean().optional(),
+  italic:        z.boolean().optional(),
+  underline:     z.boolean().optional(),
+  strikethrough: z.boolean().optional(),
+  color:         PdfColorSchema.optional(),
+  fontSize:      z.number().positive().optional(),
+  fontFamily:    z.string().optional(),
+  verticalAlign: z.enum(['baseline', 'super', 'sub']).optional(),
+  link:          z.string().url().optional(),
+  highlight:     PdfColorSchema.optional(),
 });
 
 export type PdfTextRun = z.infer<typeof PdfTextRunSchema>;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Content elements
+// Page-break control
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Heading levels 1–6 (matching HTML). */
-export const PdfHeadingLevelSchema = z.union([
-  z.literal(1), z.literal(2), z.literal(3),
-  z.literal(4), z.literal(5), z.literal(6),
-]);
+/**
+ * `breakInside: 'avoid'` — keep this block whole on a single page.
+ * The renderer applies this automatically to images, tables, code, blockquotes.
+ */
+export const PdfBreakInsideSchema = z.enum(['auto', 'avoid']);
+export const PdfBreakEdgeSchema   = z.enum(['auto', 'always', 'avoid']);
 
-const baseElementFields = {
-  /** Spacing *outside* the element (mm). */
-  margin:   PdfSpacingSchema.optional(),
-  /** Spacing *inside* the element (mm). */
-  padding:  PdfSpacingSchema.optional(),
+export type PdfBreakInside = z.infer<typeof PdfBreakInsideSchema>;
+export type PdfBreakEdge   = z.infer<typeof PdfBreakEdgeSchema>;
+
+/** Fields shared by every block. */
+const blockBase = {
+  margin:      PdfSpacingSchema.optional(),
+  padding:     PdfSpacingSchema.optional(),
+  /**
+   * Prevent this block from being cut across two pages.
+   * When omitted the renderer uses 'avoid' for images, tables, code, and
+   * blockquotes; 'auto' for all other blocks.
+   */
+  breakInside: PdfBreakInsideSchema.optional(),
+  breakBefore: PdfBreakEdgeSchema.optional(),
+  breakAfter:  PdfBreakEdgeSchema.optional(),
 };
 
-// ── Heading ──────────────────────────────────────────────────────────────────
-export const PdfHeadingElementSchema = z.object({
-  ...baseElementFields,
-  type:       z.literal('heading'),
-  level:      PdfHeadingLevelSchema,
-  runs:       z.array(PdfTextRunSchema).min(1),
-  typography: PdfTypographySchema.optional(),
-  /** Numbered outline position, e.g. "2.1.3" – filled automatically if omitted. */
-  outlineLabel: z.string().optional(),
-  /** Add to the document outline / TOC. */
+// ─────────────────────────────────────────────────────────────────────────────
+// Block types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const PdfHeadingSchema = z.object({
+  ...blockBase,
+  type:         z.literal('heading'),
+  level:        z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]),
+  runs:         z.array(PdfTextRunSchema).min(1),
+  typography:   PdfTypographySchema.optional(),
   includeInToc: z.boolean().default(true),
 });
 
-// ── Paragraph ────────────────────────────────────────────────────────────────
-export const PdfParagraphElementSchema = z.object({
-  ...baseElementFields,
+export const PdfParagraphSchema = z.object({
+  ...blockBase,
   type:       z.literal('paragraph'),
   runs:       z.array(PdfTextRunSchema),
   typography: PdfTypographySchema.optional(),
-  /** First-line indent in mm. */
   textIndent: PdfMmSchema.optional(),
-  /** Minimum lines to keep together (orphan / widow control). */
-  keepLines:  z.number().int().positive().optional(),
 });
 
-// ── Image ─────────────────────────────────────────────────────────────────────
-export const PdfObjectFitSchema = z.enum([
-  'fill', 'contain', 'cover', 'none', 'scale-down',
-]);
-
-export const PdfImageElementSchema = z.object({
-  ...baseElementFields,
-  type:       z.literal('image'),
-  /** Relative file path, absolute URL, or a base-64 data URI. */
-  src:        z.string(),
-  alt:        z.string().optional(),
-  /** Explicit width in mm; omit to derive from container. */
-  width:      PdfMmSchema.optional(),
-  /** Explicit height in mm; omit to preserve aspect ratio. */
-  height:     PdfMmSchema.optional(),
-  objectFit:  PdfObjectFitSchema.optional(),
-  /** Horizontal alignment when narrower than its container. */
-  align:      z.enum(['left', 'center', 'right']).optional(),
-  caption:    z.array(PdfTextRunSchema).optional(),
-  border:     PdfBorderSchema.optional(),
-  /** Border radius in mm. */
+export const PdfImageSchema = z.object({
+  ...blockBase,
+  type:         z.literal('image'),
+  /** File path, URL, or base-64 data URI. */
+  src:          z.string(),
+  alt:          z.string().optional(),
+  /** Width in mm; omit to fill the available width. */
+  width:        PdfMmSchema.optional(),
+  /** Height in mm; omit to preserve aspect ratio. */
+  height:       PdfMmSchema.optional(),
+  objectFit:    z.enum(['fill', 'contain', 'cover', 'none', 'scale-down']).optional(),
+  align:        z.enum(['left', 'center', 'right']).optional(),
+  caption:      z.array(PdfTextRunSchema).optional(),
+  border:       PdfBorderSchema.optional(),
   borderRadius: PdfMmSchema.optional(),
-  opacity:    z.number().min(0).max(1).optional(),
+  opacity:      z.number().min(0).max(1).optional(),
 });
 
-// ── Table ─────────────────────────────────────────────────────────────────────
 export const PdfTableCellSchema = z.object({
-  runs:       z.array(PdfTextRunSchema),
-  typography: PdfTypographySchema.optional(),
-  /** Override individual cell padding. */
-  padding:    PdfSpacingSchema.optional(),
-  background: PdfColorSchema.optional(),
-  border:     PdfBorderSidesSchema.optional(),
-  /** How many columns this cell spans. */
-  colSpan:    z.number().int().positive().default(1),
-  /** How many rows this cell spans. */
-  rowSpan:    z.number().int().positive().default(1),
-  /** Vertical alignment within the cell. */
+  runs:          z.array(PdfTextRunSchema),
+  typography:    PdfTypographySchema.optional(),
+  padding:       PdfSpacingSchema.optional(),
+  background:    PdfColorSchema.optional(),
+  border:        PdfBorderSidesSchema.optional(),
+  colSpan:       z.number().int().positive().default(1),
+  rowSpan:       z.number().int().positive().default(1),
   verticalAlign: z.enum(['top', 'middle', 'bottom']).optional(),
 });
 
 export const PdfTableRowSchema = z.object({
   cells:      z.array(PdfTableCellSchema),
-  /** Optional: shade the whole row with a background colour. */
   background: PdfColorSchema.optional(),
-  /** Fixed row height in mm; omit for auto. */
   height:     PdfMmSchema.optional(),
   isHeader:   z.boolean().default(false),
 });
 
-export const PdfTableElementSchema = z.object({
-  ...baseElementFields,
-  type:       z.literal('table'),
-  rows:       z.array(PdfTableRowSchema).min(1),
-  /** Explicit column widths (mm).  Must sum ≤ container width.  Omit for equal distribution. */
+export const PdfTableSchema = z.object({
+  ...blockBase,
+  type:         z.literal('table'),
+  rows:         z.array(PdfTableRowSchema).min(1),
   columnWidths: z.array(PdfMmSchema).optional(),
-  /** Default cell padding applied to every cell (mm). */
-  cellPadding: PdfSpacingSchema.optional(),
-  border:     PdfBorderSchema.optional(),
-  caption:    z.array(PdfTextRunSchema).optional(),
-  /** Repeat header rows on every page break. */
+  cellPadding:  PdfSpacingSchema.optional(),
+  border:       PdfBorderSchema.optional(),
+  caption:      z.array(PdfTextRunSchema).optional(),
+  /** Repeat header rows on every page. */
   repeatHeader: z.boolean().default(true),
-  /** Width of table as % of container (0–100). */
   widthPercent: z.number().min(0).max(100).optional(),
 });
 
-// ── List ──────────────────────────────────────────────────────────────────────
 export type PdfListItem = {
-  runs:     PdfTextRun[];
+  runs:      PdfTextRun[];
   children?: PdfListItem[];
 };
 
 export const PdfListItemSchema: z.ZodType<PdfListItem> = z.lazy(() =>
   z.object({
     runs:     z.array(PdfTextRunSchema).min(1),
-    /** Nested sub-list. */
     children: z.array(PdfListItemSchema).optional(),
   }),
 );
 
-export const PdfListElementSchema = z.object({
-  ...baseElementFields,
-  type:          z.literal('list'),
-  ordered:       z.boolean().default(false),
-  /** Custom start number for ordered lists. */
-  start:         z.number().int().positive().default(1),
-  items:         z.array(PdfListItemSchema).min(1),
-  typography:    PdfTypographySchema.optional(),
-  /** Indent per nesting level (mm). */
+export const PdfListSchema = z.object({
+  ...blockBase,
+  type:           z.literal('list'),
+  ordered:        z.boolean().default(false),
+  start:          z.number().int().positive().default(1),
+  items:          z.array(PdfListItemSchema).min(1),
+  typography:     PdfTypographySchema.optional(),
   indentPerLevel: PdfMmSchema.optional(),
-  /** Custom list marker: 'disc' | 'circle' | 'square' | 'decimal' | 'alpha' | … */
-  listStyleType: z.string().optional(),
+  listStyleType:  z.string().optional(),
 });
 
-// ── Code block ────────────────────────────────────────────────────────────────
-export const PdfCodeBlockElementSchema = z.object({
-  ...baseElementFields,
-  type:       z.literal('code'),
-  content:    z.string(),
-  language:   z.string().optional(),
-  /** Show line numbers. */
+export const PdfCodeSchema = z.object({
+  ...blockBase,
+  type:        z.literal('code'),
+  content:     z.string(),
+  language:    z.string().optional(),
   lineNumbers: z.boolean().default(false),
-  typography: PdfTypographySchema.optional(),
-  background: PdfColorSchema.optional(),
-  border:     PdfBorderSchema.optional(),
+  typography:  PdfTypographySchema.optional(),
+  background:  PdfColorSchema.optional(),
+  border:      PdfBorderSchema.optional(),
 });
 
-// ── Blockquote ────────────────────────────────────────────────────────────────
-export const PdfBlockquoteElementSchema = z.object({
-  ...baseElementFields,
-  type:         z.literal('blockquote'),
-  runs:         z.array(PdfTextRunSchema).min(1),
-  attribution:  z.array(PdfTextRunSchema).optional(),
-  typography:   PdfTypographySchema.optional(),
-  accent:       PdfColorSchema.optional(),
-  background:   PdfColorSchema.optional(),
+export const PdfBlockquoteSchema = z.object({
+  ...blockBase,
+  type:        z.literal('blockquote'),
+  runs:        z.array(PdfTextRunSchema).min(1),
+  attribution: z.array(PdfTextRunSchema).optional(),
+  typography:  PdfTypographySchema.optional(),
+  accent:      PdfColorSchema.optional(),
+  background:  PdfColorSchema.optional(),
 });
 
-// ── Horizontal divider ────────────────────────────────────────────────────────
-export const PdfDividerElementSchema = z.object({
-  ...baseElementFields,
-  type:    z.literal('divider'),
-  border:  PdfBorderSchema.optional(),
-  /** Width as % of the container. */
+export const PdfDividerSchema = z.object({
+  ...blockBase,
+  type:         z.literal('divider'),
+  border:       PdfBorderSchema.optional(),
   widthPercent: z.number().min(0).max(100).default(100),
 });
 
-// ── Vertical spacer ───────────────────────────────────────────────────────────
-export const PdfSpacerElementSchema = z.object({
+export const PdfSpacerSchema = z.object({
   type:   z.literal('spacer'),
   /** Height in mm. */
   height: PdfMmSchema,
 });
 
-// ── Page Break ────────────────────────────────────────────────────────────────
-export const PdfPageBreakElementSchema = z.object({
+export const PdfPageBreakSchema = z.object({
   type: z.literal('pageBreak'),
 });
 
-// ── Union of all element types ────────────────────────────────────────────────
-export const PdfContentElementSchema = z.discriminatedUnion('type', [
-  PdfHeadingElementSchema,
-  PdfParagraphElementSchema,
-  PdfImageElementSchema,
-  PdfTableElementSchema,
-  PdfListElementSchema,
-  PdfCodeBlockElementSchema,
-  PdfBlockquoteElementSchema,
-  PdfDividerElementSchema,
-  PdfSpacerElementSchema,
-  PdfPageBreakElementSchema,
-]);
-
-export type PdfContentElement = z.infer<typeof PdfContentElementSchema>;
-
 // ─────────────────────────────────────────────────────────────────────────────
-// Layout containers  (like CSS block / flex / grid wrappers)
+// PdfBlock — the single union used in document.content
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const PdfLayoutTypeSchema = z.enum([
-  'block',     // flow layout — children stack top-to-bottom
-  'flex',      // one-dimensional flex layout
-  'grid',      // two-dimensional grid layout
-  'columns',   // newspaper-style multi-column (like CSS column-count)
-  'absolute',  // absolute position within the page canvas (mm from top-left)
+export const PdfBlockSchema = z.discriminatedUnion('type', [
+  PdfHeadingSchema,
+  PdfParagraphSchema,
+  PdfImageSchema,
+  PdfTableSchema,
+  PdfListSchema,
+  PdfCodeSchema,
+  PdfBlockquoteSchema,
+  PdfDividerSchema,
+  PdfSpacerSchema,
+  PdfPageBreakSchema,
 ]);
 
-/** Options that apply only when layout === 'flex'. */
-export const PdfFlexOptionsSchema = z.object({
-  direction:      z.enum(['row', 'row-reverse', 'column', 'column-reverse']).default('row'),
-  wrap:           z.enum(['nowrap', 'wrap', 'wrap-reverse']).default('wrap'),
-  /** Gap between items (mm). */
-  gap:            PdfMmSchema.default(4),
-  justifyContent: z.enum(['flex-start', 'flex-end', 'center', 'space-between', 'space-around', 'space-evenly']).optional(),
-  alignItems:     z.enum(['flex-start', 'flex-end', 'center', 'stretch', 'baseline']).optional(),
-  alignContent:   z.enum(['flex-start', 'flex-end', 'center', 'stretch', 'space-between', 'space-around']).optional(),
-});
-
-/** Options that apply only when layout === 'grid'. */
-export const PdfGridOptionsSchema = z.object({
-  /**
-   * Number of equal-width columns.
-   * For custom widths provide `templateColumns` instead.
-   */
-  columns:          z.number().int().positive().optional(),
-  /**
-   * CSS-style column template, e.g. "1fr 2fr 1fr" or "60mm 80mm".
-   * Overrides `columns`.
-   */
-  templateColumns:  z.string().optional(),
-  templateRows:     z.string().optional(),
-  /** Gap between grid cells (mm). */
-  columnGap:        PdfMmSchema.default(4),
-  rowGap:           PdfMmSchema.default(4),
-  alignItems:       z.enum(['start', 'end', 'center', 'stretch']).optional(),
-  justifyItems:     z.enum(['start', 'end', 'center', 'stretch']).optional(),
-});
-
-/** Options that apply only when layout === 'columns'. */
-export const PdfColumnsOptionsSchema = z.object({
-  count:      z.number().int().min(2).max(12).default(2),
-  /** Gap between columns (mm). */
-  gap:        PdfMmSchema.default(5),
-  /** Vertical rule between columns. */
-  rule:       PdfBorderSchema.optional(),
-});
-
-/** Options that apply only when layout === 'absolute'. */
-export const PdfAbsolutePositionSchema = z.object({
-  /** Distance from the left edge of the page canvas (mm). */
-  x:      PdfMmSchema,
-  /** Distance from the top edge of the page canvas (mm). */
-  y:      PdfMmSchema,
-  width:  PdfMmSchema,
-  height: PdfMmSchema,
-  /** Z-order for stacking overlapping page components. */
-  zIndex: z.number().int().default(0),
-});
-
-/**
- * A PageComponent is the layout primitive — the equivalent of a `<div>` in HTML.
- * PageComponents can be nested to build complex responsive grids or side-by-side
- * columns.
- */
-export type PdfPageComponent = {
-  layout:       z.infer<typeof PdfLayoutTypeSchema>;
-  flex?:        z.infer<typeof PdfFlexOptionsSchema>;
-  grid?:        z.infer<typeof PdfGridOptionsSchema>;
-  multiColumn?: z.infer<typeof PdfColumnsOptionsSchema>;
-  absolute?:    z.infer<typeof PdfAbsolutePositionSchema>;
-  /** Flex item: how much this page component grows (only relevant when parent is flex). */
-  flexGrow?:    number;
-  /** Fixed width in mm; omit to fill the available container width. */
-  width?:       number;
-  /** Fixed height in mm; omit to be driven by content. */
-  height?:      number;
-  padding?:     z.infer<typeof PdfSpacingSchema>;
-  margin?:      z.infer<typeof PdfSpacingSchema>;
-  background?:  string;
-  border?:      z.infer<typeof PdfBorderSidesSchema>;
-  /** Border radius in mm. */
-  borderRadius?: number;
-  /** Keep this page component on the same page as the next page component (no page break between them). */
-  keepWithNext?: boolean;
-  /** Children can be either content elements or nested page components. */
-  children:     Array<PdfContentElement | PdfPageComponent>;
-};
-
-// Zod schema for PdfPageComponent (recursive — uses z.lazy for self-reference)
-export const PdfPageComponentSchema: z.ZodType<PdfPageComponent> = z.lazy(() =>
-  z.object({
-    layout:       PdfLayoutTypeSchema,
-    flex:         PdfFlexOptionsSchema.optional(),
-    grid:         PdfGridOptionsSchema.optional(),
-    multiColumn:  PdfColumnsOptionsSchema.optional(),
-    absolute:     PdfAbsolutePositionSchema.optional(),
-    flexGrow:     z.number().optional(),
-    width:        PdfMmSchema.optional(),
-    height:       PdfMmSchema.optional(),
-    padding:      PdfSpacingSchema.optional(),
-    margin:       PdfSpacingSchema.optional(),
-    background:   PdfColorSchema.optional(),
-    border:       PdfBorderSidesSchema.optional(),
-    borderRadius: PdfMmSchema.optional(),
-    keepWithNext: z.boolean().optional(),
-    children:     z.array(z.union([PdfContentElementSchema, PdfPageComponentSchema])),
-  }),
-);
+export type PdfBlock = z.infer<typeof PdfBlockSchema>;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page settings
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const PdfPageSizeSchema = z.enum([
-  'A4', 'A3', 'A5',
-  'Letter', 'Legal', 'Tabloid',
-  'custom',
-]);
-
-export const PdfOrientationSchema = z.enum(['portrait', 'landscape']);
-
 export const PdfPageSettingsSchema = z.object({
-  size:        PdfPageSizeSchema.default('A4'),
-  orientation: PdfOrientationSchema.default('portrait'),
-  /** Required when size === 'custom'. */
+  size:         z.enum(['A4', 'A3', 'A5', 'Letter', 'Legal', 'Tabloid', 'custom']).default('A4'),
+  orientation:  z.enum(['portrait', 'landscape']).default('portrait'),
   customWidth:  PdfMmSchema.optional(),
-  /** Required when size === 'custom'. */
   customHeight: PdfMmSchema.optional(),
-  margins:     PdfSpacingSchema.default({ top: 20, right: 20, bottom: 20, left: 20 }),
-  /** Add page numbers. */
+  margins:      PdfSpacingSchema.default({ top: 20, right: 20, bottom: 20, left: 20 }),
   pageNumbers: z.object({
     show:     z.boolean().default(false),
     position: z.enum(['bottom-center', 'bottom-right', 'bottom-left', 'top-center', 'top-right', 'top-left']).default('bottom-center'),
     format:   z.enum(['numeric', 'roman', 'alpha']).default('numeric'),
-    /** Starting number. */
     startAt:  z.number().int().positive().default(1),
   }).optional(),
-  header:      z.array(PdfTextRunSchema).optional(),
-  footer:      z.array(PdfTextRunSchema).optional(),
+  header: z.array(PdfTextRunSchema).optional(),
+  footer: z.array(PdfTextRunSchema).optional(),
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Page
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const PdfPageSchema = z.object({
-  /** Per-page overrides of the document-level page settings. */
-  settings:   PdfPageSettingsSchema.partial().optional(),
-  /** Page-level background colour or image URL. */
-  background: z.union([
-    PdfColorSchema,
-    z.object({ src: z.string(), opacity: z.number().min(0).max(1).optional() }),
-  ]).optional(),
-  /** The root page component(s) that fill this page. */
-  components:   z.array(PdfPageComponentSchema),
-});
-
-export type PdfPage = z.infer<typeof PdfPageSchema>;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Document metadata
+// Document
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const PdfDocumentMetaSchema = z.object({
@@ -505,58 +290,44 @@ export const PdfDocumentMetaSchema = z.object({
   description: z.string().optional(),
   keywords:    z.array(z.string()).optional(),
   language:    z.string().default('en'),
-  /** ISO-8601 date string. */
   createdAt:   z.string().datetime().optional(),
-  /** ISO-8601 date string. */
   updatedAt:   z.string().datetime().optional(),
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Top-level Document
-// ─────────────────────────────────────────────────────────────────────────────
-
 /**
- * The root schema for a `.bkwpdf.json` file.
+ * Root schema for a `.bkwpdf.json` file.
  *
- * Structure summary
- * ─────────────────
  * PdfDocument
- * ├── meta            — title, author, keywords, …
- * ├── pageSettings    — page size, orientation, margins (document defaults)
- * ├── defaultStyles   — typography applied to the whole document
- * ├── namedStyles     — reusable named style presets (like CSS classes)
- * └── pages[]
- *     ├── settings?   — per-page overrides
- *     └── components[]  — recursive layout tree
- *         └── children[]
- *             ├── PdfPageComponent   (nested layout container)
- *             └── PdfContentElement
- *                 ├── heading | paragraph | image | table
- *                 ├── list | code | blockquote | divider
- *                 └── spacer | pageBreak
+ * ├── meta           — title, author, …
+ * ├── pageSettings   — size, orientation, margins, header/footer
+ * ├── defaultStyles  — typography defaults for the whole document
+ * ├── namedStyles    — reusable typography presets
+ * ├── background?    — colour or image applied to every page
+ * └── content[]      — flat list of PdfBlock, rendered top-to-bottom
+ *
+ * The renderer paginates `content` automatically.  Use `breakInside: 'avoid'`
+ * on a block to keep it whole on a single page.  Insert `{ type: 'pageBreak' }`
+ * for an explicit page break.
  */
 export const PdfDocumentSchema = z.object({
-  /** Schema version — bump when the shape changes in a breaking way. */
   schemaVersion: z.literal('1.0').default('1.0'),
   meta:          PdfDocumentMetaSchema,
-  /** Document-wide page settings (can be overridden per page). */
   pageSettings:  PdfPageSettingsSchema,
-  /** Document-wide default typography (can be overridden per element). */
   defaultStyles: PdfTypographySchema.optional(),
-  /**
-   * Named style presets — referenced by name from element `styleRef` fields.
-   * Think of these as CSS classes.
-   *
-   * Example:
-   * ```json
-   * { "callout": { "fontSize": 11, "color": "#7c3aed", "fontWeight": "bold" } }
-   * ```
-   */
   namedStyles:   z.record(z.string(), PdfTypographySchema).optional(),
-  pages:         z.array(PdfPageSchema).min(1),
+  background: z.union([
+    PdfColorSchema,
+    z.object({ src: z.string(), opacity: z.number().min(0).max(1).optional() }),
+  ]).optional(),
+  /**
+   * Flat list of content blocks, flowed top-to-bottom and paginated
+   * automatically.  Images, tables, code, and blockquotes are never cut in the
+   * middle by default (`breakInside: 'avoid'` applied by the renderer).
+   */
+  content: z.array(PdfBlockSchema).min(1),
 });
 
-export type PdfDocument = z.infer<typeof PdfDocumentSchema>;
+export type PdfDocument     = z.infer<typeof PdfDocumentSchema>;
 export type PdfDocumentMeta = z.infer<typeof PdfDocumentMetaSchema>;
 export type PdfPageSettings = z.infer<typeof PdfPageSettingsSchema>;
 
@@ -564,14 +335,11 @@ export type PdfPageSettings = z.infer<typeof PdfPageSettingsSchema>;
 // JSON Schema export
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Returns the formal JSON Schema representation of `PdfDocumentSchema`.
- * Useful for editor tooling, external validation, or documentation.
- *
- * Uses Zod v4's built-in `z.toJSONSchema()` — no extra dependency required.
- */
+/** Zod schema for a minified document — a non-empty array of PdfBlock. */
+export const PdfBlockArraySchema = z.array(PdfBlockSchema).min(1);
+
 export function getMinifiedJsonSchema(): Record<string, unknown> {
-  return z.toJSONSchema(z.array(PdfPageComponentSchema)) as Record<string, unknown>;
+  return z.toJSONSchema(PdfBlockArraySchema) as Record<string, unknown>;
 }
 
 
