@@ -12,6 +12,10 @@ from src.service.document_service import (
     get_document_service as _get_doc,
 )
 from src.service.model_service import ModelService, get_model_service as _get_model
+from src.service.pdf_summarization_service import (
+    PDFSummarizationService,
+    get_pdf_summarization_service as _get_pdf_summarization,
+)
 
 
 def get_chat_service() -> ChatService:
@@ -24,3 +28,7 @@ def get_document_service() -> DocumentService:
 
 def get_model_service() -> ModelService:
     return _get_model()
+
+
+def get_pdf_summarization_service() -> PDFSummarizationService:
+    return _get_pdf_summarization()

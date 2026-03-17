@@ -24,6 +24,7 @@ from mlx_lm import load as mlx_load
 
 from src.infra.llm_connector.mlx_base import MLXModelBase
 from src.infra.llm_connector.parsing_service import ParsingService
+from src.infra.llm_connector.xgrammar_processor import make_json_schema_logits_processor
 
 logger = logging.getLogger("app.llm_connector")
 
@@ -62,6 +63,11 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
     temperature: float = Field(default=0.1, description="Sampling temperature")
     parsing_service: ParsingService = Field(description="Shared ParsingService used to parse raw model output")
     template_name: str = Field(default="qwen", description="Chat-template family name forwarded to ParsingService (e.g. 'qwen', 'openai')")
+    json_schema: Optional[str] = Field(
+        default=None,
+        description="JSON Schema string to enforce via xgrammar constrained decoding. "
+                    "When set, only token sequences valid under this schema are generated.",
+    )
 
     # Per-class model cache, keyed by resolved absolute path
     _model_cache: ClassVar[dict[str, _ModelPair]] = {}
@@ -177,6 +183,16 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
             print(f"❌ {error_msg}\n{traceback.format_exc()}")
             raise
 
+        # Build an optional xgrammar logits processor for constrained decoding.
+        logits_processors = None
+        if self.json_schema is not None:
+            processor = make_json_schema_logits_processor(
+                tokenizer, self.json_schema
+            )
+            if processor is not None:
+                logits_processors = [processor]
+                logger.info("[MLXChatModel] xgrammar constrained decoding enabled")
+
         # Run inference
         try:
             logger.info(
@@ -189,6 +205,7 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
                 prompt=prompt,
                 max_tokens=self.max_tokens,
                 sampler=make_sampler(temp=self.temperature),
+                logits_processors=logits_processors,
                 verbose=False,
             )
             logger.info("MLX generation complete")

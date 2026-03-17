@@ -24,7 +24,7 @@ from src.infra.logging_config import (
     get_request_logger,
     start_request_logging,
 )
-from src.service.tools.document_retrieval_tool import make_retrieval_tools
+from src.service.tools.document_retrieval_tool import get_the_most_relevant_chunks, get_document_summary
 
 logger = logging.getLogger("app.service")
 
@@ -98,7 +98,7 @@ class ChatService:
         try:
             self._validate_document(conversation.document_name)
 
-            tools = make_retrieval_tools(conversation.embedding_model)
+            tools = (get_the_most_relevant_chunks, get_document_summary)
             answer = self._generate_answer(conversation, tools)
             verified = await self._verify_answer(
                 conversation.message_list,

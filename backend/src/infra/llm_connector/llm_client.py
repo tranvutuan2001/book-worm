@@ -34,7 +34,9 @@ class LLMService:
         system_prompt: str,
         tools: List[BaseTool],
         template_name: str = "qwen",
-        max_iterations: int = 25,
+        max_iterations: int = None,
+        json_schema: str = None,
+        max_tokens: int = 4000,
     ) -> str:
         """
         Run a full chat turn with optional tool-calling support.
@@ -51,13 +53,20 @@ class LLMService:
             max_iterations: Maximum number of agent reasoning/tool-call cycles
                             before the agent is forced to stop.  Maps to
                             LangGraph's ``recursion_limit`` (default ``25``).
+            json_schema:    Optional JSON Schema string.  When provided,
+                            xgrammar constrained decoding is applied so the
+                            model can only emit tokens that form a valid
+                            sequence under the schema.
+            max_tokens:     Maximum number of tokens to generate.  Default
+                            is 2048; increase for large structured outputs.
         """
         llm = MLXChatModel(
             model_path=model_path,
-            max_tokens=2048,
+            max_tokens=max_tokens,
             temperature=0.1,
             parsing_service=self._parsing_service,
             template_name=template_name,
+            json_schema=json_schema,
         )
         agent = create_agent(model=llm, tools=tools, system_prompt=system_prompt)
         messages = [{'role': m.role.value, 'content': m.content} for m in message_list]

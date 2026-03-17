@@ -1,19 +1,21 @@
-"""Document management routes (upload & listing)."""
+"""Document management routes (upload, listing, and PDF summarization)."""
 
 import logging
 import traceback
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
-from src.api.deps import get_document_service
+from src.api.deps import get_document_service, get_pdf_summarization_service
 from src.api.schemas.document import (
     DocumentInfo,
     DocumentStatus,
     DocumentsResponse,
     UploadResponse,
 )
-from src.core.exceptions import DocumentProcessingError, InvalidDocumentError
+from src.api.schemas.pdf_summarization import SummarizeResponse
+from src.core.exceptions import DocumentNotFoundError, DocumentProcessingError, InvalidDocumentError
 from src.service.document_service import DocumentService
+from src.service.pdf_summarization_service import PDFSummarizationService
 
 logger = logging.getLogger("app.api")
 
@@ -50,6 +52,44 @@ async def upload_document(
         raise
     except Exception as exc:
         logger.error("Unhandled error in /upload: %s\n%s", exc, traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post(
+    "/documents/{document_name}/summarize",
+    response_model=SummarizeResponse,
+    summary="Summarize a document as a PDF JSON",
+    description=(
+        "Three-step pipeline: "
+        "(1) generate a rich text summary via LLM + document retrieval tools; "
+        "(2) convert the text into a structured JSON array conforming to pdf-schema.json "
+        "using outlines constrained generation; "
+        "(3) validate the JSON against the schema.  "
+        "The result is stored under ``pdf/`` and also returned in the response body."
+    ),
+)
+async def summarize_document(
+    document_name: str,
+    service: PDFSummarizationService = Depends(get_pdf_summarization_service),
+) -> SummarizeResponse:
+    logger.info("POST /documents/%s/summarize", document_name)
+    try:
+        result = service.summarize(document_name=document_name)
+        return SummarizeResponse(
+            document_name=document_name,
+            output_file=result["output_file"],
+            content=result["content"],
+        )
+    except DocumentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except DocumentProcessingError as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(
+            "Unhandled error in /summarize: %s\n%s", exc, traceback.format_exc()
+        )
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

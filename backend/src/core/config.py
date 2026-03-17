@@ -16,10 +16,15 @@ from pathlib import Path
 PROJECT_ROOT: Path = Path(__file__).resolve().parents[2]
 
 DATA_DIR: Path = PROJECT_ROOT / "0_data"
+PDF_DIR: Path = PROJECT_ROOT / "pdf"
 MODELS_DIR: Path = PROJECT_ROOT / "models"
 CHAT_MODELS_DIR: Path = MODELS_DIR / "chat"
 EMBEDDING_MODELS_DIR: Path = MODELS_DIR / "embedding"
 LOGS_DIR: Path = PROJECT_ROOT / "logs"
+
+# Location of JSON schema / example for PDF output
+PDF_SCHEMA_PATH: Path = PROJECT_ROOT / "pdf-schema.json"
+PDF_EXAMPLE_PATH: Path = PROJECT_ROOT / "pdf-example.json"
 
 # ---------------------------------------------------------------------------
 # Default model paths (relative to PROJECT_ROOT)

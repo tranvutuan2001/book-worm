@@ -1,3 +1,10 @@
+import os
+# Multiple packages (mlx, torch inside xgrammar) each bundle their own copy of
+# libomp.dylib on macOS, causing OpenMP to complain at startup.
+# KMP_DUPLICATE_LIB_OK silences the abort; it must be set before any import
+# that loads OpenMP.
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
