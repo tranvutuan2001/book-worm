@@ -39,7 +39,7 @@ from src.core.config import (
 from src.core.exceptions import DocumentNotFoundError, DocumentProcessingError
 from src.domain.entity.message import Message
 from src.domain.enums import Role
-from src.infra.llm_connector.llm_client import LLMService, _llm_service
+from src.infra.llm_connector.llm_service import LLMService, _llm_service
 from src.infra.llm_connector.xgrammar_processor import JSON_ARRAY_OF_STRINGS_SCHEMA
 from src.service.tools.document_retrieval_tool import (
     get_document_summary,

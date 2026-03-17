@@ -35,7 +35,7 @@ from src.core.exceptions import DocumentProcessingError
 from src.core.utils import write_json_file
 from src.domain.entity.message import Message
 from src.domain.enums import Role
-from src.infra.llm_connector.llm_client import LLMService, _llm_service
+from src.infra.llm_connector.llm_service import LLMService, _llm_service
 from src.infra.llm_connector.mlx_chat import MLXChatModel
 from src.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
 

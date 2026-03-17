@@ -3,7 +3,7 @@ from typing import Type
 from pydantic import BaseModel, Field
 from langchain.tools import BaseTool
 
-from src.infra.llm_connector.llm_client import LLMService
+from src.infra.llm_connector.llm_service import LLMService
 from src.infra.llm_connector.parsing_service import ParsingService
 from src.domain.entity.message import Message
 from src.constant import Role
