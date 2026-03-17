@@ -8,11 +8,11 @@ after a document is uploaded.  It has no FastAPI / HTTP dependency.
 import json
 import logging
 import time
-import traceback
 from pathlib import Path
-from typing import List, Optional
+from typing import Annotated, ClassVar, List, Optional
 
 import pdfplumber
+from fastapi import Depends
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from src.core.config import (
@@ -35,9 +35,7 @@ from src.core.exceptions import DocumentProcessingError
 from src.core.utils import write_json_file
 from src.domain.entity.message import Message
 from src.domain.enums import Role
-from src.infra.llm_connector.llm_service import LLMService, _llm_service
-from src.infra.llm_connector.mlx_chat import MLXChatModel
-from src.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
+from src.infra.llm_connector.llm_service import LLMService, get_llm_service
 
 logger = logging.getLogger("app.service")
 
@@ -72,6 +70,8 @@ section summaries.  Synthesise the sections into a cohesive overview that:
 
 class DocumentAnalysisService:
     """Orchestrates the full document pre-analysis pipeline."""
+
+    _instance: ClassVar["DocumentAnalysisService | None"] = None
 
     def __init__(self, llm_service: LLMService) -> None:
         self._llm = llm_service
@@ -196,12 +196,11 @@ class DocumentAnalysisService:
     # ------------------------------------------------------------------
 
     def _prepare_models(self) -> None:
-        """Clear caches and eagerly load the models required for analysis."""
+        """Unload all cached models and eagerly reload the ones required for analysis."""
         logger.info("Clearing model caches and loading analysis models…")
-        MLXChatModel._model_cache.clear()
-        MLXEmbeddingModel._model_cache.clear()
-        MLXChatModel._load_model(DEFAULT_CHAT_MODEL)
-        MLXEmbeddingModel._load_model(DEFAULT_EMBEDDING_MODEL)
+        self._llm.unload_all_models()
+        self._llm.load_model(DEFAULT_CHAT_MODEL, "chat")
+        self._llm.load_model(DEFAULT_EMBEDDING_MODEL, "embedding")
         logger.info("Models ready")
 
     # ------------------------------------------------------------------
@@ -349,11 +348,11 @@ class DocumentAnalysisService:
 # Singleton & dependency factory
 # ---------------------------------------------------------------------------
 
-_document_analysis_service: DocumentAnalysisService = DocumentAnalysisService(
-    llm_service=_llm_service
-)
 
-
-def get_document_analysis_service() -> DocumentAnalysisService:
-    """FastAPI dependency that provides the shared ``DocumentAnalysisService``."""
-    return _document_analysis_service
+def get_document_analysis_service(
+    llm_service: Annotated[LLMService, Depends(get_llm_service)],
+) -> "DocumentAnalysisService":
+    """FastAPI dependency that provides the :class:`DocumentAnalysisService` singleton."""
+    if DocumentAnalysisService._instance is None:
+        DocumentAnalysisService._instance = DocumentAnalysisService(llm_service=llm_service)
+    return DocumentAnalysisService._instance

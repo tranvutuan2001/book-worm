@@ -11,14 +11,16 @@ to HTTP responses by the API route layer.
 import logging
 import time
 import traceback
-from typing import List
+from typing import Annotated, ClassVar, List
+
+from fastapi import Depends
 
 from src.core.exceptions import DocumentNotFoundError, LLMError
 from src.core.config import DATA_DIR
 from src.domain.entity.conversation import Conversation
 from src.domain.entity.message import Message
 from src.domain.enums import Role
-from src.infra.llm_connector.llm_service import LLMService, _llm_service
+from src.infra.llm_connector.llm_service import LLMService, get_llm_service
 from src.infra.logging_config import (
     end_request_logging,
     get_request_logger,
@@ -60,6 +62,8 @@ Return only the fact-checked final answer with no meta-commentary.
 
 class ChatService:
     """Handles the document Q&A use case."""
+
+    _instance: ClassVar["ChatService | None"] = None
 
     def __init__(self, llm_service: LLMService) -> None:
         self._llm = llm_service
@@ -197,9 +201,11 @@ class ChatService:
 # Singleton & dependency factory
 # ---------------------------------------------------------------------------
 
-_chat_service: ChatService = ChatService(llm_service=_llm_service)
 
-
-def get_chat_service() -> ChatService:
-    """FastAPI dependency that provides the shared ``ChatService`` instance."""
-    return _chat_service
+def get_chat_service(
+    llm_service: Annotated[LLMService, Depends(get_llm_service)],
+) -> "ChatService":
+    """FastAPI dependency that provides the :class:`ChatService` singleton."""
+    if ChatService._instance is None:
+        ChatService._instance = ChatService(llm_service=llm_service)
+    return ChatService._instance

@@ -24,10 +24,12 @@ import time
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any, ClassVar
 
 import jsonschema
 import re
+
+from fastapi import Depends
 
 from src.core.config import (
     DATA_DIR,
@@ -39,7 +41,7 @@ from src.core.config import (
 from src.core.exceptions import DocumentNotFoundError, DocumentProcessingError
 from src.domain.entity.message import Message
 from src.domain.enums import Role
-from src.infra.llm_connector.llm_service import LLMService, _llm_service
+from src.infra.llm_connector.llm_service import LLMService, get_llm_service
 from src.infra.llm_connector.xgrammar_processor import JSON_ARRAY_OF_STRINGS_SCHEMA
 from src.service.tools.document_retrieval_tool import (
     get_document_summary,
@@ -106,22 +108,15 @@ TARGET EXAMPLE:
 """.strip()
 
 
-# ---------------------------------------------------------------------------
-# Service
-# ---------------------------------------------------------------------------
-
-
 class PDFSummarizationService:
     """Orchestrates the three-step PDF summarisation pipeline."""
+
+    _instance: ClassVar["PDFSummarizationService | None"] = None
 
     def __init__(self, llm_service: LLMService) -> None:
         self._llm = llm_service
         self._schema: dict[str, Any] | None = None  # loaded lazily
         self._example: list[Any] | None = None  # loaded lazily
-
-    # ------------------------------------------------------------------
-    # Public entrypoint
-    # ------------------------------------------------------------------
 
     def summarize(
         self,
@@ -523,11 +518,11 @@ class PDFSummarizationService:
 # Singleton & dependency factory
 # ---------------------------------------------------------------------------
 
-_pdf_summarization_service: PDFSummarizationService = PDFSummarizationService(
-    llm_service=_llm_service
-)
 
-
-def get_pdf_summarization_service() -> PDFSummarizationService:
-    """FastAPI dependency that provides the shared ``PDFSummarizationService``."""
-    return _pdf_summarization_service
+def get_pdf_summarization_service(
+    llm_service: Annotated[LLMService, Depends(get_llm_service)],
+) -> "PDFSummarizationService":
+    """FastAPI dependency that provides the :class:`PDFSummarizationService` singleton."""
+    if PDFSummarizationService._instance is None:
+        PDFSummarizationService._instance = PDFSummarizationService(llm_service=llm_service)
+    return PDFSummarizationService._instance

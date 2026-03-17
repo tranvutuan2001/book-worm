@@ -11,15 +11,15 @@ import traceback
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
+from typing import Annotated, ClassVar
 
-from fastapi import UploadFile
+from fastapi import Depends, UploadFile
 
 from src.core.config import DATA_DIR
 from src.core.exceptions import DocumentProcessingError, InvalidDocumentError
 from src.service.document_analysis_service import (
     DocumentAnalysisService,
-    _document_analysis_service,
+    get_document_analysis_service,
 )
 
 logger = logging.getLogger("app.service")
@@ -57,6 +57,8 @@ class DocumentListResult:
 
 
 class DocumentService:
+    _instance: ClassVar["DocumentService | None"] = None
+
     def __init__(self, analysis_service: DocumentAnalysisService) -> None:
         self._analysis_service = analysis_service
 
@@ -145,27 +147,11 @@ class DocumentService:
 # Singleton & dependency factory
 # ---------------------------------------------------------------------------
 
-_document_service: DocumentService = DocumentService(
-    analysis_service=_document_analysis_service
-)
 
-
-def get_document_service() -> DocumentService:
-    """FastAPI dependency that provides the shared ``DocumentService`` instance."""
-    return _document_service
-
-def get_document_service() -> DocumentService:
-    """
-    FastAPI dependency factory for ``DocumentService``.
-
-    Inject this into route handlers with::
-
-        from fastapi import Depends
-        from app.service.document_service import DocumentService, get_document_service
-
-        async def my_route(
-            service: DocumentService = Depends(get_document_service)
-        ):
-            ...
-    """
-    return _document_service
+def get_document_service(
+    analysis_service: Annotated[DocumentAnalysisService, Depends(get_document_analysis_service)],
+) -> "DocumentService":
+    """FastAPI dependency that provides the :class:`DocumentService` singleton."""
+    if DocumentService._instance is None:
+        DocumentService._instance = DocumentService(analysis_service=analysis_service)
+    return DocumentService._instance

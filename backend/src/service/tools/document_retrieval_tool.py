@@ -17,7 +17,7 @@ import numpy as np
 from langchain.tools import tool
 
 from src.core.config import DATA_DIR, DEFAULT_EMBEDDING_MODEL, TOP_K_CHUNKS
-from src.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
+from src.infra.llm_connector.llm_service import get_llm_service
 
 logger = logging.getLogger("app.service.tools")
 
@@ -72,7 +72,7 @@ def get_the_most_relevant_chunks(question: str, document_name: str) -> List[str]
         index.add(vectors)
 
         query_vec = np.array(
-            [MLXEmbeddingModel(DEFAULT_EMBEDDING_MODEL).embed(question)], dtype="float32"
+            [get_llm_service().embed_text(DEFAULT_EMBEDDING_MODEL, question)], dtype="float32"
         )
         _, indices = index.search(query_vec, TOP_K_CHUNKS)
 

@@ -2,7 +2,9 @@ import asyncio
 import logging
 import os
 from pathlib import Path
-from typing import List
+from typing import Annotated, ClassVar, List
+
+from fastapi import Depends
 
 from src.api.schemas.model import (
     DownloadableModelInfo,
@@ -12,20 +14,20 @@ from src.api.schemas.model import (
     ModelLoadResponse,
     ModelUnloadResponse,
 )
-from src.infra.llm_connector.mlx_base import MLXModelBase
-from src.infra.llm_connector.mlx_chat import MLXChatModel
-from src.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
+from src.infra.llm_connector.llm_service import LLMService, get_llm_service
 
 logger = logging.getLogger("app.model_service")
 _downloading: set[str] = set()
 
-# ---------------------------------------------------------------------------
-# Service class
-# ---------------------------------------------------------------------------
-
 class ModelService:
-    """Manages discovery, downloading, loading, and unloading of MLX models."""
+    """
+    Manages discovery, downloading, loading, and unloading of MLX models.
 
+    All in-memory model cache operations are delegated to :class:`LLMService`
+    which is the sole owner of loaded model state.  This service is responsible
+    only for filesystem scanning, HuggingFace downloads, and translating
+    lifecycle calls into API response objects.
+    """
 
     # project_root/backend/, two levels up from app/service/
     _PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -47,6 +49,11 @@ class ModelService:
             filename="mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ",
         ),
     ]
+
+    _instance: ClassVar["ModelService | None"] = None
+
+    def __init__(self, llm_service: LLMService) -> None:
+        self._llm = llm_service
 
     def _models_dir_for(model_type: str) -> Path:
         if model_type == "embedding":
@@ -174,12 +181,8 @@ class ModelService:
             raise HTTPException(status_code=404, detail=f"Model '{model_path}' not found in models/{model_type}/")
 
         path_str = str(resolved)
-        typed_cache = (
-            MLXChatModel._model_cache
-            if model_type == "chat"
-            else MLXEmbeddingModel._model_cache
-        )
-        if path_str in typed_cache:
+
+        if self._llm.is_model_loaded(path_str, model_type):
             return ModelLoadResponse(
                 model=model_path,
                 model_type=model_type,
@@ -189,10 +192,7 @@ class ModelService:
             )
 
         try:
-            if model_type == "embedding":
-                MLXEmbeddingModel._load_model(path_str)
-            else:
-                MLXChatModel._load_model(path_str)
+            self._llm.load_model(path_str, model_type)
         except Exception as exc:
             from fastapi import HTTPException
             raise HTTPException(status_code=500, detail=f"Error loading model: {exc}")
@@ -212,25 +212,15 @@ class ModelService:
             raise HTTPException(status_code=404, detail=f"Model '{model_path}' not found in models/{model_type}/")
 
         path_str = str(resolved)
-        typed_cache = (
-            MLXChatModel._model_cache
-            if model_type == "chat"
-            else MLXEmbeddingModel._model_cache
-        )
+        was_unloaded = self._llm.unload_model(path_str, model_type)
 
-        if path_str not in typed_cache:
+        if not was_unloaded:
             return ModelUnloadResponse(
                 model_path=model_path,
                 model_type=model_type,
                 status="not_loaded",
                 message="Model was not loaded in memory",
             )
-
-        try:
-            del typed_cache[path_str]
-        except Exception as exc:
-            from fastapi import HTTPException
-            raise HTTPException(status_code=500, detail=f"Error unloading model: {exc}")
 
         return ModelUnloadResponse(
             model_path=model_path,
@@ -240,30 +230,32 @@ class ModelService:
         )
 
     def list_loaded_models(self) -> List[LoadedModelInfo]:
-        results: List[LoadedModelInfo] = []
-        for path_str in MLXChatModel._model_cache:
-            path = Path(path_str)
-            results.append(LoadedModelInfo(
-                model_name=path.name,
-                model_path=path_str,
-                model_type="chat",
-                loaded=True,
-            ))
-        for path_str in MLXEmbeddingModel._model_cache:
-            path = Path(path_str)
-            results.append(LoadedModelInfo(
-                model_name=path.name,
-                model_path=path_str,
-                model_type="embedding",
-                loaded=True,
-            ))
-        return results
+        """
+        Return API-level info for every model that is loaded or loading.
+
+        Delegates to :meth:`LLMService.list_loaded_models` and converts the
+        result to :class:`LoadedModelInfo` response objects.
+        ``loaded=True`` means fully in memory; ``loaded=False`` means a load
+        is currently in progress.
+        """
+        return [
+            LoadedModelInfo(
+                model_name=r["model_name"],
+                model_path=r["model_path"],
+                model_type=r["model_type"],
+                loaded=not r["loading"],
+            )
+            for r in self._llm.list_loaded_models()
+        ]
 
 
-# Singleton instance
-_model_service: ModelService = ModelService()
+# Singleton — created on first call to get_model_service()
 
 
-def get_model_service() -> ModelService:
-    """FastAPI dependency factory for ModelService."""
-    return _model_service
+def get_model_service(
+    llm_service: Annotated[LLMService, Depends(get_llm_service)],
+) -> "ModelService":
+    """FastAPI dependency that provides the :class:`ModelService` singleton."""
+    if ModelService._instance is None:
+        ModelService._instance = ModelService(llm_service=llm_service)
+    return ModelService._instance
