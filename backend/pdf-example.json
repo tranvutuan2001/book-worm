@@ -4,7 +4,7 @@
     "level": 1,
     "runs": [
       {
-        "text": "The Complete Guide to Modern Software Development",
+        "text": "Book Title",
         "bold": true,
         "italic": false,
         "underline": false,
@@ -71,43 +71,19 @@
   {
     "type": "paragraph",
     "runs": [
-      {
-        "text": "Welcome to this comprehensive guide. This document covers ",
-        "fontSize": 11,
-        "fontFamily": "Times New Roman"
-      },
-      {
-        "text": "essential concepts",
-        "bold": true,
-        "fontSize": 11,
-        "fontFamily": "Times New Roman"
-      },
-      {
-        "text": " of modern software development, including ",
-        "fontSize": 11
-      },
-      {
-        "text": "best practices",
-        "italic": true,
-        "underline": true,
-        "color": "#533483",
-        "fontSize": 11
-      },
-      {
-        "text": ", tooling, and methodologies. Visit ",
-        "fontSize": 11
-      },
-      {
-        "text": "our website",
-        "link": "https://example.com",
-        "color": "#0077cc",
-        "underline": true,
-        "fontSize": 11
-      },
-      {
-        "text": " for more information.",
-        "fontSize": 11
-      }
+      { "text": "Normal text, ", "fontSize": 11, "fontFamily": "Times New Roman" },
+      { "text": "bold", "bold": true, "fontSize": 11, "fontFamily": "Times New Roman" },
+      { "text": ", ", "fontSize": 11 },
+      { "text": "italic underline link", "italic": true, "underline": true, "color": "#533483", "link": "https://example.com", "fontSize": 11 },
+      { "text": ". E=mc", "fontSize": 11 },
+      { "text": "2", "verticalAlign": "super", "fontSize": 8 },
+      { "text": ", H", "fontSize": 11 },
+      { "text": "2", "verticalAlign": "sub", "fontSize": 8 },
+      { "text": "O, ", "fontSize": 11 },
+      { "text": "highlighted", "highlight": "#ffff00", "fontSize": 11 },
+      { "text": ", ", "fontSize": 11 },
+      { "text": "struck", "strikethrough": true, "color": "#999999", "fontSize": 11 },
+      { "text": ".", "fontSize": 11 }
     ],
     "typography": {
       "fontFamily": "Times New Roman",
@@ -128,63 +104,10 @@
     "breakAfter": "auto"
   },
   {
-    "type": "paragraph",
-    "runs": [
-      {
-        "text": "Mathematical notation: E = mc",
-        "fontSize": 11
-      },
-      {
-        "text": "2",
-        "verticalAlign": "super",
-        "fontSize": 8
-      },
-      {
-        "text": " is one of the most famous equations. Chemical formulas like H",
-        "fontSize": 11
-      },
-      {
-        "text": "2",
-        "verticalAlign": "sub",
-        "fontSize": 8
-      },
-      {
-        "text": "O are also common. ",
-        "fontSize": 11
-      },
-      {
-        "text": "This text is highlighted",
-        "highlight": "#ffff00",
-        "fontSize": 11
-      },
-      {
-        "text": " and ",
-        "fontSize": 11
-      },
-      {
-        "text": "this is struck through",
-        "strikethrough": true,
-        "color": "#999999",
-        "fontSize": 11
-      },
-      {
-        "text": ".",
-        "fontSize": 11
-      }
-    ],
-    "margin": { "top": 2, "right": 0, "bottom": 2, "left": 0 },
-    "padding": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
-  },
-  {
     "type": "heading",
     "level": 3,
     "runs": [
-      {
-        "text": "1.1 Key Concepts",
-        "bold": true,
-        "fontSize": 14,
-        "color": "#222222"
-      }
+      { "text": "1.1 Section", "bold": true, "fontSize": 14, "color": "#222222" }
     ],
     "typography": {
       "fontFamily": "Arial",
@@ -211,45 +134,17 @@
     "listStyleType": "disc",
     "items": [
       {
-        "runs": [
-          { "text": "Version Control", "bold": true },
-          { "text": ": Managing changes to source code over time." }
-        ],
+        "runs": [{ "text": "Item A", "bold": true }, { "text": ": description." }],
         "children": [
           {
-            "runs": [
-              { "text": "Git", "italic": true },
-              { "text": " — distributed version control system" }
-            ],
+            "runs": [{ "text": "Sub A1", "italic": true }, { "text": " — detail" }],
             "children": []
           },
-          {
-            "runs": [
-              { "text": "SVN", "italic": true },
-              { "text": " — centralized version control system" }
-            ]
-          }
+          { "runs": [{ "text": "Sub A2" }] }
         ]
       },
       {
-        "runs": [
-          { "text": "Continuous Integration", "bold": true },
-          { "text": ": Automatically building and testing code changes." }
-        ],
-        "children": [
-          {
-            "runs": [{ "text": "GitHub Actions" }]
-          },
-          {
-            "runs": [{ "text": "Jenkins" }]
-          }
-        ]
-      },
-      {
-        "runs": [
-          { "text": "Code Review", "bold": true },
-          { "text": ": Systematic examination of source code." }
-        ]
+        "runs": [{ "text": "Item B", "bold": true }, { "text": ": description." }]
       }
     ],
     "margin": { "top": 3, "right": 0, "bottom": 3, "left": 5 },
@@ -267,24 +162,13 @@
     "indentPerLevel": 8,
     "listStyleType": "decimal",
     "items": [
+      { "runs": [{ "text": "Step one" }] },
       {
-        "runs": [{ "text": "Plan the architecture" }]
-      },
-      {
-        "runs": [{ "text": "Set up the development environment" }],
+        "runs": [{ "text": "Step two" }],
         "children": [
-          { "runs": [{ "text": "Install dependencies" }] },
-          { "runs": [{ "text": "Configure linters and formatters" }] }
+          { "runs": [{ "text": "Sub step a" }] },
+          { "runs": [{ "text": "Sub step b" }] }
         ]
-      },
-      {
-        "runs": [{ "text": "Write tests before code (TDD)" }]
-      },
-      {
-        "runs": [{ "text": "Implement features iteratively" }]
-      },
-      {
-        "runs": [{ "text": "Deploy to staging then production" }]
       }
     ],
     "margin": { "top": 3, "right": 0, "bottom": 3, "left": 5 },
@@ -294,24 +178,15 @@
     "type": "blockquote",
     "runs": [
       {
-        "text": "Any fool can write code that a computer can understand. Good programmers write code that humans can understand.",
+        "text": "Quote text here.",
         "italic": true,
         "fontSize": 12,
         "color": "#444444"
       }
     ],
     "attribution": [
-      {
-        "text": "— Martin Fowler, ",
-        "fontSize": 10,
-        "color": "#666666"
-      },
-      {
-        "text": "Refactoring",
-        "italic": true,
-        "fontSize": 10,
-        "color": "#666666"
-      }
+      { "text": "— Author, ", "fontSize": 10, "color": "#666666" },
+      { "text": "Source Book", "italic": true, "fontSize": 10, "color": "#666666" }
     ],
     "typography": {
       "fontFamily": "Georgia",
@@ -331,12 +206,7 @@
     "type": "heading",
     "level": 2,
     "runs": [
-      {
-        "text": "Chapter 2: Code Examples",
-        "bold": true,
-        "fontSize": 20,
-        "color": "#16213e"
-      }
+      { "text": "Chapter 2: Examples", "bold": true, "fontSize": 20, "color": "#16213e" }
     ],
     "typography": {
       "fontFamily": "Arial",
@@ -351,19 +221,8 @@
     "breakBefore": "always"
   },
   {
-    "type": "paragraph",
-    "runs": [
-      {
-        "text": "Below is an example of a simple TypeScript function:",
-        "fontSize": 11
-      }
-    ],
-    "margin": { "top": 2, "right": 0, "bottom": 2, "left": 0 },
-    "padding": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
-  },
-  {
     "type": "code",
-    "content": "function greet(name: string): string {\n  if (!name) {\n    throw new Error('Name is required');\n  }\n  return `Hello, ${name}! Welcome to the guide.`;\n}\n\nconst message = greet('World');\nconsole.log(message); // Hello, World! Welcome to the guide.",
+    "content": "function greet(name: string): string {\n  return `Hello, ${name}!`;\n}",
     "language": "typescript",
     "lineNumbers": true,
     "typography": {
@@ -384,31 +243,17 @@
   },
   {
     "type": "image",
-    "src": "https://example.com/images/architecture-diagram.png",
-    "alt": "Software Architecture Diagram",
+    "src": "https://example.com/diagram.png",
+    "alt": "Architecture Diagram",
     "width": 140,
     "height": 90,
     "objectFit": "contain",
     "align": "center",
     "caption": [
-      {
-        "text": "Figure 1: ",
-        "bold": true,
-        "fontSize": 9,
-        "color": "#555555"
-      },
-      {
-        "text": "High-level system architecture overview.",
-        "italic": true,
-        "fontSize": 9,
-        "color": "#555555"
-      }
+      { "text": "Figure 1: ", "bold": true, "fontSize": 9, "color": "#555555" },
+      { "text": "System overview.", "italic": true, "fontSize": 9, "color": "#555555" }
     ],
-    "border": {
-      "width": 0.3,
-      "style": "solid",
-      "color": "#cccccc"
-    },
+    "border": { "width": 0.3, "style": "solid", "color": "#cccccc" },
     "borderRadius": 2,
     "opacity": 1,
     "margin": { "top": 5, "right": 0, "bottom": 5, "left": 0 },
@@ -430,12 +275,7 @@
     "type": "heading",
     "level": 2,
     "runs": [
-      {
-        "text": "Chapter 3: Comparison Table",
-        "bold": true,
-        "fontSize": 20,
-        "color": "#16213e"
-      }
+      { "text": "Chapter 3: Table", "bold": true, "fontSize": 20, "color": "#16213e" }
     ],
     "typography": {
       "fontFamily": "Arial",
@@ -460,18 +300,8 @@
       "color": "#cccccc"
     },
     "caption": [
-      {
-        "text": "Table 1: ",
-        "bold": true,
-        "fontSize": 9,
-        "color": "#555555"
-      },
-      {
-        "text": "Comparison of popular JavaScript frameworks.",
-        "italic": true,
-        "fontSize": 9,
-        "color": "#555555"
-      }
+      { "text": "Table 1: ", "bold": true, "fontSize": 9, "color": "#555555" },
+      { "text": "Framework comparison.", "italic": true, "fontSize": 9, "color": "#555555" }
     ],
     "rows": [
       {
@@ -487,25 +317,22 @@
             "verticalAlign": "middle"
           },
           {
-            "runs": [{ "text": "Primary Use Case", "bold": true, "color": "#ffffff", "fontSize": 11 }],
-            "colSpan": 1,
-            "rowSpan": 1,
+            "runs": [{ "text": "Use Case", "bold": true, "color": "#ffffff", "fontSize": 11 }],
+            "colSpan": 1, "rowSpan": 1,
             "typography": { "textAlign": "center", "fontFamily": "Arial" },
             "padding": { "top": 3, "right": 4, "bottom": 3, "left": 4 },
             "verticalAlign": "middle"
           },
           {
-            "runs": [{ "text": "Learning Curve", "bold": true, "color": "#ffffff", "fontSize": 11 }],
-            "colSpan": 1,
-            "rowSpan": 1,
+            "runs": [{ "text": "Curve", "bold": true, "color": "#ffffff", "fontSize": 11 }],
+            "colSpan": 1, "rowSpan": 1,
             "typography": { "textAlign": "center", "fontFamily": "Arial" },
             "padding": { "top": 3, "right": 4, "bottom": 3, "left": 4 },
             "verticalAlign": "middle"
           },
           {
-            "runs": [{ "text": "Performance", "bold": true, "color": "#ffffff", "fontSize": 11 }],
-            "colSpan": 1,
-            "rowSpan": 1,
+            "runs": [{ "text": "Perf", "bold": true, "color": "#ffffff", "fontSize": 11 }],
+            "colSpan": 1, "rowSpan": 1,
             "typography": { "textAlign": "center", "fontFamily": "Arial" },
             "padding": { "top": 3, "right": 4, "bottom": 3, "left": 4 },
             "verticalAlign": "middle"
@@ -518,16 +345,14 @@
         "cells": [
           {
             "runs": [{ "text": "React", "bold": true, "color": "#61dafb", "fontSize": 10 }],
-            "colSpan": 1,
-            "rowSpan": 1,
+            "colSpan": 1, "rowSpan": 1,
             "typography": { "textAlign": "left" },
             "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 },
             "verticalAlign": "top"
           },
           {
-            "runs": [{ "text": "UI component library for SPAs and complex UIs", "fontSize": 10 }],
-            "colSpan": 1,
-            "rowSpan": 1,
+            "runs": [{ "text": "SPAs & complex UIs", "fontSize": 10 }],
+            "colSpan": 1, "rowSpan": 1,
             "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 },
             "verticalAlign": "top",
             "border": {
@@ -539,8 +364,7 @@
           },
           {
             "runs": [{ "text": "Moderate", "fontSize": 10, "color": "#f59e0b" }],
-            "colSpan": 1,
-            "rowSpan": 1,
+            "colSpan": 1, "rowSpan": 1,
             "typography": { "textAlign": "center" },
             "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 },
             "verticalAlign": "middle"
@@ -558,71 +382,30 @@
       },
       {
         "isHeader": false,
-        "cells": [
-          {
-            "runs": [{ "text": "Angular", "bold": true, "color": "#dd0031", "fontSize": 10 }],
-            "colSpan": 1,
-            "rowSpan": 1,
-            "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 },
-            "verticalAlign": "top"
-          },
-          {
-            "runs": [{ "text": "Full-featured framework for enterprise applications", "fontSize": 10 }],
-            "colSpan": 1,
-            "rowSpan": 1,
-            "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 },
-            "verticalAlign": "top"
-          },
-          {
-            "runs": [{ "text": "Steep", "fontSize": 10, "color": "#ef4444" }],
-            "colSpan": 1,
-            "rowSpan": 1,
-            "typography": { "textAlign": "center" },
-            "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 },
-            "verticalAlign": "middle"
-          },
-          {
-            "runs": [{ "text": "High", "fontSize": 10, "color": "#22c55e", "bold": true }],
-            "colSpan": 1,
-            "rowSpan": 1,
-            "typography": { "textAlign": "center" },
-            "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 },
-            "background": "#f0fff4",
-            "verticalAlign": "middle"
-          }
-        ]
-      },
-      {
-        "isHeader": false,
-        "background": "#f9f9f9",
         "height": 12,
         "cells": [
           {
             "runs": [{ "text": "Vue.js", "bold": true, "color": "#42b883", "fontSize": 10 }],
-            "colSpan": 1,
-            "rowSpan": 1,
+            "colSpan": 1, "rowSpan": 1,
             "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 },
             "verticalAlign": "top"
           },
           {
-            "runs": [{ "text": "Progressive framework for building UIs", "fontSize": 10 }],
-            "colSpan": 1,
-            "rowSpan": 1,
+            "runs": [{ "text": "Progressive UIs", "fontSize": 10 }],
+            "colSpan": 1, "rowSpan": 1,
             "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 },
             "verticalAlign": "top"
           },
           {
             "runs": [{ "text": "Easy", "fontSize": 10, "color": "#22c55e" }],
-            "colSpan": 1,
-            "rowSpan": 1,
+            "colSpan": 1, "rowSpan": 1,
             "typography": { "textAlign": "center" },
             "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 },
             "verticalAlign": "middle"
           },
           {
             "runs": [{ "text": "High", "fontSize": 10, "color": "#22c55e", "bold": true }],
-            "colSpan": 1,
-            "rowSpan": 1,
+            "colSpan": 1, "rowSpan": 1,
             "typography": { "textAlign": "center" },
             "padding": { "top": 2, "right": 3, "bottom": 2, "left": 3 },
             "background": "#f0fff4",
@@ -635,27 +418,14 @@
     "padding": { "top": 0, "right": 0, "bottom": 0, "left": 0 },
     "breakInside": "avoid"
   },
-  {
-    "type": "spacer",
-    "height": 10
-  },
+  { "type": "spacer", "height": 10 },
   {
     "type": "heading",
     "level": 4,
     "runs": [
-      {
-        "text": "Additional Notes",
-        "fontSize": 12,
-        "bold": true,
-        "color": "#333333"
-      }
+      { "text": "Notes", "fontSize": 12, "bold": true, "color": "#333333" }
     ],
-    "typography": {
-      "fontFamily": "Arial",
-      "fontSize": 12,
-      "fontWeight": 600,
-      "textAlign": "left"
-    },
+    "typography": { "fontFamily": "Arial", "fontSize": 12, "fontWeight": 600, "textAlign": "left" },
     "includeInToc": false,
     "margin": { "top": 4, "right": 0, "bottom": 2, "left": 0 },
     "padding": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
@@ -663,66 +433,34 @@
   {
     "type": "paragraph",
     "runs": [
-      {
-        "text": "All benchmarks were conducted on identical hardware. Results may vary depending on the use case, bundle size, and optimization level applied. Consult the official documentation for each framework for the most up-to-date guidance.",
-        "fontSize": 9,
-        "color": "#777777",
-        "italic": true
-      }
+      { "text": "Benchmarks on identical hardware. Results may vary.", "fontSize": 9, "color": "#777777", "italic": true }
     ],
-    "typography": {
-      "fontSize": 9,
-      "fontFamily": "Arial",
-      "color": "#777777",
-      "textAlign": "justify",
-      "lineHeight": 1.4
-    },
+    "typography": { "fontSize": 9, "fontFamily": "Arial", "color": "#777777", "textAlign": "justify", "lineHeight": 1.4 },
     "margin": { "top": 1, "right": 0, "bottom": 1, "left": 0 },
     "padding": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
   },
   {
     "type": "divider",
     "widthPercent": 100,
-    "border": {
-      "width": 0.3,
-      "style": "solid",
-      "color": "#cccccc"
-    },
+    "border": { "width": 0.3, "style": "solid", "color": "#cccccc" },
     "margin": { "top": 8, "right": 0, "bottom": 4, "left": 0 },
     "padding": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
   },
-  {
-    "type": "pageBreak"
-  },
+  { "type": "pageBreak" },
   {
     "type": "heading",
     "level": 2,
     "runs": [
-      {
-        "text": "Chapter 4: Conclusion",
-        "bold": true,
-        "fontSize": 20,
-        "color": "#16213e"
-      }
+      { "text": "Chapter 4: Conclusion", "bold": true, "fontSize": 20, "color": "#16213e" }
     ],
-    "typography": {
-      "fontFamily": "Arial",
-      "fontSize": 20,
-      "fontWeight": 700,
-      "textAlign": "left"
-    },
+    "typography": { "fontFamily": "Arial", "fontSize": 20, "fontWeight": 700, "textAlign": "left" },
     "includeInToc": true,
     "margin": { "top": 8, "right": 0, "bottom": 4, "left": 0 },
     "padding": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
   },
   {
     "type": "paragraph",
-    "runs": [
-      {
-        "text": "In summary, choosing the right tools and following established practices will significantly improve your software quality and team productivity. The key takeaways are:",
-        "fontSize": 11
-      }
-    ],
+    "runs": [{ "text": "Key takeaways:", "fontSize": 11 }],
     "margin": { "top": 2, "right": 0, "bottom": 2, "left": 0 },
     "padding": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
   },
@@ -731,34 +469,20 @@
     "ordered": true,
     "start": 1,
     "items": [
-      { "runs": [{ "text": "Use version control for every project." }] },
-      { "runs": [{ "text": "Automate testing and deployment pipelines." }] },
-      { "runs": [{ "text": "Write readable, maintainable code." }] },
-      { "runs": [{ "text": "Conduct regular code reviews." }] },
-      { "runs": [{ "text": "Continuously learn and adapt." }] }
+      { "runs": [{ "text": "Use version control." }] },
+      { "runs": [{ "text": "Automate testing." }] },
+      { "runs": [{ "text": "Write readable code." }] }
     ],
     "margin": { "top": 3, "right": 0, "bottom": 3, "left": 5 },
     "padding": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
   },
-  {
-    "type": "spacer",
-    "height": 20
-  },
+  { "type": "spacer", "height": 20 },
   {
     "type": "paragraph",
     "runs": [
-      {
-        "text": "© 2026 Software Development Guide. All rights reserved.",
-        "fontSize": 8,
-        "color": "#999999",
-        "italic": true
-      }
+      { "text": "\u00a9 2026 Guide. All rights reserved.", "fontSize": 8, "color": "#999999", "italic": true }
     ],
-    "typography": {
-      "textAlign": "center",
-      "fontSize": 8,
-      "color": "#999999"
-    },
+    "typography": { "textAlign": "center", "fontSize": 8, "color": "#999999" },
     "margin": { "top": 0, "right": 0, "bottom": 0, "left": 0 },
     "padding": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
   }
