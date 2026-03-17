@@ -24,7 +24,7 @@ import time
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Any, List
+from typing import Any
 
 import jsonschema
 import re
@@ -32,7 +32,6 @@ import re
 from src.core.config import (
     DATA_DIR,
     DEFAULT_CHAT_MODEL,
-    DEFAULT_EMBEDDING_MODEL,
     PDF_DIR,
     PDF_EXAMPLE_PATH,
     PDF_SCHEMA_PATH,
@@ -43,7 +42,6 @@ from src.domain.enums import Role
 from src.infra.llm_connector.llm_client import LLMService, _llm_service
 from src.infra.llm_connector.xgrammar_processor import JSON_ARRAY_OF_STRINGS_SCHEMA
 from src.service.tools.document_retrieval_tool import (
-    get_the_most_relevant_chunks,
     get_document_summary,
 )
 
