@@ -138,7 +138,7 @@ class ChatService:
     def _generate_answer(self, conversation: Conversation, tools: tuple) -> str:
         try:
             system_prompt = f"{_SYSTEM_PROMPT}\n\nDocument: {conversation.document_name}"
-            return self._llm.complete_chat(
+            return self._llm.agent_complete_chat(
                 message_list=conversation.message_list,
                 system_prompt=system_prompt,
                 tools=list(tools),
@@ -184,7 +184,7 @@ class ChatService:
         req_logger.info("Starting verification step…")
         try:
             verification_system_prompt = f"{_VERIFICATION_SYSTEM_PROMPT}\n\nDocument: {document_name}"
-            verified = self._llm.complete_chat(
+            verified = self._llm.agent_complete_chat(
                 message_list=verification_message,
                 system_prompt=verification_system_prompt,
                 tools=list(tools),

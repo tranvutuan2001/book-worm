@@ -215,7 +215,7 @@ class LLMService:
     # Inference
     # ------------------------------------------------------------------
 
-    def complete_chat(
+    def agent_complete_chat(
         self,
         model_path: str,
         message_list: List[Message],

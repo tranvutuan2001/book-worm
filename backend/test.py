@@ -68,7 +68,7 @@ print("\n" + "=" * 60)
 print("TEST 2: Chat with tool binding (weather + calculator)")
 print("=" * 60)
 tools = [GetWeatherTool(), CalculatorTool()]
-res_tools = _llm_client.complete_chat(
+res_tools = _llm_client.agent_complete_chat(
     model_path=CHAT_MODEL,
     message_list=[Message(id="msg_2", content="What is the weather in Paris? Also, what is 123 * 456?", role=Role.USER, timestamp=1674567891)],
     system_prompt="You are a helpful assistant. Use the available tools when needed.",

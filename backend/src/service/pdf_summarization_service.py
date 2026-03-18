@@ -196,7 +196,7 @@ class PDFSummarizationService:
         )
         system_prompt = _STEP1_SYSTEM.format(document_name=document_name)
         try:
-            summary = self._llm.complete_chat(
+            summary = self._llm.agent_complete_chat(
                 message_list=[request_message],
                 system_prompt=system_prompt,
                 tools=[get_document_summary],
@@ -239,7 +239,7 @@ class PDFSummarizationService:
                 timestamp=int(time.time() * 1000),
             )
             try:
-                raw_output = self._llm.complete_chat(
+                raw_output = self._llm.agent_complete_chat(
                     message_list=[message],
                     system_prompt=_STEP2_SPLIT_SYSTEM,
                     tools=[],
@@ -365,7 +365,7 @@ class PDFSummarizationService:
                 timestamp=int(time.time() * 1000),
             )
             try:
-                raw_output = self._llm.complete_chat(
+                raw_output = self._llm.agent_complete_chat(
                     message_list=[user_message],
                     system_prompt=step3_system,
                     tools=[],

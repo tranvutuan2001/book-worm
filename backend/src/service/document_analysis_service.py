@@ -246,7 +246,7 @@ class DocumentAnalysisService:
                 timestamp=int(time.time()),
             )
             try:
-                summary = self._llm.complete_chat(
+                summary = self._llm.agent_complete_chat(
                     message_list=[user_msg],
                     system_prompt=_SECTION_SUMMARY_SYSTEM,
                     tools=[],
@@ -281,7 +281,7 @@ class DocumentAnalysisService:
                 timestamp=int(time.time()),
             )
             try:
-                chapter = self._llm.complete_chat(
+                chapter = self._llm.agent_complete_chat(
                     message_list=[user_msg],
                     system_prompt=_CHAPTER_SUMMARY_SYSTEM,
                     tools=[],
