@@ -6,8 +6,10 @@ from typing import Annotated, ClassVar, List, Literal, TypedDict
 from fastapi import Depends
 from langchain.agents import create_agent
 from langchain.tools import BaseTool
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
 from src.domain.entity.message import Message
+from src.domain.enums import Role
 from src.infra.llm_connector.llm_logging_handler import LLMLoggingHandler
 from src.infra.llm_connector.mlx_base import MLXModelBase
 from src.infra.llm_connector.mlx_chat import MLXChatModel
@@ -214,6 +216,60 @@ class LLMService:
     # ------------------------------------------------------------------
     # Inference
     # ------------------------------------------------------------------
+
+    def complete_chat(
+        self,
+        model_path: str,
+        message_list: List[Message],
+        system_prompt: str,
+        template_name: str = "qwen",
+        json_schema: str = None,
+        max_tokens: int = 4000,
+    ) -> str:
+        """
+        Run a pure chat completion without any agent or tool-calling.
+
+        Args:
+            model_path:    Local path (or HF name) of the MLX chat model.
+            message_list:  Conversation history as ``Message`` objects.
+            system_prompt: System instruction to prepend to the conversation.
+            template_name: Chat-template family name used by ``model_path``
+                           (e.g. ``"qwen"``).  Forwarded to
+                           ``ParsingService`` to select the correct output
+                           parser.
+            json_schema:   Optional JSON Schema string.  When provided,
+                           xgrammar constrained decoding is applied so the
+                           model can only emit tokens that form a valid
+                           sequence under the schema.
+            max_tokens:    Maximum number of tokens to generate.  Default
+                           is 4000.
+
+        Returns:
+            The assistant reply as a plain string.
+        """
+        llm = MLXChatModel(
+            model_path=model_path,
+            max_tokens=max_tokens,
+            temperature=0.1,
+            parsing_service=self._parsing_service,
+            template_name=template_name,
+            json_schema=json_schema,
+        )
+
+        lc_messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
+        for m in message_list:
+            if m.role == Role.SYSTEM:
+                lc_messages.append(SystemMessage(content=m.content))
+            elif m.role == Role.ASSISTANT:
+                lc_messages.append(AIMessage(content=m.content))
+            else:
+                lc_messages.append(HumanMessage(content=m.content))
+
+        response = llm.invoke(
+            lc_messages,
+            config={"callbacks": [LLMLoggingHandler()]},
+        )
+        return response.content
 
     def agent_complete_chat(
         self,

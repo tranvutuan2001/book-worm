@@ -54,18 +54,12 @@ logger = logging.getLogger("app.service.pdf_summarization")
 # ---------------------------------------------------------------------------
 
 _STEP1_SYSTEM = """
-You are a document analyst. Your only job is:
-1. Call `get_document_summary` ONCE to retrieve the document summary.
-2. Rewrite the result into a clean, readable summary (fix awkward phrasing, improve flow). Do NOT oversimplify or remove important details.  The summary should be comprehensive and informative.
-3. Output the final summary text and STOP immediately.
-
-Rules:
-- Call `get_document_summary` exactly once — do NOT call any tool more than once.
-- After receiving the tool result, write the summary and finish. Do NOT call another tool.
-- Keep the summary under 3000 words and focused on the main points.
-- Do NOT ask follow-up questions or request clarification.
-
-Document: {document_name}
+You are a document analyst. You will be given a raw document summary.
+Your job is to rewrite it into a clean, readable summary:
+- Fix awkward phrasing and improve flow.
+- Do NOT oversimplify or remove important details.
+- Keep the summary comprehensive, informative, and under 3000 words.
+- Output ONLY the final summary text. Do NOT add commentary or ask questions.
 """.strip()
 
 _STEP2_SPLIT_SYSTEM = """
@@ -147,7 +141,7 @@ class PDFSummarizationService:
         logger.info("[summarize] Step 1 complete (%d chars)", len(summary_text))
 
         logger.info("[summarize] Step 2 — splitting summary into logical blocks")
-        blocks = self._split_into_blocks(summary_text, chat_model)
+        blocks = self._step2_split_into_blocks(summary_text, chat_model)
         logger.info("[summarize] %d block(s) to process", len(blocks))
 
         pdf_json: list[Any] = []
@@ -187,34 +181,44 @@ class PDFSummarizationService:
     # ------------------------------------------------------------------
 
     def _step1_generate_summary(self, document_name: str, chat_model: str) -> str:
-        """Call the LLM agent with document retrieval tools to produce a rich summary."""
+        """Fetch the raw document summary directly, then refine it with complete_chat."""
+        logger.info("[step1] Fetching raw document summary for '%s'", document_name)
+        try:
+            base_summary: str = get_document_summary.invoke({"document_name": document_name})
+        except Exception as exc:
+            logger.error("[step1] get_document_summary failed: %s\n%s", exc, traceback.format_exc())
+            raise DocumentProcessingError(
+                f"Failed to fetch document summary: {exc}"
+            ) from exc
+
+        logger.info("[step1] Raw summary fetched (%d chars); refining with LLM", len(base_summary))
         request_message = Message(
             id="summarize_request",
             role=Role.USER,
-            content=(f"Summarise the document using the provided tools"),
+            content=(
+                f"Rewrite the following raw document summary into a clean, "
+                f"comprehensive summary:\n\n{base_summary}"
+            ),
             timestamp=int(time.time() * 1000),
         )
-        system_prompt = _STEP1_SYSTEM.format(document_name=document_name)
         try:
-            summary = self._llm.agent_complete_chat(
-                message_list=[request_message],
-                system_prompt=system_prompt,
-                tools=[get_document_summary],
+            refined = self._llm.complete_chat(
                 model_path=chat_model,
-                max_iterations=10,
+                message_list=[request_message],
+                system_prompt=_STEP1_SYSTEM,
             )
-            return summary
+            return refined
         except Exception as exc:
-            logger.error("Step 1 failed: %s\n%s", exc, traceback.format_exc())
+            logger.error("[step1] LLM refinement failed: %s\n%s", exc, traceback.format_exc())
             raise DocumentProcessingError(
-                f"Failed to generate text summary: {exc}"
+                f"Failed to refine document summary: {exc}"
             ) from exc
 
     # ------------------------------------------------------------------
     # Step 2 — split summary into logical blocks
     # ------------------------------------------------------------------
 
-    def _split_into_blocks(
+    def _step2_split_into_blocks(
         self, summary_text: str, chat_model: str, max_attempts: int = 5
     ) -> list[str]:
         """Ask the LLM to segment *summary_text* into self-contained logical blocks.
@@ -239,11 +243,10 @@ class PDFSummarizationService:
                 timestamp=int(time.time() * 1000),
             )
             try:
-                raw_output = self._llm.agent_complete_chat(
+                raw_output = self._llm.complete_chat(
+                    model_path=chat_model,
                     message_list=[message],
                     system_prompt=_STEP2_SPLIT_SYSTEM,
-                    tools=[],
-                    model_path=chat_model,
                     json_schema=JSON_ARRAY_OF_STRINGS_SCHEMA,
                 )
             except Exception as exc:

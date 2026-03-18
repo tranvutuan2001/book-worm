@@ -16,6 +16,8 @@ from src.service.pdf_summarization_service import (
     PDFSummarizationService,
     get_pdf_summarization_service as _get_pdf_summarization,
 )
+from src.infra.llm_connector.llm_service import LLMService, get_llm_service
+from fastapi import Depends
 
 
 def get_chat_service() -> ChatService:
@@ -30,5 +32,7 @@ def get_model_service() -> ModelService:
     return _get_model()
 
 
-def get_pdf_summarization_service() -> PDFSummarizationService:
-    return _get_pdf_summarization()
+def get_pdf_summarization_service(
+    llm_service: LLMService = Depends(get_llm_service),
+) -> PDFSummarizationService:
+    return _get_pdf_summarization(llm_service=llm_service)
