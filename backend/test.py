@@ -1,96 +1,55 @@
-import json
-from typing import Type
-from pydantic import BaseModel, Field
-from langchain.tools import BaseTool
+import logging
+import os
 
-from src.infra.llm_connector.llm_service import LLMService
-from src.infra.llm_connector.parsing_service import ParsingService
+from src.infra.logging_config import setup_logging
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
+import time
+
+from src.infra.llm_connector.llm_service import get_llm_service
+from src.service.tools.document_retrieval_tool import get_document_summary
 from src.domain.entity.message import Message
-from src.constant import Role
+from src.domain.enums import Role
+from src.core.config import DEFAULT_CHAT_MODEL
 
-_llm_client = LLMService(ParsingService())
+DOCUMENT_NAME = "The Simple Path to Wealth_ Your - J Collins_20260312_000311"
 
-CHAT_MODEL = "./models/chat/mlx-community/Qwen3.5-35B-A3B-4bit"
-EMBED_MODEL = "./models/embedding/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"
+# 1. Retrieve the document summary as context
+doc_summary = get_document_summary(DOCUMENT_NAME)
 
-# ---------------------------------------------------------------------------
-# Dummy tools for tool-binding test
-# ---------------------------------------------------------------------------
+# 2. Build the message list
+user_question = "What is the main investment strategy recommended in this book?"
 
-class GetWeatherInput(BaseModel):
-    city: str = Field(description="The city to get the weather for")
-
-class GetWeatherTool(BaseTool):
-    name: str = "get_weather"
-    description: str = "Returns the current weather for a given city."
-    args_schema: Type[BaseModel] = GetWeatherInput
-
-    def _run(self, city: str) -> str:
-        # Stub – return fake data so we can verify the LLM calls the tool
-        return json.dumps({"city": city, "temperature": "22°C", "condition": "Sunny"})
-
-
-class CalculatorInput(BaseModel):
-    expression: str = Field(description="A simple arithmetic expression to evaluate, e.g. '2 + 3 * 4'")
-
-class CalculatorTool(BaseTool):
-    name: str = "calculator"
-    description: str = "Evaluates a simple arithmetic expression and returns the result."
-    args_schema: Type[BaseModel] = CalculatorInput
-
-    def _run(self, expression: str) -> str:
-        try:
-            result = eval(expression, {"__builtins__": {}})  # noqa: S307
-            return str(result)
-        except Exception as e:
-            return f"Error: {e}"
-
-
-# # ---------------------------------------------------------------------------
-# # Test 1 – plain chat (no tools)
-# # ---------------------------------------------------------------------------
-# print("\n" + "=" * 60)
-# print("TEST 1: Plain chat (no tools)")
-# print("=" * 60)
-# res = _llm_client.complete_chat(
-#     model_name=CHAT_MODEL,
-#     message_list=[Message(id="msg_1", content="What is Domain-Driven Design in one sentence?", role=Role.USER, timestamp=1674567890)],
-#     system_prompt="You are a helpful assistant. Be concise.",
-#     tools=[],
-# )
-# print("Response:", res)
-
-
-# ---------------------------------------------------------------------------
-# Test 2 – chat with tools bound
-# ---------------------------------------------------------------------------
-print("\n" + "=" * 60)
-print("TEST 2: Chat with tool binding (weather + calculator)")
-print("=" * 60)
-tools = [GetWeatherTool(), CalculatorTool()]
-res_tools = _llm_client.agent_complete_chat(
-    model_path=CHAT_MODEL,
-    message_list=[Message(id="msg_2", content="What is the weather in Paris? Also, what is 123 * 456?", role=Role.USER, timestamp=1674567891)],
-    system_prompt="You are a helpful assistant. Use the available tools when needed.",
-    tools=tools,
-)
-print("Response:", res_tools)
-
-
-# ---------------------------------------------------------------------------
-# Test 3 – text embedding
-# ---------------------------------------------------------------------------
-print("\n" + "=" * 60)
-print("TEST 3: Text embedding")
-print("=" * 60)
-
-texts = [
-    "Domain-Driven Design is an approach to software development.",
-    "The quick brown fox jumps over the lazy dog.",
+messages = [
+    Message(
+        id="msg_1",
+        content=(
+            f"Rewrite the following raw document summary into a clean, "
+                f"comprehensive summary:\n\n{doc_summary}"
+        ),
+        role=Role.USER,
+        timestamp=int(time.time()),
+    )
 ]
-for text in texts:
-    embedding = _llm_client.embed_text(EMBED_MODEL, text)
-    print(f"Text : {text!r}")
-    print(f"Dims : {len(embedding)}")
-    print(f"First5: {[round(v, 4) for v in embedding[:5]]}")
-    print()
+
+# # 3. Define a system prompt that includes the document summary as context
+# from src.service.pdf_summarization_service import _STEP1_SYSTEM
+
+# # 4. Run the chat completion
+# llm_client = get_llm_service()
+
+# print(f"=== Running chat completion with model: {DEFAULT_CHAT_MODEL} ===")
+# res = llm_client.complete_chat(
+#     model_path=DEFAULT_CHAT_MODEL,
+#     message_list=messages,
+#     system_prompt=_STEP1_SYSTEM,
+#     template_name="qwen",
+#     max_tokens=9000,
+# )
+
+setup_logging()
+logger = logging.getLogger("app.test")
+logger.info(doc_summary)
+
+# print("=== Response ===")
+# print(res)

@@ -207,6 +207,7 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
                 sampler=make_sampler(temp=self.temperature),
                 logits_processors=logits_processors,
                 verbose=False,
+                kv_bits=4,
             )
             logger.info("MLX generation complete")
         except Exception as e:
