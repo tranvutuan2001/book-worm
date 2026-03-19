@@ -253,7 +253,7 @@ class ModelService:
 
 
 def get_model_service(
-    llm_service: Annotated[LLMService, Depends(get_llm_service)],
+    llm_service: LLMService = Depends(get_llm_service),
 ) -> "ModelService":
     """FastAPI dependency that provides the :class:`ModelService` singleton."""
     if ModelService._instance is None:

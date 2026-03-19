@@ -149,7 +149,7 @@ class DocumentService:
 
 
 def get_document_service(
-    analysis_service: Annotated[DocumentAnalysisService, Depends(get_document_analysis_service)],
+    analysis_service: DocumentAnalysisService = Depends(get_document_analysis_service),
 ) -> "DocumentService":
     """FastAPI dependency that provides the :class:`DocumentService` singleton."""
     if DocumentService._instance is None:

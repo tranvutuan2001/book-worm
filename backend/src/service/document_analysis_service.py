@@ -84,7 +84,6 @@ class DocumentAnalysisService:
         self,
         pdf_path: str,
         document_name: str,
-        process_levels: Optional[List[str]] = None,
     ) -> None:
         """Run the full analysis pipeline for *pdf_path*.
 
@@ -97,8 +96,6 @@ class DocumentAnalysisService:
         Raises:
             DocumentProcessingError: If any stage of the pipeline fails.
         """
-        if process_levels is None:
-            process_levels = ["chunks", "sections", "chapters"]
 
         logger.info("Pre-analysis started: %s", document_name)
         self._prepare_models()
@@ -117,16 +114,11 @@ class DocumentAnalysisService:
 
             section_summaries: Optional[List[str]] = None
 
-            if "chunks" in process_levels:
-                section_summaries = self._process_chunks(chunks, document_name, out_dir)
-
-            if "sections" in process_levels:
-                section_summaries = self._process_sections(chunks, document_name, out_dir)
-
-            if "chapters" in process_levels:
-                self._process_chapters(
-                    chunks, document_name, out_dir, section_summaries
-                )
+            section_summaries = self._process_chunks(chunks, document_name, out_dir)
+            section_summaries = self._process_sections(chunks, document_name, out_dir)
+            self._process_chapters(
+                chunks, document_name, out_dir, section_summaries
+            )
 
             logger.info("Pre-analysis completed: %s", document_name)
 
@@ -350,8 +342,8 @@ class DocumentAnalysisService:
 
 
 def get_document_analysis_service(
-    llm_service: Annotated[LLMService, Depends(get_llm_service)],
-) -> "DocumentAnalysisService":
+    llm_service: LLMService= Depends(get_llm_service),
+) -> DocumentAnalysisService:
     """FastAPI dependency that provides the :class:`DocumentAnalysisService` singleton."""
     if DocumentAnalysisService._instance is None:
         DocumentAnalysisService._instance = DocumentAnalysisService(llm_service=llm_service)

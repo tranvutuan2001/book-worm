@@ -42,9 +42,10 @@ class Qwen3ResponseParser(BaseResponseParser):
             for b in thinking_blocks
         )
         # Remove matched <think>…</think> blocks, then strip any orphaned
-        # </think> closing tag the model may emit when it omits the opening tag.
+        # </think> closing tag the model may emit when it omits the opening tag,
+        # along with all content that precedes it (the untagged thinking block).
         text = self._THINK_RE.sub("", raw)
-        # text = re.sub(r"</think>", "", text).strip()
+        text = re.sub(r"^.*?</think>", "", text, flags=re.DOTALL).strip()
 
         tool_calls: list[ToolCall] = []
         for match in self._TOOL_CALL_RE.finditer(text):
