@@ -138,7 +138,7 @@ class PDFSummarizationService:
 
         logger.info("[summarize] Step 1 — generating text summary: %s", document_name)
         summary_text = self._step1_generate_summary(document_name, chat_model)
-        logger.info("[summarize] Step 1 complete (%d chars)", len(summary_text))
+        logger.info("[summarize] Step 1 complete (%d words)", len(summary_text.split()))
 
         logger.info("[summarize] Step 2 — splitting summary into logical blocks")
         blocks = self._step2_split_into_blocks(summary_text, chat_model)
