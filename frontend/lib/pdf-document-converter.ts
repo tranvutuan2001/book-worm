@@ -132,6 +132,44 @@ function renderElement(el: PdfBlock): string {
     case 'pageBreak':
       return '<div style="page-break-after:always"></div>';
 
+    case 'chart': {
+      // Encode the full block as JSON and embed it in a placeholder div.
+      // DocumentPreview will render these as static PNG images via ECharts.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const chart = el as any;
+      const height: number = chart.height ?? 80;
+      const bg: string = chart.background ?? 'transparent';
+      const align: string = chart.align ?? 'left';
+      const widthStyle = chart.width ? `width:${chart.width}mm` : 'width:100%';
+      const marginStyle =
+        align === 'center' ? 'margin-left:auto;margin-right:auto'
+        : align === 'right' ? 'margin-left:auto'
+        : '';
+      const encoded = encodeURIComponent(JSON.stringify(el));
+      const label: string =
+        chart.title ??
+        (chart.chartType === 'pie' ? 'Pie Chart'
+          : chart.chartType === 'line' ? 'Line Chart'
+          : 'Bar Chart');
+
+      // contenteditable="false" keeps the block non-editable in the editor DOM
+      const placeholderDiv =
+        `<div class="pdf-chart-placeholder"` +
+        ` contenteditable="false"` +
+        ` data-chart-block="${encoded}"` +
+        ` data-chart-type="${escapeHtml(chart.chartType ?? 'bar')}"` +
+        ` data-chart-label="${escapeHtml(label)}"` +
+        ` style="height:${height}mm;${widthStyle};background-color:${bg};${marginStyle}"` +
+        ` title="${escapeHtml(label)}"></div>`;
+
+      const captionHtml =
+        chart.caption?.length
+          ? `<p class="chart-caption" style="text-align:${align === 'left' ? 'left' : 'center'};margin-top:4px;font-size:9pt;font-style:italic;color:#555">${renderRuns(chart.caption)}</p>`
+          : '';
+
+      return `<div class="pdf-chart-wrapper" contenteditable="false" style="text-align:${align}">${placeholderDiv}${captionHtml}</div>`;
+    }
+
     default:
       return '';
   }
@@ -321,8 +359,31 @@ function parseBlockNode(node: Node): PdfBlock | null {
     if (s.pageBreakAfter === 'always' || s.breakAfter === 'page') {
       return { type: 'pageBreak' };
     }
+
+    // Chart placeholder — restore the original block from the encoded attribute
+    if (el.classList.contains('pdf-chart-placeholder')) {
+      const encoded = el.getAttribute('data-chart-block');
+      if (encoded) {
+        try { return JSON.parse(decodeURIComponent(encoded)) as PdfBlock; } catch { /* fall through */ }
+      }
+    }
+
+    // Chart wrapper div — look for a nested placeholder
+    if (el.classList.contains('pdf-chart-wrapper')) {
+      const placeholder = el.querySelector('.pdf-chart-placeholder');
+      if (placeholder) {
+        const encoded = placeholder.getAttribute('data-chart-block');
+        if (encoded) {
+          try { return JSON.parse(decodeURIComponent(encoded)) as PdfBlock; } catch { /* fall through */ }
+        }
+      }
+    }
+
+    // Only treat as spacer for plain height-only divs (no chart class)
     const mmMatch = s.height?.match(/([\d.]+)mm/);
-    if (mmMatch) return { type: 'spacer', height: parseFloat(mmMatch[1]) };
+    if (mmMatch && !el.classList.contains('pdf-chart-placeholder') && !el.classList.contains('pdf-chart-wrapper')) {
+      return { type: 'spacer', height: parseFloat(mmMatch[1]) };
+    }
 
     // Recurse: a div might contain block children (e.g. pasted content)
     const children: PdfBlock[] = [];

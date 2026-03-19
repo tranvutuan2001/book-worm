@@ -241,6 +241,103 @@ export const PdfPageBreakSchema = z.object({
 }).describe('An explicit page break. All content following this block starts at the top of the next page.');
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Chart
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Fields shared by all chart block types. */
+const chartBase = {
+  /** Optional chart title rendered above the chart. */
+  title:      z.string().optional(),
+  /** Caption rendered below the chart. */
+  caption:    z.array(PdfTextRunSchema).optional(),
+  /** Width in mm; omit to fill the available content width. */
+  width:      PdfMmSchema.optional(),
+  /** Height in mm. */
+  height:     PdfMmSchema.default(80),
+  align:      z.enum(['left', 'center', 'right']).optional(),
+  /** Color palette applied to series / slices in declaration order. */
+  colors:     z.array(PdfColorSchema).optional(),
+  legend: z.object({
+    show:     z.boolean().default(true),
+    position: z.enum(['top', 'bottom', 'left', 'right']).default('bottom'),
+  }).optional(),
+  background: PdfColorSchema.optional(),
+};
+
+/** A single data series used by bar and line charts. */
+export const PdfChartSeriesSchema = z.object({
+  name:   z.string(),
+  values: z.array(z.number()).min(1),
+  color:  PdfColorSchema.optional(),
+});
+
+export const PdfBarChartSchema = z.object({
+  ...blockBase,
+  ...chartBase,
+  type:        z.literal('chart'),
+  chartType:   z.literal('bar'),
+  /** Category labels for the x-axis (vertical) or y-axis (horizontal). */
+  categories:  z.array(z.string()).min(1),
+  series:      z.array(PdfChartSeriesSchema).min(1),
+  orientation: z.enum(['vertical', 'horizontal']).default('vertical'),
+  /** Stack all series into a single bar per category. */
+  stacked:     z.boolean().default(false),
+  xAxisLabel:  z.string().optional(),
+  yAxisLabel:  z.string().optional(),
+}).describe('A bar chart with one or more series plotted against categorical axis labels. Supports vertical/horizontal orientation and stacking. Never split across pages by default.');
+
+export const PdfLineChartSchema = z.object({
+  ...blockBase,
+  ...chartBase,
+  type:        z.literal('chart'),
+  chartType:   z.literal('line'),
+  categories:  z.array(z.string()).min(1),
+  series:      z.array(PdfChartSeriesSchema).min(1),
+  /** Use bezier curves instead of straight line segments. */
+  smooth:      z.boolean().default(false),
+  /** Show a marker dot at each data point. */
+  showPoints:  z.boolean().default(true),
+  /** Fill the area under each line. */
+  fill:        z.boolean().default(false),
+  xAxisLabel:  z.string().optional(),
+  yAxisLabel:  z.string().optional(),
+}).describe('A line chart with one or more series plotted against categorical x-axis labels. Supports smooth curves, data-point markers, and area fill. Never split across pages by default.');
+
+/** A single slice in a pie or donut chart. */
+export const PdfPieSliceSchema = z.object({
+  name:  z.string(),
+  value: z.number().nonnegative(),
+  color: PdfColorSchema.optional(),
+});
+
+export const PdfPieChartSchema = z.object({
+  ...blockBase,
+  ...chartBase,
+  type:            z.literal('chart'),
+  chartType:       z.literal('pie'),
+  slices:          z.array(PdfPieSliceSchema).min(1),
+  /** Render as a donut chart with a hollow centre. */
+  donut:           z.boolean().default(false),
+  showLabels:      z.boolean().default(true),
+  showPercentages: z.boolean().default(false),
+}).describe('A pie or donut chart composed of named slices. Optionally show slice labels and percentage values. Never split across pages by default.');
+
+/**
+ * Discriminated union of all supported chart variants.
+ * Discriminator key: `chartType` ('bar' | 'line' | 'pie').
+ * All variants also carry `type: 'chart'` for the outer block union.
+ */
+export const PdfChartSchema = z.discriminatedUnion('chartType', [
+  PdfBarChartSchema,
+  PdfLineChartSchema,
+  PdfPieChartSchema,
+]);
+
+export type PdfChartSeries = z.infer<typeof PdfChartSeriesSchema>;
+export type PdfPieSlice    = z.infer<typeof PdfPieSliceSchema>;
+export type PdfChart       = z.infer<typeof PdfChartSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PdfBlock — the single union used in document.content
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -255,6 +352,7 @@ export const PdfBlockSchema = z.discriminatedUnion('type', [
   PdfDividerSchema,
   PdfSpacerSchema,
   PdfPageBreakSchema,
+  PdfChartSchema,
 ]);
 
 export type PdfBlock = z.infer<typeof PdfBlockSchema>;
