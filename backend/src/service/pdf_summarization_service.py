@@ -206,6 +206,7 @@ class PDFSummarizationService:
                 model_path=chat_model,
                 message_list=[request_message],
                 system_prompt=_STEP1_SYSTEM,
+                max_tokens=12000,
             )
             return refined
         except Exception as exc:
