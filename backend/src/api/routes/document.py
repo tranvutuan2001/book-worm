@@ -5,7 +5,6 @@ import traceback
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
-from src.api.deps import get_document_service, get_pdf_summarization_service
 from src.api.schemas.document import (
     DocumentInfo,
     DocumentStatus,
@@ -14,8 +13,8 @@ from src.api.schemas.document import (
 )
 from src.api.schemas.pdf_summarization import SummarizeResponse
 from src.core.exceptions import DocumentNotFoundError, DocumentProcessingError, InvalidDocumentError
-from src.service.document_service import DocumentService
-from src.service.pdf_summarization_service import PDFSummarizationService
+from src.service.document_service import DocumentService, get_document_service
+from src.service.pdf_summarization_service import PDFSummarizationService, get_pdf_summarization_service
 
 logger = logging.getLogger("app.api")
 

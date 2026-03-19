@@ -6,7 +6,6 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from src.api.deps import get_model_service
 from src.api.schemas.model import (
     DownloadableModelInfo,
     LoadedModelInfo,
@@ -18,7 +17,7 @@ from src.api.schemas.model import (
     ModelUnloadRequest,
     ModelUnloadResponse,
 )
-from src.service.model_service import ModelService
+from src.service.model_service import ModelService, get_model_service
 
 logger = logging.getLogger("app.api")
 
