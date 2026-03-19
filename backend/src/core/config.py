@@ -37,9 +37,9 @@ DEFAULT_EMBEDDING_MODEL: str = "models/embedding/mlx-community/Qwen3-Embedding-0
 # Document analysis parameters
 # ---------------------------------------------------------------------------
 
-CHUNK_SIZE: int = 2000
+CHUNK_SIZE: int = 1000
 CHUNK_OVERLAP: int = 100
-CHUNKS_PER_SECTION: int = 10
+CHUNKS_PER_SECTION: int = 5
 SECTIONS_PER_CHAPTER: int = 5
 MAX_EMBEDDING_RETRIES: int = 3
 

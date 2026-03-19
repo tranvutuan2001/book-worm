@@ -2285,6 +2285,814 @@
           "type"
         ],
         "additionalProperties": false
+      },
+      {
+        "oneOf": [
+          {
+            "description": "A bar chart with one or more series plotted against categorical axis labels. Supports vertical/horizontal orientation and stacking. Never split across pages by default.",
+            "type": "object",
+            "properties": {
+              "margin": {
+                "type": "object",
+                "properties": {
+                  "top": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "right": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "bottom": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "left": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "top",
+                  "right",
+                  "bottom",
+                  "left"
+                ],
+                "additionalProperties": false
+              },
+              "padding": {
+                "type": "object",
+                "properties": {
+                  "top": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "right": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "bottom": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "left": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "top",
+                  "right",
+                  "bottom",
+                  "left"
+                ],
+                "additionalProperties": false
+              },
+              "breakInside": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "avoid"
+                ]
+              },
+              "breakBefore": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "always",
+                  "avoid"
+                ]
+              },
+              "breakAfter": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "always",
+                  "avoid"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "caption": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "bold": {
+                      "type": "boolean"
+                    },
+                    "italic": {
+                      "type": "boolean"
+                    },
+                    "underline": {
+                      "type": "boolean"
+                    },
+                    "strikethrough": {
+                      "type": "boolean"
+                    },
+                    "color": {
+                      "description": "CSS-compatible color string",
+                      "type": "string"
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "fontFamily": {
+                      "type": "string"
+                    },
+                    "verticalAlign": {
+                      "type": "string",
+                      "enum": [
+                        "baseline",
+                        "super",
+                        "sub"
+                      ]
+                    },
+                    "link": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "highlight": {
+                      "description": "CSS-compatible color string",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "text"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "width": {
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "height": {
+                "default": 80,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "align": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "center",
+                  "right"
+                ]
+              },
+              "colors": {
+                "type": "array",
+                "items": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                }
+              },
+              "legend": {
+                "type": "object",
+                "properties": {
+                  "show": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "position": {
+                    "default": "bottom",
+                    "type": "string",
+                    "enum": [
+                      "top",
+                      "bottom",
+                      "left",
+                      "right"
+                    ]
+                  }
+                },
+                "required": [
+                  "show",
+                  "position"
+                ],
+                "additionalProperties": false
+              },
+              "background": {
+                "description": "CSS-compatible color string",
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "const": "chart"
+              },
+              "chartType": {
+                "type": "string",
+                "const": "bar"
+              },
+              "categories": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "series": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "values": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "color": {
+                      "description": "CSS-compatible color string",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "values"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "orientation": {
+                "default": "vertical",
+                "type": "string",
+                "enum": [
+                  "vertical",
+                  "horizontal"
+                ]
+              },
+              "stacked": {
+                "default": false,
+                "type": "boolean"
+              },
+              "xAxisLabel": {
+                "type": "string"
+              },
+              "yAxisLabel": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "height",
+              "type",
+              "chartType",
+              "categories",
+              "series",
+              "orientation",
+              "stacked"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "description": "A line chart with one or more series plotted against categorical x-axis labels. Supports smooth curves, data-point markers, and area fill. Never split across pages by default.",
+            "type": "object",
+            "properties": {
+              "margin": {
+                "type": "object",
+                "properties": {
+                  "top": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "right": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "bottom": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "left": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "top",
+                  "right",
+                  "bottom",
+                  "left"
+                ],
+                "additionalProperties": false
+              },
+              "padding": {
+                "type": "object",
+                "properties": {
+                  "top": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "right": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "bottom": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "left": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "top",
+                  "right",
+                  "bottom",
+                  "left"
+                ],
+                "additionalProperties": false
+              },
+              "breakInside": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "avoid"
+                ]
+              },
+              "breakBefore": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "always",
+                  "avoid"
+                ]
+              },
+              "breakAfter": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "always",
+                  "avoid"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "caption": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "bold": {
+                      "type": "boolean"
+                    },
+                    "italic": {
+                      "type": "boolean"
+                    },
+                    "underline": {
+                      "type": "boolean"
+                    },
+                    "strikethrough": {
+                      "type": "boolean"
+                    },
+                    "color": {
+                      "description": "CSS-compatible color string",
+                      "type": "string"
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "fontFamily": {
+                      "type": "string"
+                    },
+                    "verticalAlign": {
+                      "type": "string",
+                      "enum": [
+                        "baseline",
+                        "super",
+                        "sub"
+                      ]
+                    },
+                    "link": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "highlight": {
+                      "description": "CSS-compatible color string",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "text"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "width": {
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "height": {
+                "default": 80,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "align": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "center",
+                  "right"
+                ]
+              },
+              "colors": {
+                "type": "array",
+                "items": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                }
+              },
+              "legend": {
+                "type": "object",
+                "properties": {
+                  "show": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "position": {
+                    "default": "bottom",
+                    "type": "string",
+                    "enum": [
+                      "top",
+                      "bottom",
+                      "left",
+                      "right"
+                    ]
+                  }
+                },
+                "required": [
+                  "show",
+                  "position"
+                ],
+                "additionalProperties": false
+              },
+              "background": {
+                "description": "CSS-compatible color string",
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "const": "chart"
+              },
+              "chartType": {
+                "type": "string",
+                "const": "line"
+              },
+              "categories": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "series": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "values": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "color": {
+                      "description": "CSS-compatible color string",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "values"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "smooth": {
+                "default": false,
+                "type": "boolean"
+              },
+              "showPoints": {
+                "default": true,
+                "type": "boolean"
+              },
+              "fill": {
+                "default": false,
+                "type": "boolean"
+              },
+              "xAxisLabel": {
+                "type": "string"
+              },
+              "yAxisLabel": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "height",
+              "type",
+              "chartType",
+              "categories",
+              "series",
+              "smooth",
+              "showPoints",
+              "fill"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "description": "A pie or donut chart composed of named slices. Optionally show slice labels and percentage values. Never split across pages by default.",
+            "type": "object",
+            "properties": {
+              "margin": {
+                "type": "object",
+                "properties": {
+                  "top": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "right": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "bottom": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "left": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "top",
+                  "right",
+                  "bottom",
+                  "left"
+                ],
+                "additionalProperties": false
+              },
+              "padding": {
+                "type": "object",
+                "properties": {
+                  "top": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "right": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "bottom": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  },
+                  "left": {
+                    "default": 0,
+                    "description": "Measurement in mm",
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "top",
+                  "right",
+                  "bottom",
+                  "left"
+                ],
+                "additionalProperties": false
+              },
+              "breakInside": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "avoid"
+                ]
+              },
+              "breakBefore": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "always",
+                  "avoid"
+                ]
+              },
+              "breakAfter": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "always",
+                  "avoid"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "caption": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "bold": {
+                      "type": "boolean"
+                    },
+                    "italic": {
+                      "type": "boolean"
+                    },
+                    "underline": {
+                      "type": "boolean"
+                    },
+                    "strikethrough": {
+                      "type": "boolean"
+                    },
+                    "color": {
+                      "description": "CSS-compatible color string",
+                      "type": "string"
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "fontFamily": {
+                      "type": "string"
+                    },
+                    "verticalAlign": {
+                      "type": "string",
+                      "enum": [
+                        "baseline",
+                        "super",
+                        "sub"
+                      ]
+                    },
+                    "link": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "highlight": {
+                      "description": "CSS-compatible color string",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "text"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "width": {
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "height": {
+                "default": 80,
+                "description": "Measurement in mm",
+                "type": "number"
+              },
+              "align": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "center",
+                  "right"
+                ]
+              },
+              "colors": {
+                "type": "array",
+                "items": {
+                  "description": "CSS-compatible color string",
+                  "type": "string"
+                }
+              },
+              "legend": {
+                "type": "object",
+                "properties": {
+                  "show": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "position": {
+                    "default": "bottom",
+                    "type": "string",
+                    "enum": [
+                      "top",
+                      "bottom",
+                      "left",
+                      "right"
+                    ]
+                  }
+                },
+                "required": [
+                  "show",
+                  "position"
+                ],
+                "additionalProperties": false
+              },
+              "background": {
+                "description": "CSS-compatible color string",
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "const": "chart"
+              },
+              "chartType": {
+                "type": "string",
+                "const": "pie"
+              },
+              "slices": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "color": {
+                      "description": "CSS-compatible color string",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "donut": {
+                "default": false,
+                "type": "boolean"
+              },
+              "showLabels": {
+                "default": true,
+                "type": "boolean"
+              },
+              "showPercentages": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "height",
+              "type",
+              "chartType",
+              "slices",
+              "donut",
+              "showLabels",
+              "showPercentages"
+            ],
+            "additionalProperties": false
+          }
+        ]
       }
     ]
   },

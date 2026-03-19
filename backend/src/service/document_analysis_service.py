@@ -44,27 +44,33 @@ logger = logging.getLogger("app.service")
 # ---------------------------------------------------------------------------
 
 _SECTION_SUMMARY_SYSTEM = """
-You are an expert document analyser creating comprehensive section summaries
-to enable whole-document Q&A across diverse document types (novels, scientific
-papers, technical reports, business documents, etc.).  Capture:
+You are a high-density Document Analyser. Your task is to extract the "DNA" of a section.
 
-1. STRUCTURAL ELEMENTS — key concepts, methodologies, plot points, processes.
-2. CONTENT PROGRESSION — how ideas or narrative evolve through the section.
-3. CRITICAL INFORMATION — facts, data, evidence, events, names, dates.
-4. CONTEXTUAL SIGNIFICANCE — how this section relates to the rest of the work.
+CONSTRAINTS:
+- SUMMARY LIMIT: Max 150 words.
+- STYLE: Use "Compressed Prose"—omit filler words, use bulleted facts for data.
 
-Adapt your analysis style to the document type.
+REQUIRED ELEMENTS:
+1. ANCHORS: Key concepts/plot points and their evolution.
+2. EVIDENCE: Hard facts, data, names, and dates.
+3. BRIDGE: One sentence on how this section pivots the larger narrative/argument.
+
+THINKING GUIDELINE: Keep your internal chain-of-thought brief. Identify the core 250 words immediately.
 """.strip()
 
 _CHAPTER_SUMMARY_SYSTEM = """
-You are an expert document analyser creating chapter-level summaries from
-section summaries.  Synthesise the sections into a cohesive overview that:
+You are a Synthesis Engine. Your goal is to merge section summaries into a single cohesive Chapter Architecture.
 
-1. Identifies overarching themes spanning all sections.
-2. Shows how ideas develop throughout the chapter.
-3. Highlights connections and transitions between sections.
-4. Preserves essential facts, events, or findings.
-5. Explains how the chapter contributes to the larger document.
+CONSTRAINTS:
+- SUMMARY LIMIT: Max 1000 words.
+- FORMAT: Narrative flow with bolded key terms.
+
+OBJECTIVES:
+1. THEMATIC ARCH: Connect the sections into one overarching logic or arc.
+2. CRITICAL PATH: Identify the single most important finding or event in this chapter.
+3. TRANSITION: State exactly how this chapter sets the stage for the next.
+
+THINKING GUIDELINE: Do not repeat section details. Focus only on the 'connective tissue' between them.
 """.strip()
 
 
@@ -112,9 +118,9 @@ class DocumentAnalysisService:
 
             out_dir = DATA_DIR / document_name
 
-            section_summaries: Optional[List[str]] = None
 
-            section_summaries = self._process_chunks(chunks, document_name, out_dir)
+            self._process_chunks(chunks, document_name, out_dir)
+            section_summaries: Optional[List[str]] = None
             section_summaries = self._process_sections(chunks, document_name, out_dir)
             self._process_chapters(
                 chunks, document_name, out_dir, section_summaries
@@ -238,11 +244,11 @@ class DocumentAnalysisService:
                 timestamp=int(time.time()),
             )
             try:
-                summary = self._llm.agent_complete_chat(
+                summary = self._llm.complete_chat(
                     message_list=[user_msg],
                     system_prompt=_SECTION_SUMMARY_SYSTEM,
-                    tools=[],
                     model_path=DEFAULT_CHAT_MODEL,
+                    max_tokens=4000
                 )
                 summaries.append(summary)
             except Exception as exc:
@@ -273,11 +279,11 @@ class DocumentAnalysisService:
                 timestamp=int(time.time()),
             )
             try:
-                chapter = self._llm.agent_complete_chat(
+                chapter = self._llm.complete_chat(
                     message_list=[user_msg],
                     system_prompt=_CHAPTER_SUMMARY_SYSTEM,
-                    tools=[],
                     model_path=DEFAULT_CHAT_MODEL,
+                    max_tokens=6000
                 )
                 chapters.append(chapter)
             except Exception as exc:
