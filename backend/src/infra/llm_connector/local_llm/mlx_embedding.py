@@ -1,11 +1,9 @@
 import logging
-from typing import ClassVar, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import mlx.core as mx
 import mlx.nn as nn
 from mlx_lm import load as mlx_load
-
-from src.infra.llm_connector.local_llm.mlx_base import MLXModelBase
 
 
 @runtime_checkable
@@ -21,7 +19,7 @@ _ModelPair = tuple[nn.Module, _Tokenizer]
 logger = logging.getLogger("app.llm_connector")
 
 
-class MLXEmbeddingModel(MLXModelBase):
+class MLXEmbeddingModel:
     """
     Wrapper around a locally-stored MLX embedding model.
 
@@ -33,8 +31,6 @@ class MLXEmbeddingModel(MLXModelBase):
         model = MLXEmbeddingModel("/models/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ")
         vector = model.embed("What is domain-driven design?")
 
-    The model is loaded lazily on the first call to :meth:`embed` and then
-    cached in memory for the lifetime of the process.
     """
 
     def __init__(self, model_path: str) -> None:
@@ -46,26 +42,9 @@ class MLXEmbeddingModel(MLXModelBase):
                         ``models/...`` directory when running outside Docker.
         """
         self._model_path = model_path
-
-    # Per-class model cache, keyed by resolved absolute path
-    _model_cache: ClassVar[dict[str, _ModelPair]] = {}
-
-    @classmethod
-    def _load_model(cls, model_path: str) -> _ModelPair:
-        """
-        Load and cache the MLX embedding model + tokenizer at *model_path*.
-
-        The resolved absolute path is used as the cache key.
-
-        Returns:
-            A ``(model, tokenizer)`` tuple as returned by ``mlx_lm.load``.
-        """
-        resolved = str(cls._resolve_model_path(model_path))
-        if resolved not in cls._model_cache:
-            logger.info(f"Loading MLX embedding model from: {resolved}")
-            cls._model_cache[resolved] = mlx_load(resolved)
-            logger.info(f"MLX embedding model loaded successfully: {resolved}")
-        return cls._model_cache[resolved]
+        logger.info(f"Loading MLX embedding model from: {model_path}")
+        self._model_pair: _ModelPair = mlx_load(model_path)
+        logger.info(f"MLX embedding model loaded successfully: {model_path}")
 
     def embed(self, text: str) -> list[float]:
         """
@@ -84,7 +63,7 @@ class MLXEmbeddingModel(MLXModelBase):
             A ``List[float]`` of length equal to the model's hidden dimension,
             normalised to unit L2 norm.
         """
-        model, tokenizer = self._load_model(self._model_path)
+        model, tokenizer = self._model_pair
         tokens = tokenizer.encode(text, return_tensors="mlx")
         hidden = model.model(tokens)          # (1, seq_len, hidden_dim)
         last = hidden[0, -1, :]              # last-token hidden state

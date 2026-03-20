@@ -11,12 +11,14 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from src.domain.entity.message import Message
 from src.domain.enums import Role
 from src.infra.llm_connector.llm_logging_handler import LLMLoggingHandler
-from src.infra.llm_connector.local_llm.mlx_base import MLXModelBase
 from src.infra.llm_connector.local_llm.mlx_chat import MLXChatModel
 from src.infra.llm_connector.local_llm.mlx_embedding import MLXEmbeddingModel
 from src.infra.llm_connector.local_llm.parsing_service import ParsingService, get_parsing_service
 
 logger = logging.getLogger("app.llm_connector")
+
+# Project root: four levels up from this file (backend/)
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 ModelType = Literal["chat", "embedding"]
 
@@ -61,6 +63,9 @@ class LLMService:
 
     def __init__(self, parsing_service: ParsingService) -> None:
         self._parsing_service = parsing_service
+        # Instance-level model caches — keyed by resolved absolute path.
+        self._chat_models: dict[str, MLXChatModel] = {}
+        self._embedding_models: dict[str, MLXEmbeddingModel] = {}
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -71,10 +76,41 @@ class LLMService:
         return f"{model_type}:{resolved_path}"
 
     @staticmethod
-    def _cache_for(model_type: str) -> dict:
+    def _resolve_model_path(model_path: str) -> str:
+        """
+        Resolve *model_path* to an existing local directory.
+
+        Resolution order:
+        1. Absolute path — used as-is if it exists.
+        2. Docker-style ``/models/...`` path — remapped to
+           ``<project_root>/models/...`` when running outside Docker.
+        3. Path relative to ``<project_root>`` (e.g. ``models/chat/...``).
+        4. Path relative to ``<project_root>/models/chat/``.
+        5. Path relative to ``<project_root>/models/embedding/``.
+
+        Falls back to the original string unchanged so that ``mlx_lm`` can
+        attempt a Hugging Face Hub download if the path does not exist locally.
+        """
+        p = Path(model_path)
+        if p.exists():
+            return str(p)
+
+        stripped = model_path.lstrip("/")
+        for candidate in (
+            _PROJECT_ROOT / stripped,
+            _PROJECT_ROOT / "models" / "chat" / stripped,
+            _PROJECT_ROOT / "models" / "embedding" / stripped,
+        ):
+            if candidate.exists():
+                logger.debug(f"Resolved model path '{model_path}' → '{candidate}'")
+                return str(candidate)
+
+        return model_path
+
+    def _cache_for(self, model_type: str) -> dict:
         if model_type == "embedding":
-            return MLXEmbeddingModel._model_cache
-        return MLXChatModel._model_cache
+            return self._embedding_models
+        return self._chat_models
 
     # ------------------------------------------------------------------
     # Model lifecycle
@@ -96,7 +132,7 @@ class LLMService:
         Raises:
             Exception: Propagates any error thrown by the underlying MLX load.
         """
-        resolved = str(MLXModelBase._resolve_model_path(model_path))
+        resolved = self._resolve_model_path(model_path)
         key = self._loading_key(model_type, resolved)
         cache = self._cache_for(model_type)
 
@@ -112,9 +148,12 @@ class LLMService:
         try:
             logger.info(f"[LLMService] Loading {model_type} model: {resolved}")
             if model_type == "embedding":
-                MLXEmbeddingModel._load_model(resolved)
+                self._embedding_models[resolved] = MLXEmbeddingModel(resolved)
             else:
-                MLXChatModel._load_model(resolved)
+                self._chat_models[resolved] = MLXChatModel(
+                    model_path=resolved,
+                    parsing_service=self._parsing_service,
+                )
             logger.info(f"[LLMService] Model loaded successfully: {resolved}")
         except Exception:
             logger.exception(f"[LLMService] Failed to load model: {resolved}")
@@ -135,28 +174,25 @@ class LLMService:
             ``True`` if the model was found and removed, ``False`` if it was
             not loaded.
         """
-        resolved = str(MLXModelBase._resolve_model_path(model_path))
+        resolved = self._resolve_model_path(model_path)
         cache = self._cache_for(model_type)
 
         with self._lock:
             if resolved not in cache:
                 return False
-            try:
-                del cache[resolved]
-            except KeyError:
-                return False
+            del cache[resolved]
 
         logger.info(f"[LLMService] Unloaded {model_type} model: {resolved}")
         return True
 
     def is_model_loaded(self, model_path: str, model_type: ModelType) -> bool:
         """Return ``True`` if the model is currently held in memory."""
-        resolved = str(MLXModelBase._resolve_model_path(model_path))
+        resolved = self._resolve_model_path(model_path)
         return resolved in self._cache_for(model_type)
 
     def is_model_loading(self, model_path: str, model_type: ModelType) -> bool:
         """Return ``True`` if a load operation is currently in progress."""
-        resolved = str(MLXModelBase._resolve_model_path(model_path))
+        resolved = self._resolve_model_path(model_path)
         key = self._loading_key(model_type, resolved)
         return key in self._loading
 
@@ -169,9 +205,9 @@ class LLMService:
         """
         count = 0
         with self._lock:
-            for cache in (MLXChatModel._model_cache, MLXEmbeddingModel._model_cache):
-                count += len(cache)
-                cache.clear()
+            count += len(self._chat_models) + len(self._embedding_models)
+            self._chat_models.clear()
+            self._embedding_models.clear()
         logger.info(f"[LLMService] Unloaded all models ({count} total)")
         return count
 
@@ -185,7 +221,7 @@ class LLMService:
         """
         results: List[LoadedModelRecord] = []
 
-        for path_str in list(MLXChatModel._model_cache):
+        for path_str in list(self._chat_models):
             results.append(LoadedModelRecord(
                 model_name=Path(path_str).name,
                 model_path=path_str,
@@ -193,7 +229,7 @@ class LLMService:
                 loading=False,
             ))
 
-        for path_str in list(MLXEmbeddingModel._model_cache):
+        for path_str in list(self._embedding_models):
             results.append(LoadedModelRecord(
                 model_name=Path(path_str).name,
                 model_path=path_str,
@@ -222,7 +258,6 @@ class LLMService:
         model_path: str,
         message_list: List[Message],
         system_prompt: str,
-        template_name: str = "qwen",
         json_schema: str = None,
         max_tokens: int = 4000,
     ) -> str:
@@ -233,10 +268,6 @@ class LLMService:
             model_path:    Local path (or HF name) of the MLX chat model.
             message_list:  Conversation history as ``Message`` objects.
             system_prompt: System instruction to prepend to the conversation.
-            template_name: Chat-template family name used by ``model_path``
-                           (e.g. ``"qwen"``).  Forwarded to
-                           ``ParsingService`` to select the correct output
-                           parser.
             json_schema:   Optional JSON Schema string.  When provided,
                            xgrammar constrained decoding is applied so the
                            model can only emit tokens that form a valid
@@ -247,27 +278,26 @@ class LLMService:
         Returns:
             The assistant reply as a plain string.
         """
-        llm = MLXChatModel(
-            model_path=model_path,
-            max_tokens=max_tokens,
-            temperature=0.1,
-            parsing_service=self._parsing_service,
-            template_name=template_name,
-            json_schema=json_schema,
-        )
+        resolved = self._resolve_model_path(model_path)
+        if resolved not in self._chat_models:
+            logger.info(f"[LLMService] Auto-loading chat model for inference: {resolved}")
+            self.load_model(model_path, "chat")
 
         lc_messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
-        for m in message_list:
-            if m.role == Role.SYSTEM:
-                lc_messages.append(SystemMessage(content=m.content))
-            elif m.role == Role.ASSISTANT:
-                lc_messages.append(AIMessage(content=m.content))
+        for message in message_list:
+            if message.role == Role.SYSTEM:
+                lc_messages.append(SystemMessage(content=message.content))
+            elif message.role == Role.ASSISTANT:
+                lc_messages.append(AIMessage(content=message.content))
             else:
-                lc_messages.append(HumanMessage(content=m.content))
+                lc_messages.append(HumanMessage(content=message.content))
 
-        response = llm.invoke(
+        response = self._chat_models[resolved].invoke(
             lc_messages,
             config={"callbacks": [LLMLoggingHandler()]},
+            max_tokens=max_tokens,
+            temperature=0.1,
+            json_schema=json_schema,
         )
         return response.content
 
@@ -277,7 +307,6 @@ class LLMService:
         message_list: List[Message],
         system_prompt: str,
         tools: List[BaseTool],
-        template_name: str = "qwen",
         max_iterations: int = None,
         json_schema: str = None,
         max_tokens: int = 4000,
@@ -290,10 +319,6 @@ class LLMService:
             message_list:   Conversation history as ``Message`` objects.
             system_prompt:  System instruction to prepend to the conversation.
             tools:          LangChain tools made available to the agent.
-            template_name:  Chat-template family name used by ``model_path``
-                            (e.g. ``"qwen"``).  Forwarded to
-                            ``ParsingService`` to select the correct output
-                            parser.
             max_iterations: Maximum number of agent reasoning/tool-call cycles
                             before the agent is forced to stop.  Maps to
                             LangGraph's ``recursion_limit`` (default ``25``).
@@ -304,12 +329,16 @@ class LLMService:
             max_tokens:     Maximum number of tokens to generate.  Default
                             is 4000; increase for large structured outputs.
         """
-        llm = MLXChatModel(
-            model_path=model_path,
+        resolved = self._resolve_model_path(model_path)
+        if resolved not in self._chat_models:
+            logger.info(f"[LLMService] Auto-loading chat model for agent inference: {resolved}")
+            self.load_model(model_path, "chat")
+
+        # Pre-bind per-call inference params so the agent passes them on every
+        # internal LLM invocation without touching the cached instance.
+        llm = self._chat_models[resolved].bind(
             max_tokens=max_tokens,
             temperature=0.1,
-            parsing_service=self._parsing_service,
-            template_name=template_name,
             json_schema=json_schema,
         )
         agent = create_agent(model=llm, tools=tools, system_prompt=system_prompt)
@@ -335,7 +364,11 @@ class LLMService:
         Returns:
             A unit-normalised float vector.
         """
-        return MLXEmbeddingModel(model_path).embed(text)
+        resolved = self._resolve_model_path(model_path)
+        if resolved not in self._embedding_models:
+            logger.info(f"[LLMService] Auto-loading embedding model for inference: {resolved}")
+            self._embedding_models[resolved] = MLXEmbeddingModel(resolved)
+        return self._embedding_models[resolved].embed(text)
 
 
 def get_llm_service(

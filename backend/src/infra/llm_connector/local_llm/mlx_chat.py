@@ -1,7 +1,7 @@
 import json
 import logging
 import traceback
-from typing import ClassVar, Optional, Protocol, Sequence, runtime_checkable
+from typing import Any, Optional, Protocol, Sequence, runtime_checkable
 
 import mlx.nn as nn
 from mlx_lm import generate
@@ -18,11 +18,10 @@ from langchain_core.messages import (
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.tools import BaseTool
-from pydantic import Field
+from pydantic import Field, PrivateAttr
 
 from mlx_lm import load as mlx_load
 
-from src.infra.llm_connector.local_llm.mlx_base import MLXModelBase
 from src.infra.llm_connector.local_llm.parsing_service import ParsingService
 from src.infra.llm_connector.local_llm.xgrammar_processor import make_json_schema_logits_processor
 
@@ -44,7 +43,7 @@ class _ChatTokenizer(Protocol):
 _ModelPair = tuple[nn.Module, _ChatTokenizer]
 
 
-class MLXChatModel(MLXModelBase, BaseChatModel):
+class MLXChatModel(BaseChatModel):
     """
     LangChain BaseChatModel implementation backed by a locally-stored MLX model.
 
@@ -59,38 +58,19 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
     """
 
     model_path: str = Field(description="Absolute path to the local MLX model directory")
-    max_tokens: int = Field(default=2048, description="Maximum tokens to generate")
-    temperature: float = Field(default=0.1, description="Sampling temperature")
     parsing_service: ParsingService = Field(description="Shared ParsingService used to parse raw model output")
-    template_name: str = Field(default="qwen", description="Chat-template family name forwarded to ParsingService (e.g. 'qwen', 'openai')")
-    json_schema: Optional[str] = Field(
-        default=None,
-        description="JSON Schema string to enforce via xgrammar constrained decoding. "
-                    "When set, only token sequences valid under this schema are generated.",
-    )
 
-    # Per-class model cache, keyed by resolved absolute path
-    _model_cache: ClassVar[dict[str, _ModelPair]] = {}
+    # Loaded (model, tokenizer) pair — populated in model_post_init.
+    _model_pair: Optional[_ModelPair] = PrivateAttr(default=None)
 
     # Tools bound via bind_tools(); kept as serialisable dicts
     _bound_tools: list[dict[str, object]] = []
 
-    @classmethod
-    def _load_model(cls, model_path: str) -> _ModelPair:
-        """
-        Load and cache the MLX chat model + tokenizer at *model_path*.
-
-        The resolved absolute path is used as the cache key.
-
-        Returns:
-            A ``(model, tokenizer)`` tuple as returned by ``mlx_lm.load``.
-        """
-        resolved = str(cls._resolve_model_path(model_path))
-        if resolved not in cls._model_cache:
-            logger.info(f"Loading MLX chat model from: {resolved}")
-            cls._model_cache[resolved] = mlx_load(resolved)
-            logger.info(f"MLX chat model loaded successfully: {resolved}")
-        return cls._model_cache[resolved]
+    def model_post_init(self, __context: Any) -> None:
+        """Load the MLX model from disk immediately after construction."""
+        logger.info(f"Loading MLX chat model from: {self.model_path}")
+        self._model_pair = mlx_load(self.model_path)
+        logger.info(f"MLX chat model loaded successfully: {self.model_path}")
 
     @property
     def _llm_type(self) -> str:
@@ -132,7 +112,9 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
                 # Assume it has a .schema() method (e.g. pydantic model)
                 tool_schemas.append(t)
 
-        new_instance = self.model_copy(deep=True)
+        new_instance = self.model_copy()
+        # Ensure the copied instance shares the already-loaded weights.
+        new_instance._model_pair = self._model_pair
         new_instance._bound_tools = tool_schemas
         return new_instance
 
@@ -143,13 +125,19 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
     def _generate(
         self,
         messages: list[BaseMessage],
+        stop: Optional[list[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
     ) -> ChatResult:
-        try:
-            model, tokenizer = self._load_model(self.model_path)
-        except Exception as e:
-            error_msg = f"Failed to load MLX chat model from '{self.model_path}': {e}"
+        if self._model_pair is None:
+            error_msg = f"MLX chat model is not loaded for path '{self.model_path}'"
             logger.error(error_msg)
-            raise RuntimeError(error_msg) from e
+            raise RuntimeError(error_msg)
+        model, tokenizer = self._model_pair
+
+        max_tokens: int = kwargs.get("max_tokens", 4000)
+        temperature: float = kwargs.get("temperature", 0.1)
+        json_schema: Optional[str] = kwargs.get("json_schema", None)
 
         chat_messages = self._to_chat_dicts(messages)
 
@@ -182,9 +170,9 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
 
         # Build an optional xgrammar logits processor for constrained decoding.
         logits_processors = None
-        if self.json_schema is not None:
+        if json_schema is not None:
             processor = make_json_schema_logits_processor(
-                tokenizer, self.json_schema
+                tokenizer, json_schema
             )
             if processor is not None:
                 logits_processors = [processor]
@@ -194,14 +182,14 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
         try:
             logger.info(
                 f"Running MLX generation: model={self.model_path}, "
-                f"max_tokens={self.max_tokens}, temperature={self.temperature}"
+                f"max_tokens={max_tokens}, temperature={temperature}"
             )
             response_text = generate(
                 model,
                 tokenizer,
                 prompt=prompt,
-                max_tokens=self.max_tokens,
-                sampler=make_sampler(temp=self.temperature),
+                max_tokens=max_tokens,
+                sampler=make_sampler(temp=temperature),
                 logits_processors=logits_processors,
                 verbose=False,
                 kv_bits=4,
@@ -213,7 +201,7 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
             print(f"❌ {error_msg}\n{traceback.format_exc()}")
             raise
 
-        ai_message = self.parsing_service.parse(response_text, self.template_name)
+        ai_message = self.parsing_service.parse(response_text, "qwen")
         logger.info(
             f"Parsed response: tool_calls={len(ai_message.tool_calls)}, "
             f"has_thinking={'thinking' in ai_message.additional_kwargs}"
