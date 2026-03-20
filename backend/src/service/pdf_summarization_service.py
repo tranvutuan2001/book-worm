@@ -42,12 +42,15 @@ from src.core.exceptions import DocumentNotFoundError, DocumentProcessingError
 from src.domain.entity.message import Message
 from src.domain.enums import Role
 from src.infra.llm_connector.llm_service import LLMService, get_llm_service
-from src.infra.llm_connector.xgrammar_processor import JSON_ARRAY_OF_STRINGS_SCHEMA
 from src.service.tools.document_retrieval_tool import (
     get_document_summary,
 )
 
 logger = logging.getLogger("app.service.pdf_summarization")
+
+JSON_ARRAY_OF_STRINGS_SCHEMA: str = json.dumps(
+    {"type": "array", "items": {"type": "string"}}
+)
 
 # ---------------------------------------------------------------------------
 # Prompts

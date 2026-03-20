@@ -11,10 +11,10 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from src.domain.entity.message import Message
 from src.domain.enums import Role
 from src.infra.llm_connector.llm_logging_handler import LLMLoggingHandler
-from src.infra.llm_connector.mlx_base import MLXModelBase
-from src.infra.llm_connector.mlx_chat import MLXChatModel
-from src.infra.llm_connector.mlx_embedding import MLXEmbeddingModel
-from src.infra.llm_connector.parsing_service import ParsingService, get_parsing_service
+from src.infra.llm_connector.local_llm.mlx_base import MLXModelBase
+from src.infra.llm_connector.local_llm.mlx_chat import MLXChatModel
+from src.infra.llm_connector.local_llm.mlx_embedding import MLXEmbeddingModel
+from src.infra.llm_connector.local_llm.parsing_service import ParsingService, get_parsing_service
 
 logger = logging.getLogger("app.llm_connector")
 

@@ -1,6 +1,9 @@
 'use client';
 
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { createEditor, type Descendant } from 'slate';
+import { withReact } from 'slate-react';
+import { withHistory } from 'slate-history';
 import EditorHeader from '@/app/pdf-editor/_components/EditorHeader';
 import EditorToolbar, { ActiveFormats } from '@/app/pdf-editor/_components/EditorToolbar';
 import DocumentEditor from '@/app/pdf-editor/_components/DocumentEditor';
@@ -12,6 +15,19 @@ import {
 } from '@/lib/pdf-document-schema';
 import { htmlToPdfDocument, pdfDocumentToHtml } from '@/lib/pdf-document-converter';
 import { createBlankDocument, safeParsePdfDocument, safeParseMinifiedComponents, serializePdfDocument } from './_utils/serializer';
+import {
+  toggleMark,
+  toggleBlock,
+  setBlockFromTag,
+  setMark,
+  setAlign,
+  insertDivider,
+  removeAllMarks,
+  indentListItem,
+  outdentListItem,
+  getActiveFormats,
+} from './_utils/slate-commands';
+import { slateToHtml, htmlToSlate, EMPTY_SLATE_VALUE } from './_utils/slate-html';
 
 const DEFAULT_FORMATS: ActiveFormats = {
   bold: false,
@@ -27,35 +43,44 @@ const DEFAULT_FORMATS: ActiveFormats = {
 };
 
 export default function PdfEditorPage() {
-  const editorRef = useRef<HTMLDivElement>(null);
+  // Slate editor instance — stable across renders
+  const editor = useMemo(() => withHistory(withReact(createEditor())), []);
 
   const [title, setTitle] = useState('Untitled Document');
-  const [previewHtml, setPreviewHtml] = useState('');
   const [fontFamily, setFontFamily] = useState('Georgia, serif');
   const [fontSize, setFontSize] = useState('12');
   const [activeFormats, setActiveFormats] = useState<ActiveFormats>(DEFAULT_FORMATS);
 
-  /** Live PdfDocument definition — kept in sync with every editor change. */
+  /** Slate document value — source of truth for the editor content. */
+  const [slateValue, setSlateValue] = useState<Descendant[]>(EMPTY_SLATE_VALUE);
+
+  /**
+   * Bumped whenever we want to force Slate to remount with a new initialValue
+   * (e.g. when loading a file). Passed as `key` to <DocumentEditor>.
+   */
+  const [slateKey, setSlateKey] = useState(0);
+
+  /** HTML derived from Slate value — used for preview + PDF schema sync. */
+  const [previewHtml, setPreviewHtml] = useState('');
+
+  /** Live PdfDocument schema, kept in sync with every content change. */
   const [pdfDoc, setPdfDoc] = useState<PdfDocument>(() => createBlankDocument('Untitled Document'));
 
-  /* ── Sync preview HTML + schema from the editor DOM ── */
-  const syncPreview = useCallback(() => {
-    if (!editorRef.current) return;
-    const html = editorRef.current.innerHTML;
-    setPreviewHtml(html);
-    // Update the schema definition in the background (uses current state via
-    // functional update to avoid stale closure on pdfDoc)
-    setPdfDoc((prev) =>
-      htmlToPdfDocument(html, {
-        title,
-        fontFamily,
-        fontSize,
-        existingDoc: prev,
-      }),
-    );
-  }, [title, fontFamily, fontSize]);
+  // ── onChange: Slate → preview HTML + PdfDocument schema ──────────────────
+  const handleSlateChange = useCallback(
+    (value: Descendant[]) => {
+      setSlateValue(value);
+      const html = slateToHtml(value);
+      setPreviewHtml(html);
+      setPdfDoc((prev) =>
+        htmlToPdfDocument(html, { title, fontFamily, fontSize, existingDoc: prev }),
+      );
+      setActiveFormats(getActiveFormats(editor));
+    },
+    [editor, title, fontFamily, fontSize],
+  );
 
-  /* ── Keep schema in sync when title changes ── */
+  // ── Title change ──────────────────────────────────────────────────────────
   const handleTitleChange = useCallback((value: string) => {
     setTitle(value);
     setPdfDoc((prev) => ({
@@ -64,151 +89,131 @@ export default function PdfEditorPage() {
     }));
   }, []);
 
-  /* ── Refresh toolbar active-state indicators on every selection change ── */
-  const updateActiveFormats = useCallback(() => {
-    setActiveFormats({
-      bold: document.queryCommandState('bold'),
-      italic: document.queryCommandState('italic'),
-      underline: document.queryCommandState('underline'),
-      strikeThrough: document.queryCommandState('strikeThrough'),
-      justifyLeft: document.queryCommandState('justifyLeft'),
-      justifyCenter: document.queryCommandState('justifyCenter'),
-      justifyRight: document.queryCommandState('justifyRight'),
-      justifyFull: document.queryCommandState('justifyFull'),
-      insertUnorderedList: document.queryCommandState('insertUnorderedList'),
-      insertOrderedList: document.queryCommandState('insertOrderedList'),
-    });
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener('selectionchange', updateActiveFormats);
-    return () => document.removeEventListener('selectionchange', updateActiveFormats);
-  }, [updateActiveFormats]);
-
-  /* ── execCommand wrapper ── */
+  // ── Toolbar: execCommand-style dispatch → Slate commands ─────────────────
   const exec = useCallback(
-    (command: string, value?: string) => {
-      editorRef.current?.focus();
-      document.execCommand(command, false, value);
-      syncPreview();
-      updateActiveFormats();
+    (command: string, _value?: string) => {
+      switch (command) {
+        case 'bold':          toggleMark(editor, 'bold'); break;
+        case 'italic':        toggleMark(editor, 'italic'); break;
+        case 'underline':     toggleMark(editor, 'underline'); break;
+        case 'strikeThrough': toggleMark(editor, 'strikethrough'); break;
+        case 'justifyLeft':   setAlign(editor, 'left'); break;
+        case 'justifyCenter': setAlign(editor, 'center'); break;
+        case 'justifyRight':  setAlign(editor, 'right'); break;
+        case 'justifyFull':   setAlign(editor, 'justify'); break;
+        case 'insertUnorderedList': toggleBlock(editor, 'bulleted-list'); break;
+        case 'insertOrderedList':   toggleBlock(editor, 'numbered-list'); break;
+        case 'indent':   indentListItem(editor); break;
+        case 'outdent':  outdentListItem(editor); break;
+        case 'insertHorizontalRule': insertDivider(editor); break;
+        case 'removeFormat': removeAllMarks(editor); break;
+        case 'undo': editor.undo(); break;
+        case 'redo': editor.redo(); break;
+        default: break;
+      }
+      setActiveFormats(getActiveFormats(editor));
     },
-    [syncPreview, updateActiveFormats],
+    [editor],
   );
 
-  /* ── Block/paragraph style ── */
+  // ── Block format (from heading/paragraph dropdown) ────────────────────────
   const handleBlockFormat = useCallback(
     (tag: string) => {
-      exec('formatBlock', tag);
+      setBlockFromTag(editor, tag);
+      setActiveFormats(getActiveFormats(editor));
     },
-    [exec],
+    [editor],
   );
 
-  /* ── Font family ── */
+  // ── Font family ───────────────────────────────────────────────────────────
   const handleFontFamilyChange = useCallback(
     (family: string) => {
       setFontFamily(family);
-      exec('fontName', family);
+      setMark(editor, 'fontFamily', family);
     },
-    [exec],
+    [editor],
   );
 
-  /* ── Font size (execCommand only accepts 1-7; we inject a styled <span>) ── */
+  // ── Font size ─────────────────────────────────────────────────────────────
   const handleFontSizeChange = useCallback(
     (size: string) => {
       setFontSize(size);
-      exec('fontSize', '7');
-      editorRef.current?.querySelectorAll('font[size="7"]').forEach((el) => {
-        const span = document.createElement('span');
-        span.style.fontSize = `${size}pt`;
-        span.innerHTML = el.innerHTML;
-        el.replaceWith(span);
-      });
-      syncPreview();
+      setMark(editor, 'fontSize', size);
     },
-    [exec, syncPreview],
+    [editor],
   );
 
-  /* ── Export PDF ── */
-  const handleExport = useCallback(() => {
-    exportPdf({
-      title,
-      content: editorRef.current?.innerHTML ?? '',
-      fontFamily,
-      fontSize,
-    });
-  }, [title, fontFamily, fontSize]);
+  // ── Keyboard shortcuts ────────────────────────────────────────────────────
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      switch (e.key.toLowerCase()) {
+        case 'b': e.preventDefault(); toggleMark(editor, 'bold'); break;
+        case 'i': e.preventDefault(); toggleMark(editor, 'italic'); break;
+        case 'u': e.preventDefault(); toggleMark(editor, 'underline'); break;
+        default: break;
+      }
+      setActiveFormats(getActiveFormats(editor));
+    },
+    [editor],
+  );
 
-  // ── Definition upload ──────────────────────────────────────────────────────
+  // ── Export PDF ────────────────────────────────────────────────────────────
+  const handleExport = useCallback(() => {
+    exportPdf({ title, content: previewHtml, fontFamily, fontSize });
+  }, [title, previewHtml, fontFamily, fontSize]);
+
+  // ── Helper: load a PdfDocument into Slate ─────────────────────────────────
+  const loadDoc = useCallback((doc: PdfDocument) => {
+    const loadedTitle = doc.meta.title ?? 'Untitled Document';
+    const loadedFont  = doc.defaultStyles?.fontFamily ?? 'Georgia, serif';
+    const loadedSize  = doc.defaultStyles?.fontSize ? String(doc.defaultStyles.fontSize) : '12';
+
+    setTitle(loadedTitle);
+    setFontFamily(loadedFont);
+    setFontSize(loadedSize);
+    setPdfDoc(doc);
+
+    const html = pdfDocumentToHtml(doc);
+    const slateNodes = htmlToSlate(html);
+    setSlateValue(slateNodes);
+    setPreviewHtml(html);
+    // Force Slate remount so it picks up the new initialValue
+    setSlateKey((k) => k + 1);
+  }, []);
+
+  // ── Definition upload ─────────────────────────────────────────────────────
   const handleUploadDefinition = useCallback((file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result;
       if (typeof text !== 'string') return;
-
       const [doc, err] = safeParsePdfDocument(text);
       if (err || !doc) {
-        alert(
-          `Invalid document definition.\n\n${err?.issues.map((i) => i.message).join('\n') ?? 'Unknown error'}`,
-        );
+        alert(`Invalid document definition.\n\n${err?.issues.map((i) => i.message).join('\n') ?? 'Unknown error'}`);
         return;
       }
-
-      // Restore title and default typography from the loaded document
-      const loadedTitle = doc.meta.title ?? 'Untitled Document';
-      const loadedFont = doc.defaultStyles?.fontFamily ?? 'Georgia, serif';
-      const loadedSize = doc.defaultStyles?.fontSize
-        ? String(doc.defaultStyles.fontSize)
-        : '12';
-
-      setTitle(loadedTitle);
-      setFontFamily(loadedFont);
-      setFontSize(loadedSize);
-      setPdfDoc(doc);
-
-      // Render the schema back to HTML and inject into the contentEditable editor
-      const html = pdfDocumentToHtml(doc);
-      if (editorRef.current) {
-        editorRef.current.innerHTML = html || '<p><br></p>';
-        setPreviewHtml(editorRef.current.innerHTML);
-      }
+      loadDoc(doc);
     };
     reader.readAsText(file);
-  }, []);
+  }, [loadDoc]);
 
-  // ── Minified-version upload ─────────────────────────────────────────────────
+  // ── Minified-version upload ───────────────────────────────────────────────
   const handleUploadMinifiedVersion = useCallback((file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result;
       if (typeof text !== 'string') return;
-
       const [doc, err] = safeParseMinifiedComponents(text);
       if (err || !doc) {
-        alert(
-          `Invalid minified document.\n\n${err?.issues.map((i) => i.message).join('\n') ?? 'Unknown error'}`,
-        );
+        alert(`Invalid minified document.\n\n${err?.issues.map((i) => i.message).join('\n') ?? 'Unknown error'}`);
         return;
       }
-
-      const loadedFont = doc.defaultStyles?.fontFamily ?? 'Georgia, serif';
-      const loadedSize = doc.defaultStyles?.fontSize
-        ? String(doc.defaultStyles.fontSize)
-        : '12';
-
-      setTitle(doc.meta.title ?? 'Untitled Document');
-      setFontFamily(loadedFont);
-      setFontSize(loadedSize);
-      setPdfDoc(doc);
-
-      const html = pdfDocumentToHtml(doc);
-      if (editorRef.current) {
-        editorRef.current.innerHTML = html || '<p><br></p>';
-        setPreviewHtml(editorRef.current.innerHTML);
-      }
+      loadDoc(doc);
     };
     reader.readAsText(file);
-  }, []);
+  }, [loadDoc]);
 
   // ── JSON Schema download ──────────────────────────────────────────────────
   const handleDownloadJsonSchema = useCallback(() => {
@@ -223,7 +228,7 @@ export default function PdfEditorPage() {
     URL.revokeObjectURL(url);
   }, []);
 
-  // ── Definition download ────────────────────────────────────────────────────
+  // ── Definition download ───────────────────────────────────────────────────
   const handleDownloadDefinition = useCallback(() => {
     const json = serializePdfDocument(pdfDoc);
     const blob = new Blob([json], { type: 'application/json' });
@@ -238,14 +243,6 @@ export default function PdfEditorPage() {
     a.click();
     URL.revokeObjectURL(url);
   }, [pdfDoc]);
-
-  /* ── Ref callback: initialise the editor with an empty paragraph ── */
-  const initEditor = useCallback((node: HTMLDivElement | null) => {
-    if (node && !node.innerHTML.trim()) {
-      node.innerHTML = '<p><br /></p>';
-    }
-    (editorRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-  }, []);
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden bg-gray-50">
@@ -271,12 +268,13 @@ export default function PdfEditorPage() {
 
       <div className="flex flex-1 overflow-hidden">
         <DocumentEditor
+          editor={editor}
+          slateKey={slateKey}
+          initialValue={slateValue}
           fontFamily={fontFamily}
           fontSize={fontSize}
-          initEditor={initEditor}
-          onInput={syncPreview}
-          onKeyUp={updateActiveFormats}
-          onMouseUp={updateActiveFormats}
+          onChange={handleSlateChange}
+          onKeyDown={handleKeyDown}
         />
 
         <DocumentPreview

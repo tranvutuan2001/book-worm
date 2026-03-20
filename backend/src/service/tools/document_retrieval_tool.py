@@ -111,3 +111,8 @@ def get_document_summary(document_name: str) -> str:
             "get_document_summary failed: %s\n%s", exc, traceback.format_exc()
         )
         raise
+
+@tool(description="Utility function to count words in a string.")
+def word_count_tool(text: str) -> int:
+    """Utility function to count words in a string."""
+    return len(text.split())

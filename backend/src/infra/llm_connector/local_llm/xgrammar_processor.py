@@ -28,11 +28,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("app.llm_connector.xgrammar")
 
-# JSON Schema that matches any JSON array of strings — used for Step 2.
-JSON_ARRAY_OF_STRINGS_SCHEMA: str = json.dumps(
-    {"type": "array", "items": {"type": "string"}}
-)
-
 
 class XGrammarMLXLogitsProcessor:
     """

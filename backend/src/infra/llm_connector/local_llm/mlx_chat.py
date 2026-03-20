@@ -22,9 +22,9 @@ from pydantic import Field
 
 from mlx_lm import load as mlx_load
 
-from src.infra.llm_connector.mlx_base import MLXModelBase
-from src.infra.llm_connector.parsing_service import ParsingService
-from src.infra.llm_connector.xgrammar_processor import make_json_schema_logits_processor
+from src.infra.llm_connector.local_llm.mlx_base import MLXModelBase
+from src.infra.llm_connector.local_llm.parsing_service import ParsingService
+from src.infra.llm_connector.local_llm.xgrammar_processor import make_json_schema_logits_processor
 
 logger = logging.getLogger("app.llm_connector")
 
@@ -143,9 +143,6 @@ class MLXChatModel(MLXModelBase, BaseChatModel):
     def _generate(
         self,
         messages: list[BaseMessage],
-        stop: Optional[list[str]] = None,
-        run_manager: Optional[CallbackManagerForLLMRun] = None,
-        **kwargs: object,
     ) -> ChatResult:
         try:
             model, tokenizer = self._load_model(self.model_path)

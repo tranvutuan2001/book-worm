@@ -36,6 +36,7 @@ from src.core.utils import write_json_file
 from src.domain.entity.message import Message
 from src.domain.enums import Role
 from src.infra.llm_connector.llm_service import LLMService, get_llm_service
+from src.service.tools.document_retrieval_tool import word_count_tool
 
 logger = logging.getLogger("app.service")
 
@@ -44,33 +45,33 @@ logger = logging.getLogger("app.service")
 # ---------------------------------------------------------------------------
 
 _SECTION_SUMMARY_SYSTEM = """
-You are a high-density Document Analyser. Your task is to extract the "DNA" of a section.
+/no_think
+You are a fact extractor. Output ONLY the structured summary below. Do not explain, reflect, or reason.
 
-CONSTRAINTS:
-- SUMMARY LIMIT: Max 150 words.
-- STYLE: Use "Compressed Prose"—omit filler words, use bulleted facts for data.
+RULES:
+- Max 250 words total.
+- Telegraphic style: drop articles (a, an, the) and auxiliary verbs.
+- No preamble, no meta-commentary.
 
-REQUIRED ELEMENTS:
-1. ANCHORS: Key concepts/plot points and their evolution.
-2. EVIDENCE: Hard facts, data, names, and dates.
-3. BRIDGE: One sentence on how this section pivots the larger narrative/argument.
-
-THINKING GUIDELINE: Keep your internal chain-of-thought brief. Identify the core 250 words immediately.
+FORMAT (use exactly these headers):
+ANCHORS: <concept> -> <change or role>
+EVIDENCE: <bullet list of names, dates, numbers, hard facts>
+BRIDGE: Pivots from <prior topic> to <next topic> by <mechanism>.
 """.strip()
 
 _CHAPTER_SUMMARY_SYSTEM = """
-You are a Synthesis Engine. Your goal is to merge section summaries into a single cohesive Chapter Architecture.
+/no_think
+You are a synthesis engine. Output ONLY the structured chapter summary below. Do not restate section facts, explain your process, or reason aloud.
 
-CONSTRAINTS:
-- SUMMARY LIMIT: Max 1000 words.
-- FORMAT: Narrative flow with bolded key terms.
+RULES:
+- Max 1000 words total.
+- Synthesise across sections; never copy sentences from them.
+- No preamble, no meta-commentary.
 
-OBJECTIVES:
-1. THEMATIC ARCH: Connect the sections into one overarching logic or arc.
-2. CRITICAL PATH: Identify the single most important finding or event in this chapter.
-3. TRANSITION: State exactly how this chapter sets the stage for the next.
-
-THINKING GUIDELINE: Do not repeat section details. Focus only on the 'connective tissue' between them.
+FORMAT (use exactly these headers):
+THEMATIC ARCH: <one paragraph — how sections connect and build on each other>
+CRITICAL PATH: <single sentence — the pivotal finding or event of this chapter>
+TRANSITION: <single sentence — what unresolved tension or question this chapter hands to the next>
 """.strip()
 
 
@@ -244,12 +245,15 @@ class DocumentAnalysisService:
                 timestamp=int(time.time()),
             )
             try:
-                summary = self._llm.complete_chat(
+                summary = self._llm.agent_complete_chat(
                     message_list=[user_msg],
+                    tools=[word_count_tool],
                     system_prompt=_SECTION_SUMMARY_SYSTEM,
                     model_path=DEFAULT_CHAT_MODEL,
-                    max_tokens=4000
+                    max_tokens=8000
                 )
+                logger.info("Section summary %d–%d done", i + 1, end)
+                logger.info("Summary:\n%s", summary)
                 summaries.append(summary)
             except Exception as exc:
                 raise DocumentProcessingError(
@@ -279,11 +283,12 @@ class DocumentAnalysisService:
                 timestamp=int(time.time()),
             )
             try:
-                chapter = self._llm.complete_chat(
+                chapter = self._llm.agent_complete_chat(
                     message_list=[user_msg],
+                    tools=[word_count_tool],
                     system_prompt=_CHAPTER_SUMMARY_SYSTEM,
                     model_path=DEFAULT_CHAT_MODEL,
-                    max_tokens=6000
+                    max_tokens=12000
                 )
                 chapters.append(chapter)
             except Exception as exc:

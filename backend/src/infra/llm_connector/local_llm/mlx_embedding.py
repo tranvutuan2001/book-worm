@@ -5,7 +5,7 @@ import mlx.core as mx
 import mlx.nn as nn
 from mlx_lm import load as mlx_load
 
-from src.infra.llm_connector.mlx_base import MLXModelBase
+from src.infra.llm_connector.local_llm.mlx_base import MLXModelBase
 
 
 @runtime_checkable
