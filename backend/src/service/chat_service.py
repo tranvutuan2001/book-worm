@@ -20,7 +20,7 @@ from src.core.config import DATA_DIR
 from src.domain.entity.conversation import Conversation
 from src.domain.entity.message import Message
 from src.domain.enums import Role
-from src.infra.llm_connector.llm_service import LLMService, get_llm_service
+from src.infra.llm_connector import LLMService, get_llm_service
 from src.infra.logging_config import (
     end_request_logging,
     get_request_logger,

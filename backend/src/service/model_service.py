@@ -14,7 +14,7 @@ from src.api.schemas.model import (
     ModelLoadResponse,
     ModelUnloadResponse,
 )
-from src.infra.llm_connector.llm_service import LLMService, get_llm_service
+from src.infra.llm_connector import LLMService, get_llm_service
 
 logger = logging.getLogger("app.model_service")
 _downloading: set[str] = set()

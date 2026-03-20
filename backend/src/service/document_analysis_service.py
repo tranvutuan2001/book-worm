@@ -35,7 +35,7 @@ from src.core.exceptions import DocumentProcessingError
 from src.core.utils import write_json_file
 from src.domain.entity.message import Message
 from src.domain.enums import Role
-from src.infra.llm_connector.llm_service import LLMService, get_llm_service
+from src.infra.llm_connector import LLMService, get_llm_service
 from src.service.tools.document_retrieval_tool import word_count_tool
 
 logger = logging.getLogger("app.service")

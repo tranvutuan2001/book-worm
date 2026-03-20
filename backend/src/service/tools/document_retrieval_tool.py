@@ -17,7 +17,7 @@ import numpy as np
 from langchain.tools import tool
 
 from src.core.config import DATA_DIR, DEFAULT_EMBEDDING_MODEL, TOP_K_CHUNKS
-from src.infra.llm_connector.llm_service import get_llm_service
+from src.infra.llm_connector import get_llm_service
 
 logger = logging.getLogger("app.service.tools")
 

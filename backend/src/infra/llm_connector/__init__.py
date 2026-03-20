@@ -28,6 +28,4 @@ __all__ = [
     "LoadedModelRecord",
     "ModelType",
     "get_llm_service",
-    "ParsingService",
-    "get_parsing_service",
 ]
