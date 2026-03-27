@@ -112,7 +112,6 @@ def get_document_summary(document_name: str) -> str:
         )
         raise
 
-@tool(description="Utility function to count words in a string.")
+@tool(description="Utility function to count total number of words in a text.")
 def word_count_tool(text: str) -> int:
-    """Utility function to count words in a string."""
     return len(text.split())

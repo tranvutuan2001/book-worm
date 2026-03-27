@@ -7,13 +7,17 @@ from fastapi import Depends
 from langchain.agents import create_agent
 from langchain.tools import BaseTool
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.runnables import ConfigurableField
 
 from src.domain.entity.message import Message
 from src.domain.enums import Role
 from src.infra.llm_connector.llm_logging_handler import LLMLoggingHandler
 from src.infra.llm_connector.local_llm.mlx_chat import MLXChatModel
 from src.infra.llm_connector.local_llm.mlx_embedding import MLXEmbeddingModel
-from src.infra.llm_connector.local_llm.parsing_service import ParsingService, get_parsing_service
+from src.infra.llm_connector.local_llm.parsing_service import (
+    ParsingService,
+    get_parsing_service,
+)
 
 logger = logging.getLogger("app.llm_connector")
 
@@ -28,7 +32,7 @@ class LoadedModelRecord(TypedDict):
 
     model_name: str
     model_path: str
-    model_type: str   # "chat" | "embedding"
+    model_type: str  # "chat" | "embedding"
     loading: bool
 
 
@@ -153,6 +157,22 @@ class LLMService:
                 self._chat_models[resolved] = MLXChatModel(
                     model_path=resolved,
                     parsing_service=self._parsing_service,
+                ).configurable_fields(
+                    max_tokens=ConfigurableField(
+                        id="max_tokens",
+                        name="Max Tokens",
+                        description="Maximum number of tokens to generate for this run",
+                    ),
+                    temperature=ConfigurableField(
+                        id="temperature",
+                        name="Temperature",
+                        description="Sampling temperature for this run",
+                    ),
+                    json_schema=ConfigurableField(
+                        id="json_schema",
+                        name="JSON Schema",
+                        description="Optional JSON schema for constrained decoding",
+                    ),
                 )
             logger.info(f"[LLMService] Model loaded successfully: {resolved}")
         except Exception:
@@ -222,30 +242,36 @@ class LLMService:
         results: List[LoadedModelRecord] = []
 
         for path_str in list(self._chat_models):
-            results.append(LoadedModelRecord(
-                model_name=Path(path_str).name,
-                model_path=path_str,
-                model_type="chat",
-                loading=False,
-            ))
+            results.append(
+                LoadedModelRecord(
+                    model_name=Path(path_str).name,
+                    model_path=path_str,
+                    model_type="chat",
+                    loading=False,
+                )
+            )
 
         for path_str in list(self._embedding_models):
-            results.append(LoadedModelRecord(
-                model_name=Path(path_str).name,
-                model_path=path_str,
-                model_type="embedding",
-                loading=False,
-            ))
+            results.append(
+                LoadedModelRecord(
+                    model_name=Path(path_str).name,
+                    model_path=path_str,
+                    model_type="embedding",
+                    loading=False,
+                )
+            )
 
         # Include models whose load is still in flight
         for key in list(self._loading):
             model_type, _, resolved = key.partition(":")
-            results.append(LoadedModelRecord(
-                model_name=Path(resolved).name,
-                model_path=resolved,
-                model_type=model_type,
-                loading=True,
-            ))
+            results.append(
+                LoadedModelRecord(
+                    model_name=Path(resolved).name,
+                    model_path=resolved,
+                    model_type=model_type,
+                    loading=True,
+                )
+            )
 
         return results
 
@@ -259,7 +285,8 @@ class LLMService:
         message_list: List[Message],
         system_prompt: str,
         json_schema: str = None,
-        max_tokens: int = 4000,
+        temperature: float = None,
+        max_tokens: int = None,
     ) -> str:
         """
         Run a pure chat completion without any agent or tool-calling.
@@ -280,7 +307,9 @@ class LLMService:
         """
         resolved = self._resolve_model_path(model_path)
         if resolved not in self._chat_models:
-            logger.info(f"[LLMService] Auto-loading chat model for inference: {resolved}")
+            logger.info(
+                f"[LLMService] Auto-loading chat model for inference: {resolved}"
+            )
             self.load_model(model_path, "chat")
 
         lc_messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
@@ -292,12 +321,21 @@ class LLMService:
             else:
                 lc_messages.append(HumanMessage(content=message.content))
 
-        response = self._chat_models[resolved].invoke(
-            lc_messages,
-            config={"callbacks": [LLMLoggingHandler()]},
-            max_tokens=max_tokens,
-            temperature=0.1,
-            json_schema=json_schema,
+        response = (
+            self._chat_models[resolved]
+            .with_config(
+                configurable={
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                    "json_schema": json_schema,
+                }
+            )
+            .invoke(
+                lc_messages,
+                config={
+                    "callbacks": [LLMLoggingHandler()],
+                },
+            )
         )
         return response.content
 
@@ -309,7 +347,8 @@ class LLMService:
         tools: List[BaseTool],
         max_iterations: int = None,
         json_schema: str = None,
-        max_tokens: int = 4000,
+        max_tokens: int = None,
+        temperature: float = None,
     ) -> str:
         """
         Run a full chat turn with optional tool-calling support.
@@ -331,17 +370,22 @@ class LLMService:
         """
         resolved = self._resolve_model_path(model_path)
         if resolved not in self._chat_models:
-            logger.info(f"[LLMService] Auto-loading chat model for agent inference: {resolved}")
+            logger.info(
+                f"[LLMService] Auto-loading chat model for agent inference: {resolved}"
+            )
             self.load_model(model_path, "chat")
 
-        # Pre-bind per-call inference params so the agent passes them on every
-        # internal LLM invocation without touching the cached instance.
-        llm = self._chat_models[resolved].bind(
-            max_tokens=max_tokens,
-            temperature=0.1,
-            json_schema=json_schema,
+        agent = create_agent(
+            model=self._chat_models[resolved].with_config(
+                configurable={
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                    "json_schema": json_schema,
+                }
+            ),
+            tools=tools,
+            system_prompt=system_prompt,
         )
-        agent = create_agent(model=llm, tools=tools, system_prompt=system_prompt)
         messages = [{"role": m.role.value, "content": m.content} for m in message_list]
 
         response = agent.invoke(
@@ -366,13 +410,17 @@ class LLMService:
         """
         resolved = self._resolve_model_path(model_path)
         if resolved not in self._embedding_models:
-            logger.info(f"[LLMService] Auto-loading embedding model for inference: {resolved}")
+            logger.info(
+                f"[LLMService] Auto-loading embedding model for inference: {resolved}"
+            )
             self._embedding_models[resolved] = MLXEmbeddingModel(resolved)
         return self._embedding_models[resolved].embed(text)
 
 
 def get_llm_service(
-    parsing_service: Annotated[ParsingService | None, Depends(get_parsing_service)] = None,
+    parsing_service: Annotated[
+        ParsingService | None, Depends(get_parsing_service)
+    ] = None,
 ) -> LLMService:
     if LLMService._instance is None:
         if parsing_service is None:

@@ -59,6 +59,9 @@ class MLXChatModel(BaseChatModel):
 
     model_path: str = Field(description="Absolute path to the local MLX model directory")
     parsing_service: ParsingService = Field(description="Shared ParsingService used to parse raw model output")
+    max_tokens: int = Field(default=4000, description="Maximum number of tokens to generate")
+    temperature: float = Field(default=0.1, description="Sampling temperature")
+    json_schema: Optional[str] = Field(default=None, description="Optional JSON schema string for xgrammar constrained decoding")
 
     # Loaded (model, tokenizer) pair — populated in model_post_init.
     _model_pair: Optional[_ModelPair] = PrivateAttr(default=None)
@@ -135,9 +138,7 @@ class MLXChatModel(BaseChatModel):
             raise RuntimeError(error_msg)
         model, tokenizer = self._model_pair
 
-        max_tokens: int = kwargs.get("max_tokens", 4000)
-        temperature: float = kwargs.get("temperature", 0.1)
-        json_schema: Optional[str] = kwargs.get("json_schema", None)
+        print(f'max_tokens: {self.max_tokens}, temperature: {self.temperature}, json_schema: {self.json_schema}')
 
         chat_messages = self._to_chat_dicts(messages)
 
@@ -170,9 +171,9 @@ class MLXChatModel(BaseChatModel):
 
         # Build an optional xgrammar logits processor for constrained decoding.
         logits_processors = None
-        if json_schema is not None:
+        if self.json_schema is not None:
             processor = make_json_schema_logits_processor(
-                tokenizer, json_schema
+                tokenizer, self.json_schema
             )
             if processor is not None:
                 logits_processors = [processor]
@@ -182,14 +183,14 @@ class MLXChatModel(BaseChatModel):
         try:
             logger.info(
                 f"Running MLX generation: model={self.model_path}, "
-                f"max_tokens={max_tokens}, temperature={temperature}"
+                f"max_tokens={self.max_tokens}, temperature={self.temperature}"
             )
             response_text = generate(
                 model,
                 tokenizer,
                 prompt=prompt,
-                max_tokens=max_tokens,
-                sampler=make_sampler(temp=temperature),
+                max_tokens=self.max_tokens,
+                sampler=make_sampler(temp=self.temperature),
                 logits_processors=logits_processors,
                 verbose=False,
                 kv_bits=4,

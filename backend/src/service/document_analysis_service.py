@@ -9,7 +9,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Annotated, ClassVar, List, Optional
+from typing import ClassVar, List, Optional
 
 import pdfplumber
 from fastapi import Depends
@@ -36,7 +36,6 @@ from src.core.utils import write_json_file
 from src.domain.entity.message import Message
 from src.domain.enums import Role
 from src.infra.llm_connector import LLMService, get_llm_service
-from src.service.tools.document_retrieval_tool import word_count_tool
 
 logger = logging.getLogger("app.service")
 
@@ -45,33 +44,15 @@ logger = logging.getLogger("app.service")
 # ---------------------------------------------------------------------------
 
 _SECTION_SUMMARY_SYSTEM = """
-/no_think
-You are a fact extractor. Output ONLY the structured summary below. Do not explain, reflect, or reason.
-
-RULES:
-- Max 250 words total.
-- Telegraphic style: drop articles (a, an, the) and auxiliary verbs.
-- No preamble, no meta-commentary.
-
-FORMAT (use exactly these headers):
-ANCHORS: <concept> -> <change or role>
-EVIDENCE: <bullet list of names, dates, numbers, hard facts>
-BRIDGE: Pivots from <prior topic> to <next topic> by <mechanism>.
+Summarize the text below into a high-density, bulleted list.
+Focus only on hard facts, names, and key metrics.
+Use a professional, note-taking style.
 """.strip()
 
 _CHAPTER_SUMMARY_SYSTEM = """
-/no_think
-You are a synthesis engine. Output ONLY the structured chapter summary below. Do not restate section facts, explain your process, or reason aloud.
-
-RULES:
-- Max 1000 words total.
-- Synthesise across sections; never copy sentences from them.
-- No preamble, no meta-commentary.
-
-FORMAT (use exactly these headers):
-THEMATIC ARCH: <one paragraph — how sections connect and build on each other>
-CRITICAL PATH: <single sentence — the pivotal finding or event of this chapter>
-TRANSITION: <single sentence — what unresolved tension or question this chapter hands to the next>
+Summarize the text below into a high-density, bulleted list.
+Focus only on hard facts, names, and key metrics.
+Use a professional, note-taking style.
 """.strip()
 
 
@@ -245,12 +226,12 @@ class DocumentAnalysisService:
                 timestamp=int(time.time()),
             )
             try:
-                summary = self._llm.agent_complete_chat(
+                summary = self._llm.complete_chat(
                     message_list=[user_msg],
-                    tools=[word_count_tool],
                     system_prompt=_SECTION_SUMMARY_SYSTEM,
                     model_path=DEFAULT_CHAT_MODEL,
-                    max_tokens=8000
+                    temperature=0.1,
+                    max_tokens=20000
                 )
                 logger.info("Section summary %d–%d done", i + 1, end)
                 logger.info("Summary:\n%s", summary)
@@ -283,12 +264,12 @@ class DocumentAnalysisService:
                 timestamp=int(time.time()),
             )
             try:
-                chapter = self._llm.agent_complete_chat(
+                chapter = self._llm.complete_chat(
                     message_list=[user_msg],
-                    tools=[word_count_tool],
                     system_prompt=_CHAPTER_SUMMARY_SYSTEM,
                     model_path=DEFAULT_CHAT_MODEL,
-                    max_tokens=12000
+                    temperature=0.1,
+                    max_tokens=20000
                 )
                 chapters.append(chapter)
             except Exception as exc:

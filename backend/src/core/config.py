@@ -30,7 +30,7 @@ PDF_EXAMPLE_PATH: Path = PROJECT_ROOT / "pdf-example.json"
 # Default model paths (relative to PROJECT_ROOT)
 # ---------------------------------------------------------------------------
 
-DEFAULT_CHAT_MODEL: str = "models/chat/mlx-community/Qwen3.5-35B-A3B-4bit"
+DEFAULT_CHAT_MODEL: str = "models/chat/mlx-community/Qwen3.5-9B-MLX-4bit"
 DEFAULT_EMBEDDING_MODEL: str = "models/embedding/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"
 
 # ---------------------------------------------------------------------------
@@ -40,7 +40,7 @@ DEFAULT_EMBEDDING_MODEL: str = "models/embedding/mlx-community/Qwen3-Embedding-0
 CHUNK_SIZE: int = 1000
 CHUNK_OVERLAP: int = 100
 CHUNKS_PER_SECTION: int = 5
-SECTIONS_PER_CHAPTER: int = 5
+SECTIONS_PER_CHAPTER: int = 10
 MAX_EMBEDDING_RETRIES: int = 3
 
 # ---------------------------------------------------------------------------
