@@ -230,7 +230,8 @@ class DocumentAnalysisService:
                     message_list=[user_msg],
                     system_prompt=_SECTION_SUMMARY_SYSTEM,
                     model_path=DEFAULT_CHAT_MODEL,
-                    temperature=0.1,
+                    temperature=0.2,
+                    frequency_penalty=0.2,
                     max_tokens=20000
                 )
                 logger.info("Section summary %d–%d done", i + 1, end)
@@ -268,7 +269,8 @@ class DocumentAnalysisService:
                     message_list=[user_msg],
                     system_prompt=_CHAPTER_SUMMARY_SYSTEM,
                     model_path=DEFAULT_CHAT_MODEL,
-                    temperature=0.1,
+                    temperature=0.2,
+                    frequency_penalty=0.2,
                     max_tokens=20000
                 )
                 chapters.append(chapter)

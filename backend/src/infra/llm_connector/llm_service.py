@@ -287,6 +287,7 @@ class LLMService:
         json_schema: str = None,
         temperature: float = None,
         max_tokens: int = None,
+        frequency_penalty: float = None,
     ) -> str:
         """
         Run a pure chat completion without any agent or tool-calling.
@@ -328,6 +329,7 @@ class LLMService:
                     "max_tokens": max_tokens,
                     "temperature": temperature,
                     "json_schema": json_schema,
+                    "frequency_penalty": frequency_penalty,
                 }
             )
             .invoke(
@@ -349,6 +351,7 @@ class LLMService:
         json_schema: str = None,
         max_tokens: int = None,
         temperature: float = None,
+        frequency_penalty: float = None,
     ) -> str:
         """
         Run a full chat turn with optional tool-calling support.
@@ -381,6 +384,7 @@ class LLMService:
                     "max_tokens": max_tokens,
                     "temperature": temperature,
                     "json_schema": json_schema,
+                    "frequency_penalty": frequency_penalty,
                 }
             ),
             tools=tools,

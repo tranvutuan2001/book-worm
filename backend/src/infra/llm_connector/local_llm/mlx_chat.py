@@ -5,7 +5,7 @@ from typing import Any, Optional, Protocol, Sequence, runtime_checkable
 
 import mlx.nn as nn
 from mlx_lm import generate
-from mlx_lm.sample_utils import make_sampler
+from mlx_lm.sample_utils import make_sampler, make_logits_processors
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
@@ -61,6 +61,7 @@ class MLXChatModel(BaseChatModel):
     parsing_service: ParsingService = Field(description="Shared ParsingService used to parse raw model output")
     max_tokens: int = Field(default=4000, description="Maximum number of tokens to generate")
     temperature: float = Field(default=0.1, description="Sampling temperature")
+    frequency_penalty: Optional[float] = Field(default=0, description="Frequency penalty: additive penalty proportional to how often a token has appeared in context")
     json_schema: Optional[str] = Field(default=None, description="Optional JSON schema string for xgrammar constrained decoding")
 
     # Loaded (model, tokenizer) pair — populated in model_post_init.
@@ -138,7 +139,7 @@ class MLXChatModel(BaseChatModel):
             raise RuntimeError(error_msg)
         model, tokenizer = self._model_pair
 
-        print(f'max_tokens: {self.max_tokens}, temperature: {self.temperature}, json_schema: {self.json_schema}')
+        print(f'max_tokens: {self.max_tokens}, temperature: {self.temperature}, frequency_penalty: {self.frequency_penalty}, json_schema: {self.json_schema}')
 
         chat_messages = self._to_chat_dicts(messages)
 
@@ -169,15 +170,19 @@ class MLXChatModel(BaseChatModel):
             print(f"❌ {error_msg}\n{traceback.format_exc()}")
             raise
 
-        # Build an optional xgrammar logits processor for constrained decoding.
-        logits_processors = None
+        penalty_processors = make_logits_processors(frequency_penalty=self.frequency_penalty)
+        if self.frequency_penalty is not None:
+            logger.info(f"[MLXChatModel] frequency_penalty={self.frequency_penalty} enabled")
+
+        logits_processors = list(penalty_processors) if penalty_processors else []
         if self.json_schema is not None:
             processor = make_json_schema_logits_processor(
                 tokenizer, self.json_schema
             )
             if processor is not None:
-                logits_processors = [processor]
+                logits_processors.append(processor)
                 logger.info("[MLXChatModel] xgrammar constrained decoding enabled")
+        logits_processors = logits_processors or None
 
         # Run inference
         try:
