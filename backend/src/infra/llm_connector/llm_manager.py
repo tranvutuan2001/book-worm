@@ -111,67 +111,47 @@ class LLMManager:
             return self._embedding_models
         return self._chat_models
 
-    @staticmethod
-    def _lm_studio_cache_key(model_type: str, model_id: str) -> str:
-        """Return the cache key used for LM Studio models."""
-        return f"lm_studio:{model_type}:{model_id}"
-
-    def _get_or_create_lm_studio_chat(self, model_path: str) -> str:
-        """
-        Ensure an ``LMStudioChatModel`` for *model_path* is in the chat
-        cache and return its cache key.
-
-        The effective model identifier is *model_path* when non-empty,
-        otherwise :attr:`config.LM_STUDIO_DEFAULT_CHAT_MODEL` is used.
-        """
+    def _create_lm_studio_chat(self, model_path: str) -> BaseChatModel:
+        """Create and return a new ``LMStudioChatModel`` instance (no caching)."""
         model_id = model_path or config.LM_STUDIO_DEFAULT_CHAT_MODEL
-        cache_key = self._lm_studio_cache_key("chat", model_id)
-        if cache_key not in self._chat_models:
-            logger.info(
-                f"[LLMManager] Creating LMStudioChatModel: model='{model_id}' "
-                f"base_url='{config.LM_STUDIO_BASE_URL}'"
-            )
-            self._chat_models[cache_key] = LMStudioChatModel(
-                base_url=config.LM_STUDIO_BASE_URL,
-                api_key=config.LM_STUDIO_API_KEY,
-                model=model_id,
-            ).configurable_fields(
-                max_tokens=ConfigurableField(
-                    id="max_tokens",
-                    name="Max Tokens",
-                    description="Maximum number of tokens to generate for this run",
-                ),
-                temperature=ConfigurableField(
-                    id="temperature",
-                    name="Temperature",
-                    description="Sampling temperature for this run",
-                ),
-                json_schema=ConfigurableField(
-                    id="json_schema",
-                    name="JSON Schema",
-                    description="Optional JSON schema for constrained decoding",
-                ),
-            )
-        return cache_key
+        logger.info(
+            f"[LLMManager] Creating LMStudioChatModel: model='{model_id}' "
+            f"base_url='{config.LM_STUDIO_BASE_URL}'"
+        )
+        return LMStudioChatModel(
+            base_url=config.LM_STUDIO_BASE_URL,
+            api_key=config.LM_STUDIO_API_KEY,
+            model=model_id,
+        ).configurable_fields(
+            max_tokens=ConfigurableField(
+                id="max_tokens",
+                name="Max Tokens",
+                description="Maximum number of tokens to generate for this run",
+            ),
+            temperature=ConfigurableField(
+                id="temperature",
+                name="Temperature",
+                description="Sampling temperature for this run",
+            ),
+            json_schema=ConfigurableField(
+                id="json_schema",
+                name="JSON Schema",
+                description="Optional JSON schema for constrained decoding",
+            ),
+        )
 
-    def _get_or_create_lm_studio_embedding(self, model_path: str) -> str:
-        """
-        Ensure an ``LMStudioEmbeddingModel`` for *model_path* is in the
-        embedding cache and return its cache key.
-        """
+    def _create_lm_studio_embedding(self, model_path: str) -> Any:
+        """Create and return a new ``LMStudioEmbeddingModel`` instance (no caching)."""
         model_id = model_path or config.LM_STUDIO_DEFAULT_EMBEDDING_MODEL
-        cache_key = self._lm_studio_cache_key("embedding", model_id)
-        if cache_key not in self._embedding_models:
-            logger.info(
-                f"[LLMManager] Creating LMStudioEmbeddingModel: model='{model_id}' "
-                f"base_url='{config.LM_STUDIO_BASE_URL}'"
-            )
-            self._embedding_models[cache_key] = LMStudioEmbeddingModel(
-                base_url=config.LM_STUDIO_BASE_URL,
-                api_key=config.LM_STUDIO_API_KEY,
-                model=model_id,
-            )
-        return cache_key
+        logger.info(
+            f"[LLMManager] Creating LMStudioEmbeddingModel: model='{model_id}' "
+            f"base_url='{config.LM_STUDIO_BASE_URL}'"
+        )
+        return LMStudioEmbeddingModel(
+            base_url=config.LM_STUDIO_BASE_URL,
+            api_key=config.LM_STUDIO_API_KEY,
+            model=model_id,
+        )
 
     # ------------------------------------------------------------------
     # Model lifecycle
@@ -350,8 +330,7 @@ class LLMManager:
         For local MLX backends the model is loaded from disk if not cached.
         """
         if config.LLM_BACKEND == "lm_studio":
-            cache_key = self._get_or_create_lm_studio_chat(model_path)
-            return self._chat_models[cache_key]
+            return self._create_lm_studio_chat(model_path)
 
         resolved = self._resolve_model_path(model_path)
         if resolved not in self._chat_models:
@@ -364,8 +343,7 @@ class LLMManager:
         Return the embedding model instance for *model_path*, auto-loading if needed.
         """
         if config.LLM_BACKEND == "lm_studio":
-            cache_key = self._get_or_create_lm_studio_embedding(model_path)
-            return self._embedding_models[cache_key]
+            return self._create_lm_studio_embedding(model_path)
 
         resolved = self._resolve_model_path(model_path)
         if resolved not in self._embedding_models:
