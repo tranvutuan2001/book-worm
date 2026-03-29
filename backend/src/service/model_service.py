@@ -14,7 +14,7 @@ from src.api.schemas.model import (
     ModelLoadResponse,
     ModelUnloadResponse,
 )
-from src.infra.llm_connector import LLMService, get_llm_service
+from src.infra.llm_connector import LLMManager, get_llm_manager
 
 logger = logging.getLogger("app.model_service")
 _downloading: set[str] = set()
@@ -52,8 +52,8 @@ class ModelService:
 
     _instance: ClassVar["ModelService | None"] = None
 
-    def __init__(self, llm_service: LLMService) -> None:
-        self._llm = llm_service
+    def __init__(self, llm_manager: LLMManager) -> None:
+        self._llm = llm_manager
 
     def _models_dir_for(model_type: str) -> Path:
         if model_type == "embedding":
@@ -253,9 +253,9 @@ class ModelService:
 
 
 def get_model_service(
-    llm_service: LLMService = Depends(get_llm_service),
+    llm_manager: LLMManager = Depends(get_llm_manager),
 ) -> "ModelService":
     """FastAPI dependency that provides the :class:`ModelService` singleton."""
     if ModelService._instance is None:
-        ModelService._instance = ModelService(llm_service=llm_service)
+        ModelService._instance = ModelService(llm_manager=llm_manager)
     return ModelService._instance

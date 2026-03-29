@@ -86,7 +86,6 @@ class DocumentAnalysisService:
         """
 
         logger.info("Pre-analysis started: %s", document_name)
-        self._prepare_models()
 
         try:
             pages = self._extract_pages(pdf_path)
@@ -171,17 +170,6 @@ class DocumentAnalysisService:
         )
         logger.info("[chapters] Done (%d summaries)", len(chapter_summaries))
 
-    # ------------------------------------------------------------------
-    # Model management
-    # ------------------------------------------------------------------
-
-    def _prepare_models(self) -> None:
-        """Unload all cached models and eagerly reload the ones required for analysis."""
-        logger.info("Clearing model caches and loading analysis models…")
-        self._llm.unload_all_models()
-        self._llm.load_model(DEFAULT_CHAT_MODEL, "chat")
-        self._llm.load_model(DEFAULT_EMBEDDING_MODEL, "embedding")
-        logger.info("Models ready")
 
     # ------------------------------------------------------------------
     # Text extraction

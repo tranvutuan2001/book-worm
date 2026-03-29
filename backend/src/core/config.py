@@ -7,6 +7,7 @@ string literals.
 """
 
 from pathlib import Path
+from typing import Literal
 
 # ---------------------------------------------------------------------------
 # Directory layout
@@ -62,3 +63,28 @@ SUFFIX_SECTION_SUMMARIES = "_section_summaries.json"
 SUFFIX_SECTION_EMBEDDINGS = "_section_summary_embeddings.json"
 SUFFIX_CHAPTER_SUMMARIES = "_chapter_summaries.json"
 SUFFIX_CHAPTER_EMBEDDINGS = "_chapter_summary_embeddings.json"
+
+# ---------------------------------------------------------------------------
+# LLM backend selection
+# ---------------------------------------------------------------------------
+
+# Which inference backend to use for chat completions and embeddings.
+#   "local"     — MLX models loaded directly in-process (Apple Silicon only).
+#   "lm_studio" — Remote LM Studio instance via OpenAI-compatible HTTP API.
+LLM_BACKEND: Literal["local", "lm_studio"] = "lm_studio"
+
+# ---------------------------------------------------------------------------
+# LM Studio connection settings
+# (only used when LLM_BACKEND = "lm_studio")
+# ---------------------------------------------------------------------------
+
+LM_STUDIO_BASE_URL: str = "http://localhost:1234/v1"
+
+# LM Studio accepts any non-empty string as the API key.
+LM_STUDIO_API_KEY: str = "lm-studio"
+
+# Model identifiers exactly as they appear in LM Studio's model list.
+# Leave empty to fall back to the model_path argument passed by the caller.
+LM_STUDIO_DEFAULT_CHAT_MODEL: str = "qwen3.5-9b-mlx"
+LM_STUDIO_DEFAULT_EMBEDDING_MODEL: str = "text-embedding-qwen3-embedding-0.6b"
+
