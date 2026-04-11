@@ -5,6 +5,7 @@ import traceback
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
+from dependency_injector.wiring import Provide, inject
 
 from src.api.schemas.model import (
     DownloadableModelInfo,
@@ -17,7 +18,8 @@ from src.api.schemas.model import (
     ModelUnloadRequest,
     ModelUnloadResponse,
 )
-from src.service.model_service import ModelService, get_model_service
+from src.container import Container
+from src.service.model_service import ModelService
 
 logger = logging.getLogger("app.api")
 
@@ -30,8 +32,9 @@ router = APIRouter(prefix="/v1/models", tags=["Models"])
     summary="List available chat models",
     description="List all chat models present in the local ``models/chat/`` directory.",
 )
+@inject
 async def list_chat_models(
-    service: ModelService = Depends(get_model_service),
+    service: ModelService = Depends(Provide[Container.model_service]),
 ) -> List[ModelInfo]:
     return service.list_chat_models()
 
@@ -42,8 +45,9 @@ async def list_chat_models(
     summary="List available embedding models",
     description="List all embedding models present in the local ``models/embedding/`` directory.",
 )
+@inject
 async def list_embedding_models(
-    service: ModelService = Depends(get_model_service),
+    service: ModelService = Depends(Provide[Container.model_service]),
 ) -> List[ModelInfo]:
     return service.list_embedding_models()
 
@@ -54,8 +58,9 @@ async def list_embedding_models(
     summary="List downloadable chat models",
     description="List chat models available for download from Hugging Face.",
 )
+@inject
 async def list_downloadable_chat_models(
-    service: ModelService = Depends(get_model_service),
+    service: ModelService = Depends(Provide[Container.model_service]),
 ) -> List[DownloadableModelInfo]:
     return service.list_downloadable_chat_models()
 
@@ -66,8 +71,9 @@ async def list_downloadable_chat_models(
     summary="List downloadable embedding models",
     description="List embedding models available for download from Hugging Face.",
 )
+@inject
 async def list_downloadable_embedding_models(
-    service: ModelService = Depends(get_model_service),
+    service: ModelService = Depends(Provide[Container.model_service]),
 ) -> List[DownloadableModelInfo]:
     return service.list_downloadable_embedding_models()
 
@@ -83,9 +89,10 @@ async def list_downloadable_embedding_models(
         "``GET /v1/models/embeddings`` to track completion."
     ),
 )
+@inject
 async def download_model(
     request: ModelDownloadRequest,
-    service: ModelService = Depends(get_model_service),
+    service: ModelService = Depends(Provide[Container.model_service]),
 ) -> ModelDownloadResponse:
     try:
         return await service.download_model(request.repository)
@@ -106,9 +113,10 @@ async def download_model(
     summary="Load a model into memory",
     description="Explicitly load a model into RAM so inference can begin immediately.",
 )
+@inject
 async def load_model(
     request: ModelLoadRequest,
-    service: ModelService = Depends(get_model_service),
+    service: ModelService = Depends(Provide[Container.model_service]),
 ) -> ModelLoadResponse:
     try:
         return service.load_model(request.model_path, request.model_type)
@@ -127,9 +135,10 @@ async def load_model(
     summary="Unload a model from memory",
     description="Remove a loaded model from RAM to free memory.",
 )
+@inject
 async def unload_model(
     request: ModelUnloadRequest,
-    service: ModelService = Depends(get_model_service),
+    service: ModelService = Depends(Provide[Container.model_service]),
 ) -> ModelUnloadResponse:
     try:
         return service.unload_model(request.model_path, request.model_type)
@@ -150,7 +159,8 @@ async def unload_model(
     summary="List models currently in memory",
     description="List all models that are currently loaded in RAM and ready for inference.",
 )
+@inject
 async def list_loaded_models(
-    service: ModelService = Depends(get_model_service),
+    service: ModelService = Depends(Provide[Container.model_service]),
 ) -> List[LoadedModelInfo]:
     return service.list_loaded_models()

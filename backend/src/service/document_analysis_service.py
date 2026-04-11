@@ -9,10 +9,10 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import ClassVar, List, Optional
+from typing import List, Optional
 
 import pdfplumber
-from fastapi import Depends
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from src.core.config import (
@@ -35,7 +35,7 @@ from src.core.exceptions import DocumentProcessingError
 from src.core.utils import write_json_file
 from src.domain.entity.message import Message
 from src.domain.enums import Role
-from src.infra.llm_connector import LLMService, get_llm_service
+from src.infra.llm_connector import LLMService
 
 logger = logging.getLogger("app.service")
 
@@ -58,8 +58,6 @@ Use a professional, note-taking style.
 
 class DocumentAnalysisService:
     """Orchestrates the full document pre-analysis pipeline."""
-
-    _instance: ClassVar["DocumentAnalysisService | None"] = None
 
     def __init__(self, llm_service: LLMService) -> None:
         self._llm = llm_service
@@ -317,16 +315,3 @@ class DocumentAnalysisService:
         logger.info("Section summaries not found — building them first…")
         return self._process_sections(chunks, doc_name, out_dir)
 
-
-# ---------------------------------------------------------------------------
-# Singleton & dependency factory
-# ---------------------------------------------------------------------------
-
-
-def get_document_analysis_service(
-    llm_service: LLMService= Depends(get_llm_service),
-) -> DocumentAnalysisService:
-    """FastAPI dependency that provides the :class:`DocumentAnalysisService` singleton."""
-    if DocumentAnalysisService._instance is None:
-        DocumentAnalysisService._instance = DocumentAnalysisService(llm_service=llm_service)
-    return DocumentAnalysisService._instance

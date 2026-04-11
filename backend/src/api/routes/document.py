@@ -4,6 +4,7 @@ import logging
 import traceback
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from dependency_injector.wiring import Provide, inject
 
 from src.api.schemas.document import (
     DocumentInfo,
@@ -12,9 +13,10 @@ from src.api.schemas.document import (
     UploadResponse,
 )
 from src.api.schemas.pdf_summarization import SummarizeResponse
+from src.container import Container
 from src.core.exceptions import DocumentNotFoundError, DocumentProcessingError, InvalidDocumentError
-from src.service.document_service import DocumentService, get_document_service
-from src.service.pdf_summarization_service import PDFSummarizationService, get_pdf_summarization_service
+from src.service.document_service import DocumentService
+from src.service.pdf_summarization_service import PDFSummarizationService
 
 logger = logging.getLogger("app.api")
 
@@ -31,9 +33,10 @@ router = APIRouter(tags=["Documents"])
         "Poll ``GET /documents`` to check when status changes to ``ready``."
     ),
 )
+@inject
 async def upload_document(
     file: UploadFile = File(description="PDF file to upload"),
-    service: DocumentService = Depends(get_document_service),
+    service: DocumentService = Depends(Provide[Container.document_service]),
 ) -> UploadResponse:
     logger.info("POST /upload — file: %s", file.filename)
     try:
@@ -67,9 +70,10 @@ async def upload_document(
         "The result is stored under ``pdf/`` and also returned in the response body."
     ),
 )
+@inject
 async def summarize_document(
     document_name: str,
-    service: PDFSummarizationService = Depends(get_pdf_summarization_service),
+    service: PDFSummarizationService = Depends(Provide[Container.pdf_summarization_service]),
 ) -> SummarizeResponse:
     logger.info("POST /documents/%s/summarize", document_name)
     try:
@@ -101,8 +105,9 @@ async def summarize_document(
         "processing status (``processing``, ``analyzing``, or ``ready``)."
     ),
 )
+@inject
 async def list_documents(
-    service: DocumentService = Depends(get_document_service),
+    service: DocumentService = Depends(Provide[Container.document_service]),
 ) -> DocumentsResponse:
     logger.info("GET /documents")
     try:

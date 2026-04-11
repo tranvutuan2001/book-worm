@@ -2,9 +2,7 @@ import asyncio
 import logging
 import os
 from pathlib import Path
-from typing import Annotated, ClassVar, List
-
-from fastapi import Depends
+from typing import List
 
 from src.api.schemas.model import (
     DownloadableModelInfo,
@@ -14,7 +12,7 @@ from src.api.schemas.model import (
     ModelLoadResponse,
     ModelUnloadResponse,
 )
-from src.infra.llm_connector import LLMManager, get_llm_manager
+from src.infra.llm_connector import LLMManager
 
 logger = logging.getLogger("app.model_service")
 _downloading: set[str] = set()
@@ -50,21 +48,16 @@ class ModelService:
         ),
     ]
 
-    _instance: ClassVar["ModelService | None"] = None
-
     def __init__(self, llm_manager: LLMManager) -> None:
         self._llm = llm_manager
 
+    @staticmethod
     def _models_dir_for(model_type: str) -> Path:
         if model_type == "embedding":
             return ModelService._EMBEDDING_MODELS_DIR
         return ModelService._CHAT_MODELS_DIR
 
-
-    # ---------------------------------------------------------------------------
-    # Helpers
-    # ---------------------------------------------------------------------------
-
+    @staticmethod
     def _human_readable_size(num_bytes: int) -> str:
         for unit in ("B", "KB", "MB", "GB", "TB"):
             if num_bytes < 1024.0:
@@ -73,10 +66,11 @@ class ModelService:
         return f"{num_bytes:.1f} PB"
 
 
+    @staticmethod
     def _dir_size(path: Path) -> int:
         return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
 
-
+    @staticmethod
     def _scan_models(base_dir: Path) -> List[ModelInfo]:
         """
         Walk *base_dir* and return a ``ModelInfo`` entry for every subdirectory
@@ -106,6 +100,7 @@ class ModelService:
         return results
 
 
+    @staticmethod
     async def _download_background(repository: str, model_type: str) -> None:
         """Background coroutine that downloads a Hugging Face model via snapshot_download."""
         from huggingface_hub import snapshot_download  # type: ignore[import]
@@ -248,14 +243,3 @@ class ModelService:
             for r in self._llm.list_loaded_models()
         ]
 
-
-# Singleton — created on first call to get_model_service()
-
-
-def get_model_service(
-    llm_manager: LLMManager = Depends(get_llm_manager),
-) -> "ModelService":
-    """FastAPI dependency that provides the :class:`ModelService` singleton."""
-    if ModelService._instance is None:
-        ModelService._instance = ModelService(llm_manager=llm_manager)
-    return ModelService._instance

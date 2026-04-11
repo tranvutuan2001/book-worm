@@ -87,4 +87,3 @@ LM_STUDIO_API_KEY: str = "lm-studio"
 # Leave empty to fall back to the model_path argument passed by the caller.
 LM_STUDIO_DEFAULT_CHAT_MODEL: str = "qwen3.5-9b-mlx"
 LM_STUDIO_DEFAULT_EMBEDDING_MODEL: str = "text-embedding-qwen3-embedding-0.6b"
-

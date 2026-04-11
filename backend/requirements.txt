@@ -37,6 +37,8 @@ click==8.3.1
     #   uvicorn
 cryptography==46.0.5
     # via pdfminer-six
+dependency-injector==4.49.0
+    # via -r requirements.in
 distro==1.9.0
     # via openai
 faiss-cpu==1.13.2

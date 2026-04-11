@@ -3,16 +3,16 @@ import os
 # libomp.dylib on macOS, causing OpenMP to complain at startup.
 # KMP_DUPLICATE_LIB_OK silences the abort; it must be set before any import
 # that loads OpenMP.
-os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from src.infra.logging_config import setup_logging
 from src.api.routes.chat import router as chat_router
 from src.api.routes.document import router as document_router
 from src.api.routes.model import router as model_router
 
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 setup_logging()
 
 app = FastAPI(

@@ -11,16 +11,12 @@ import traceback
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, ClassVar
 
-from fastapi import Depends, UploadFile
+from fastapi import UploadFile
 
 from src.core.config import DATA_DIR
 from src.core.exceptions import DocumentProcessingError, InvalidDocumentError
-from src.service.document_analysis_service import (
-    DocumentAnalysisService,
-    get_document_analysis_service,
-)
+from src.service.document_analysis_service import DocumentAnalysisService
 
 logger = logging.getLogger("app.service")
 
@@ -54,11 +50,7 @@ class DocumentListResult:
     documents: list[DocumentRecord] = field(default_factory=list)
 
 
-
-
 class DocumentService:
-    _instance: ClassVar["DocumentService | None"] = None
-
     def __init__(self, analysis_service: DocumentAnalysisService) -> None:
         self._analysis_service = analysis_service
 
@@ -142,16 +134,3 @@ class DocumentService:
         logger.info("Found %d documents", len(documents))
         return DocumentListResult(documents=documents)
 
-
-# ---------------------------------------------------------------------------
-# Singleton & dependency factory
-# ---------------------------------------------------------------------------
-
-
-def get_document_service(
-    analysis_service: DocumentAnalysisService = Depends(get_document_analysis_service),
-) -> "DocumentService":
-    """FastAPI dependency that provides the :class:`DocumentService` singleton."""
-    if DocumentService._instance is None:
-        DocumentService._instance = DocumentService(analysis_service=analysis_service)
-    return DocumentService._instance

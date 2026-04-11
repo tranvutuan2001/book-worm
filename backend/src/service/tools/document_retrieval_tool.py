@@ -17,9 +17,15 @@ import numpy as np
 from langchain.tools import tool
 
 from src.core.config import DATA_DIR, DEFAULT_EMBEDDING_MODEL, TOP_K_CHUNKS
-from src.infra.llm_connector import get_llm_service
+from src.infra.llm_connector import LLMService
 
 logger = logging.getLogger("app.service.tools")
+
+
+def _get_llm_service() -> LLMService:
+    """Lazily resolve the LLMService singleton from the application container."""
+    from src.container import container  # late import to avoid circular deps
+    return container.llm_service()
 
 
 # ---------------------------------------------------------------------------
@@ -69,15 +75,18 @@ def get_the_most_relevant_chunks(question: str, document_name: str) -> List[str]
         vectors = np.array(chunk_embeddings, dtype="float32")
 
         index = faiss.IndexFlatL2(dimension)
-        index.add(vectors)
+        index.add(n=vectors.shape[0], x=vectors)
 
         query_vec = np.array(
-            [get_llm_service().embed_text(DEFAULT_EMBEDDING_MODEL, question)], dtype="float32"
+            [_get_llm_service().embed_text(DEFAULT_EMBEDDING_MODEL, question)], dtype="float32"
         )
-        _, indices = index.search(query_vec, TOP_K_CHUNKS)
+        n_queries = query_vec.shape[0]
+        distances = np.empty((n_queries, TOP_K_CHUNKS), dtype="float32")
+        raw_indices = np.empty((n_queries, TOP_K_CHUNKS), dtype="int64")
+        index.search(n=n_queries, x=query_vec, k=TOP_K_CHUNKS, distances=distances, labels=raw_indices)
 
         all_chunks = _all_chunks(document_name)
-        result = [all_chunks[i] for i in indices[0] if i < len(all_chunks)]
+        result = [all_chunks[i] for i in raw_indices[0] if i < len(all_chunks)]
         logger.info("Returned %d relevant chunks for query.", len(result))
         return result
 

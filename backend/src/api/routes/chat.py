@@ -4,11 +4,13 @@ import logging
 import traceback
 
 from fastapi import APIRouter, Depends, HTTPException
+from dependency_injector.wiring import Provide, inject
 
 from src.api.schemas.chat import AskResponse
+from src.container import Container
 from src.core.exceptions import DocumentNotFoundError, LLMError
 from src.domain.entity.conversation import Conversation
-from src.service.chat_service import ChatService, get_chat_service
+from src.service.chat_service import ChatService
 
 logger = logging.getLogger("app.api")
 
@@ -26,9 +28,10 @@ router = APIRouter(tags=["Document Analysis"])
         "and fully analysed document."
     ),
 )
+@inject
 async def ask(
     payload: Conversation,
-    service: ChatService = Depends(get_chat_service),
+    service: ChatService = Depends(Provide[Container.chat_service]),
 ) -> AskResponse:
     logger.info("POST /ask — document: %s", payload.document_name)
     try:

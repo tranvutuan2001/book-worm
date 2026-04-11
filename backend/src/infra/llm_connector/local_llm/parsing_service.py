@@ -141,10 +141,3 @@ class ParsingService:
         return parser.parse(raw)
 
 
-# Module-level singleton — stateless, safe to share across requests
-_parsing_service = ParsingService()
-
-
-def get_parsing_service() -> ParsingService:
-    """FastAPI dependency that provides the shared ``ParsingService`` instance."""
-    return _parsing_service

@@ -1,19 +1,15 @@
 import logging
 import threading
 from pathlib import Path
-from typing import Annotated, Any, ClassVar, List, Literal, TypedDict
+from typing import Any, ClassVar, List, Literal, TypedDict
 
-from fastapi import Depends
 from langchain_core.runnables import ConfigurableField
 
 from src.core import config
 from src.infra.llm_connector.external_llm import LMStudioChatModel, LMStudioEmbeddingModel
 from src.infra.llm_connector.local_llm.mlx_chat import MLXChatModel
 from src.infra.llm_connector.local_llm.mlx_embedding import MLXEmbeddingModel
-from src.infra.llm_connector.local_llm.parsing_service import (
-    ParsingService,
-    get_parsing_service,
-)
+from src.infra.llm_connector.local_llm.parsing_service import ParsingService
 from langchain.chat_models.base import BaseChatModel
 
 logger = logging.getLogger("app.llm_connector")
@@ -50,13 +46,12 @@ class LLMManager:
       :meth:`get_embedding_model` — auto-loading a model if it is not yet
       in cache and returning the ready instance to callers.
 
-    Obtain an instance via the :func:`get_llm_manager` FastAPI dependency.
+    Obtain an instance via the application container.
     """
 
     # Class-level state shared across all instances.
     _loading: ClassVar[set[str]] = set()
     _lock: ClassVar[threading.Lock] = threading.Lock()
-    _instance: ClassVar["LLMManager | None"] = None
 
     def __init__(self, parsing_service: ParsingService) -> None:
         self._parsing_service = parsing_service
@@ -351,14 +346,3 @@ class LLMManager:
             self._embedding_models[resolved] = MLXEmbeddingModel(resolved)
         return self._embedding_models[resolved]
 
-
-def get_llm_manager(
-    parsing_service: Annotated[
-        ParsingService | None, Depends(get_parsing_service)
-    ] = None,
-) -> LLMManager:
-    if LLMManager._instance is None:
-        if parsing_service is None:
-            parsing_service = get_parsing_service()
-        LLMManager._instance = LLMManager(parsing_service=parsing_service)
-    return LLMManager._instance

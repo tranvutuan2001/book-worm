@@ -1,7 +1,6 @@
 import logging
-from typing import Annotated, ClassVar, List
+from typing import List
 
-from fastapi import Depends
 from langchain.agents import create_agent
 from langchain.tools import BaseTool
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -9,7 +8,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from src.domain.entity.message import Message
 from src.domain.enums import Role
 from src.infra.llm_connector.llm_logging_handler import LLMLoggingHandler
-from src.infra.llm_connector.llm_manager import LLMManager, get_llm_manager
+from src.infra.llm_connector.llm_manager import LLMManager
 
 logger = logging.getLogger("app.llm_connector")
 
@@ -26,11 +25,7 @@ class LLMService:
 
     All model lifecycle (loading, caching, unloading) is delegated to
     :class:`LLMManager`.  This class holds no model state of its own.
-
-    Obtain an instance via the :func:`get_llm_service` FastAPI dependency.
     """
-
-    _instance: ClassVar["LLMService | None"] = None
 
     def __init__(self, llm_manager: LLMManager) -> None:
         self._manager = llm_manager
@@ -164,10 +159,3 @@ class LLMService:
         model = self._manager.get_embedding_model(model_path)
         return model.embed(text)
 
-
-def get_llm_service(
-    llm_manager: Annotated[LLMManager, Depends(get_llm_manager)],
-) -> LLMService:
-    if LLMService._instance is None:
-        LLMService._instance = LLMService(llm_manager=llm_manager)
-    return LLMService._instance
