@@ -5,7 +5,7 @@ from typing import Any, ClassVar, List, Literal, TypedDict
 
 from langchain_core.runnables import ConfigurableField
 
-from src.core import config
+from src.config import config
 from src.infra.llm_connector.external_llm import LMStudioChatModel, LMStudioEmbeddingModel
 from src.infra.llm_connector.local_llm.mlx_chat import MLXChatModel
 from src.infra.llm_connector.local_llm.mlx_embedding import MLXEmbeddingModel

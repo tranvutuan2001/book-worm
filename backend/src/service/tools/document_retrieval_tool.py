@@ -16,7 +16,7 @@ import faiss
 import numpy as np
 from langchain.tools import tool
 
-from src.core.config import DATA_DIR, DEFAULT_EMBEDDING_MODEL, TOP_K_CHUNKS
+from src.config.config import DATA_DIR, DEFAULT_EMBEDDING_MODEL, TOP_K_CHUNKS
 from src.infra.llm_connector import LLMService
 
 logger = logging.getLogger("app.service.tools")

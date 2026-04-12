@@ -20,7 +20,7 @@ from langchain.tools import tool
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field
 
-from src.core import config
+from src.config import config
 from src.infra.llm_connector.external_llm.lm_studio_chat import LMStudioChatModel
 from src.infra.llm_connector.external_llm.lm_studio_embedding import LMStudioEmbeddingModel
 from src.infra.llm_connector.llm_manager import LLMManager

@@ -28,7 +28,7 @@ from typing import Any
 import re
 import jsonschema
 
-from src.core.config import (
+from src.config.config import (
     DATA_DIR,
     DEFAULT_CHAT_MODEL,
     PDF_DIR,

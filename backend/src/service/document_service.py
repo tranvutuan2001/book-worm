@@ -14,7 +14,7 @@ from enum import Enum
 
 from fastapi import UploadFile
 
-from src.core.config import DATA_DIR
+from src.config.config import DATA_DIR
 from src.core.exceptions import DocumentProcessingError, InvalidDocumentError
 from src.service.document_analysis_service import DocumentAnalysisService
 

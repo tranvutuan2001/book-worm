@@ -15,7 +15,7 @@ import pdfplumber
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from src.core.config import (
+from src.config.config import (
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     CHUNKS_PER_SECTION,

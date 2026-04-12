@@ -14,7 +14,7 @@ import traceback
 from typing import List
 
 from src.core.exceptions import DocumentNotFoundError, LLMError
-from src.core.config import DATA_DIR
+from src.config.config import DATA_DIR
 from src.domain.entity.conversation import Conversation
 from src.domain.entity.message import Message
 from src.domain.enums import Role
