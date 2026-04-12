@@ -4,6 +4,12 @@
 #
 #    pip-compile requirements.in
 #
+aiohappyeyeballs==2.6.1
+    # via aiohttp
+aiohttp==3.13.5
+    # via fsspec
+aiosignal==1.4.0
+    # via aiohttp
 annotated-doc==0.0.4
     # via
     #   fastapi
@@ -18,6 +24,7 @@ anyio==4.12.1
     #   watchfiles
 attrs==25.4.0
     # via
+    #   aiohttp
     #   jsonschema
     #   referencing
 certifi==2026.2.25
@@ -26,7 +33,9 @@ certifi==2026.2.25
     #   httpx
     #   requests
 cffi==2.0.0
-    # via cryptography
+    # via
+    #   cryptography
+    #   miniaudio
 charset-normalizer==3.4.5
     # via
     #   pdfminer-six
@@ -37,20 +46,34 @@ click==8.3.1
     #   uvicorn
 cryptography==46.0.5
     # via pdfminer-six
+datasets==4.8.4
+    # via mlx-vlm
 dependency-injector==4.49.0
     # via -r requirements.in
+dill==0.4.1
+    # via
+    #   datasets
+    #   multiprocess
 distro==1.9.0
     # via openai
 faiss-cpu==1.13.2
     # via -r requirements.in
 fastapi==0.135.1
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   mlx-vlm
 filelock==3.25.2
     # via
+    #   datasets
     #   huggingface-hub
     #   torch
-fsspec==2026.2.0
+frozenlist==1.8.0
     # via
+    #   aiohttp
+    #   aiosignal
+fsspec[http]==2026.2.0
+    # via
+    #   datasets
     #   huggingface-hub
     #   torch
 h11==0.16.0
@@ -65,12 +88,14 @@ httptools==0.7.1
     # via uvicorn
 httpx==0.28.1
     # via
+    #   datasets
     #   huggingface-hub
     #   langgraph-sdk
     #   langsmith
     #   openai
 huggingface-hub==1.7.1
     # via
+    #   datasets
     #   tokenizers
     #   transformers
 idna==3.11
@@ -78,6 +103,7 @@ idna==3.11
     #   anyio
     #   httpx
     #   requests
+    #   yarl
 iniconfig==2.3.0
     # via pytest
 jinja2==3.1.6
@@ -126,24 +152,42 @@ markupsafe==3.0.3
     # via jinja2
 mdurl==0.1.2
     # via markdown-it-py
+miniaudio==1.61
+    # via mlx-vlm
 mlx==0.31.1
-    # via mlx-lm
+    # via
+    #   mlx-lm
+    #   mlx-vlm
 mlx-lm==0.31.1
-    # via -r requirements.in
+    # via mlx-vlm
 mlx-metal==0.31.1
     # via mlx
+mlx-vlm==0.4.4
+    # via -r requirements.in
 mpmath==1.3.0
     # via sympy
+multidict==6.7.1
+    # via
+    #   aiohttp
+    #   yarl
+multiprocess==0.70.19
+    # via datasets
 networkx==3.6.1
     # via torch
 numpy==2.4.3
     # via
+    #   datasets
     #   faiss-cpu
     #   mlx-lm
+    #   mlx-vlm
+    #   opencv-python
+    #   pandas
     #   transformers
     #   xgrammar
 openai==2.28.0
     # via langchain-openai
+opencv-python==4.13.0.92
+    # via mlx-vlm
 orjson==3.11.7
     # via
     #   langgraph-sdk
@@ -152,22 +196,33 @@ ormsgpack==1.12.2
     # via langgraph-checkpoint
 packaging==26.0
     # via
+    #   datasets
     #   faiss-cpu
     #   huggingface-hub
     #   langchain-core
     #   langsmith
     #   pytest
     #   transformers
+pandas==3.0.2
+    # via datasets
 pdfminer-six==20251230
     # via pdfplumber
 pdfplumber==0.11.9
     # via -r requirements.in
 pillow==12.1.1
-    # via pdfplumber
+    # via
+    #   mlx-vlm
+    #   pdfplumber
 pluggy==1.6.0
     # via pytest
+propcache==0.4.1
+    # via
+    #   aiohttp
+    #   yarl
 protobuf==7.34.0
     # via mlx-lm
+pyarrow==23.0.1
+    # via datasets
 pycparser==3.0
     # via cffi
 pydantic==2.12.5
@@ -190,12 +245,15 @@ pypdfium2==5.6.0
     # via pdfplumber
 pytest==9.0.2
     # via -r requirements.in
+python-dateutil==2.9.0.post0
+    # via pandas
 python-dotenv==1.2.2
     # via uvicorn
 python-multipart==0.0.22
     # via -r requirements.in
 pyyaml==6.0.3
     # via
+    #   datasets
     #   huggingface-hub
     #   langchain-core
     #   mlx-lm
@@ -212,7 +270,9 @@ regex==2026.2.28
 requests==2.32.5
     # via
     #   -r requirements.in
+    #   datasets
     #   langsmith
+    #   mlx-vlm
     #   requests-toolbelt
     #   tiktoken
 requests-toolbelt==1.0.0
@@ -229,6 +289,8 @@ sentencepiece==0.2.1
     # via mlx-lm
 shellingham==1.5.4
     # via typer
+six==1.17.0
+    # via python-dateutil
 sniffio==1.3.1
     # via openai
 starlette==0.52.1
@@ -245,12 +307,15 @@ torch==2.10.0
     # via xgrammar
 tqdm==4.67.3
     # via
+    #   datasets
     #   huggingface-hub
+    #   mlx-vlm
     #   openai
     #   transformers
 transformers==5.3.0
     # via
     #   mlx-lm
+    #   mlx-vlm
     #   xgrammar
 typer==0.24.1
     # via
@@ -278,7 +343,9 @@ uuid-utils==0.14.1
     #   langchain-core
     #   langsmith
 uvicorn[standard]==0.41.0
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   mlx-vlm
 uvloop==0.22.1
     # via uvicorn
 watchfiles==1.1.1
@@ -289,8 +356,11 @@ xgrammar==0.1.32
     # via -r requirements.in
 xxhash==3.6.0
     # via
+    #   datasets
     #   langgraph
     #   langsmith
+yarl==1.23.0
+    # via aiohttp
 zstandard==0.25.0
     # via langsmith
 
