@@ -31,7 +31,8 @@ PDF_EXAMPLE_PATH: Path = PROJECT_ROOT / "pdf-example.json"
 # Default model paths (relative to PROJECT_ROOT)
 # ---------------------------------------------------------------------------
 
-DEFAULT_CHAT_MODEL: str = "models/chat/mlx-community/Qwen3.5-9B-MLX-4bit"
+DEFAULT_CHAT_MODEL: str = "models/chat/unsloth/gemma-4-E4B-it-UD-MLX-4bit"
+DEFAULT_CHAT_TEMPLATE: str = "gemma"
 DEFAULT_EMBEDDING_MODEL: str = "models/embedding/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"
 
 # ---------------------------------------------------------------------------
@@ -50,7 +51,6 @@ MAX_EMBEDDING_RETRIES: int = 3
 
 CHAT_MAX_TOKENS: int = 2048
 CHAT_TEMPERATURE: float = 0.1
-DEFAULT_CHAT_TEMPLATE: str = "qwen"
 TOP_K_CHUNKS: int = 3
 
 # ---------------------------------------------------------------------------
@@ -71,7 +71,7 @@ SUFFIX_CHAPTER_EMBEDDINGS = "_chapter_summary_embeddings.json"
 # Which inference backend to use for chat completions and embeddings.
 #   "local"     — MLX models loaded directly in-process (Apple Silicon only).
 #   "lm_studio" — Remote LM Studio instance via OpenAI-compatible HTTP API.
-LLM_BACKEND: Literal["local", "lm_studio"] = "lm_studio"
+LLM_BACKEND: Literal["local", "lm_studio"] = "local"
 
 # ---------------------------------------------------------------------------
 # LM Studio connection settings

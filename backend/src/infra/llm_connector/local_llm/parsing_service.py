@@ -5,10 +5,10 @@ import logging
 import re
 import uuid
 from abc import ABC, abstractmethod
-
-
 from langchain_core.messages import AIMessage
 from langchain_core.messages.tool import ToolCall
+from src.config.config import DEFAULT_CHAT_TEMPLATE
+
 
 logger = logging.getLogger("app.llm_connector")
 
@@ -244,9 +244,6 @@ _REGISTRY: dict[str, type[BaseResponseParser]] = {
     # "llama":   LlamaResponseParser,
 }
 
-_DEFAULT_TEMPLATE = "qwen"
-
-
 # ---------------------------------------------------------------------------
 # ParsingService
 # ---------------------------------------------------------------------------
@@ -275,9 +272,9 @@ class ParsingService:
         if parser is None:
             logger.warning(
                 f"ParsingService: unknown template '{template_name}', "
-                f"falling back to '{_DEFAULT_TEMPLATE}'"
+                f"falling back to '{DEFAULT_CHAT_TEMPLATE}'"
             )
-            parser = self._parsers[_DEFAULT_TEMPLATE]
+            parser = self._parsers[DEFAULT_CHAT_TEMPLATE]
         return parser.parse(raw)
 
 
