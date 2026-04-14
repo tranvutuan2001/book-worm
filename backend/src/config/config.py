@@ -31,8 +31,8 @@ PDF_EXAMPLE_PATH: Path = PROJECT_ROOT / "pdf-example.json"
 # Default model paths (relative to PROJECT_ROOT)
 # ---------------------------------------------------------------------------
 
-DEFAULT_CHAT_MODEL: str = "models/chat/unsloth/gemma-4-E4B-it-UD-MLX-4bit"
-DEFAULT_CHAT_TEMPLATE: str = "gemma"
+DEFAULT_CHAT_MODEL: str = "models/chat/mlx-community/Qwen3.5-9B-MLX-4bit"
+DEFAULT_CHAT_TEMPLATE: str = "qwen"
 DEFAULT_EMBEDDING_MODEL: str = "models/embedding/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"
 
 # ---------------------------------------------------------------------------
