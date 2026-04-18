@@ -40,80 +40,6 @@ from src.config.config import DEFAULT_CHAT_TEMPLATE
 
 logger = logging.getLogger("app.llm_connector")
 
-def _tool_def_to_schema(tool_def: Any) -> dict[str, Any]:
-    """Convert a pydantic_ai ToolDefinition to an OpenAI-style tool schema dict."""
-    return {
-        "type": "function",
-        "function": {
-            "name": tool_def.name,
-            "description": tool_def.description or "",
-            "parameters": tool_def.parameters_json_schema,
-        },
-    }
-
-
-def _messages_to_chat_dicts(
-    messages: list[ModelMessage],
-    model_request_parameters: ModelRequestParameters,
-) -> tuple[str | None, list[dict[str, Any]]]:
-    """
-    Convert Pydantic AI ``ModelMessage`` objects to plain chat dicts.
-
-    Returns
-    -------
-    instructions : str | None
-        System/instruction text for the current request.
-    chat_dicts : list[dict]
-        Conversation history (without system message).
-    """
-    instructions = models.Model._get_instructions(messages, model_request_parameters)
-    chat_dicts: list[dict[str, Any]] = []
-
-    for msg in messages:
-        if isinstance(msg, ModelRequest):
-            for part in msg.parts:
-                kind = getattr(part, "part_kind", None)
-                if kind == "user-prompt":
-                    content = part.content
-                    if not isinstance(content, str):
-                        content = " ".join(
-                            c if isinstance(c, str) else (c.get("text", "") if isinstance(c, dict) else "")
-                            for c in content
-                        )
-                    chat_dicts.append({"role": "user", "content": content})
-                elif kind == "tool-return":
-                    chat_dicts.append({
-                        "role": "tool",
-                        "tool_call_id": part.tool_call_id,
-                        "content": str(part.content),
-                    })
-                elif kind == "retry-prompt":
-                    chat_dicts.append({"role": "user", "content": str(part.content)})
-        elif isinstance(msg, ModelResponse):
-            text_parts = [p for p in msg.parts if getattr(p, "part_kind", None) == "text"]
-            tool_parts = [p for p in msg.parts if getattr(p, "part_kind", None) == "tool-call"]
-            msg_dict: dict[str, Any] = {"role": "assistant"}
-            if text_parts:
-                msg_dict["content"] = text_parts[0].content
-            if tool_parts:
-                msg_dict["tool_calls"] = [
-                    {
-                        "id": p.tool_call_id,
-                        "type": "function",
-                        "function": {
-                            "name": p.tool_name,
-                            "arguments": (
-                                p.args if isinstance(p.args, dict) else (json.loads(p.args) if p.args else {})
-                            ),
-                        },
-                    }
-                    for p in tool_parts
-                ]
-            chat_dicts.append(msg_dict)
-
-    return instructions, chat_dicts
-
-
 class MLXChatModel(models.Model):
     """
     Local MLX chat model implementing the Pydantic AI ``Model`` interface.
@@ -148,9 +74,80 @@ class MLXChatModel(models.Model):
         self._mlx_model, self._tokenizer = mlx_load(model_path)
         logger.info("[MLXChatModel] Model loaded: '%s'", model_path)
 
-    # ------------------------------------------------------------------
-    # pydantic_ai.models.Model interface
-    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _tool_def_to_schema(tool_def: Any) -> dict[str, Any]:
+        """Convert a pydantic_ai ToolDefinition to an OpenAI-style tool schema dict."""
+        return {
+            "type": "function",
+            "function": {
+                "name": tool_def.name,
+                "description": tool_def.description or "",
+                "parameters": tool_def.parameters_json_schema,
+            },
+        }
+
+    @staticmethod
+    def _messages_to_chat_dicts(
+        messages: list[ModelMessage],
+        model_request_parameters: ModelRequestParameters,
+    ) -> tuple[str | None, list[dict[str, Any]]]:
+        """
+        Convert Pydantic AI ``ModelMessage`` objects to plain chat dicts.
+
+        Returns
+        -------
+        instructions : str | None
+            System/instruction text for the current request.
+        chat_dicts : list[dict]
+            Conversation history (without system message).
+        """
+        instructions = models.Model._get_instructions(messages, model_request_parameters)
+        chat_dicts: list[dict[str, Any]] = []
+
+        for msg in messages:
+            if isinstance(msg, ModelRequest):
+                for part in msg.parts:
+                    kind = getattr(part, "part_kind", None)
+                    if kind == "user-prompt":
+                        content = part.content
+                        if not isinstance(content, str):
+                            content = " ".join(
+                                c if isinstance(c, str) else (c.get("text", "") if isinstance(c, dict) else "")
+                                for c in content
+                            )
+                        chat_dicts.append({"role": "user", "content": content})
+                    elif kind == "tool-return":
+                        chat_dicts.append({
+                            "role": "tool",
+                            "tool_call_id": part.tool_call_id,
+                            "content": str(part.content),
+                        })
+                    elif kind == "retry-prompt":
+                        chat_dicts.append({"role": "user", "content": str(part.content)})
+            elif isinstance(msg, ModelResponse):
+                text_parts = [p for p in msg.parts if getattr(p, "part_kind", None) == "text"]
+                tool_parts = [p for p in msg.parts if getattr(p, "part_kind", None) == "tool-call"]
+                msg_dict: dict[str, Any] = {"role": "assistant"}
+                if text_parts:
+                    msg_dict["content"] = text_parts[0].content
+                if tool_parts:
+                    msg_dict["tool_calls"] = [
+                        {
+                            "id": p.tool_call_id,
+                            "type": "function",
+                            "function": {
+                                "name": p.tool_name,
+                                "arguments": (
+                                    p.args if isinstance(p.args, dict) else (json.loads(p.args) if p.args else {})
+                                ),
+                            },
+                        }
+                        for p in tool_parts
+                    ]
+                chat_dicts.append(msg_dict)
+
+        return instructions, chat_dicts
 
     @property
     def model_name(self) -> str:
@@ -175,14 +172,14 @@ class MLXChatModel(models.Model):
         json_schema: str | None = settings.get("json_schema", None)
 
         tool_schemas = [
-            _tool_def_to_schema(t)
+            MLXChatModel._tool_def_to_schema(t)
             for t in model_request_parameters.function_tools
         ] + [
-            _tool_def_to_schema(t)
+            MLXChatModel._tool_def_to_schema(t)
             for t in model_request_parameters.output_tools
         ]
 
-        instructions, chat_dicts = _messages_to_chat_dicts(
+        instructions, chat_dicts = MLXChatModel._messages_to_chat_dicts(
             messages, model_request_parameters
         )
 
