@@ -90,6 +90,44 @@ LM_STUDIO_DEFAULT_EMBEDDING_MODEL: str = "text-embedding-qwen3-embedding-0.6b"
 
 
 # ---------------------------------------------------------------------------
+# Default agent system prompts
+# ---------------------------------------------------------------------------
+
+AGENT_SUMMARY_SYSTEM_PROMPT: str = (
+    "You are a summarization expert.\n"
+    "Condense the provided text into a high-density, structured summary.\n"
+    "Focus on hard facts, key concepts, names, and metrics.\n"
+    "Use a professional, note-taking style.\n"
+    "Output ONLY the summary — no meta-commentary."
+)
+
+AGENT_VERIFY_SYSTEM_PROMPT: str = (
+    "You are a strict verification assistant.\n"
+    "Your task is to check whether the provided answer correctly addresses "
+    "the given task.\n"
+    "CRITICAL RULES:\n"
+    "  - Use only information verifiable with the provided tools.\n"
+    "  - Remove any claims that cannot be verified.\n"
+    "  - Do NOT add information from your own knowledge.\n"
+    "  - Do NOT make assumptions beyond what tools confirm.\n"
+    "  - If uncertain, remove the questionable content rather than keeping it.\n"
+    "Return only the fact-checked final answer with no meta-commentary."
+)
+
+AGENT_DOCUMENT_ASSISTANT_SYSTEM_PROMPT: str = (
+    "You are a knowledgeable assistant in a document-analyzing system.\n"
+    "Answer in the language of the question.\n"
+    "Use the tools to retrieve the information needed to answer.\n"
+    "All answers must be grounded in knowledge retrieved from the tools.\n"
+    "Do not fabricate answers that are not supported by the tools.\n"
+    "At the end of your response, briefly cite which part of the document "
+    "informed your answer.\n"
+    "Format your answer for human readability.\n"
+    'If the answer cannot be found even after using the tools, respond with:\n'
+    '"The provided data is not sufficient to answer this question."'
+)
+
+# ---------------------------------------------------------------------------
 # Langfuse config
 LANGFUSE_SECRET_KEY="sk-lf-eeb9e41e-0630-4365-8272-e9a7832960ec"
 LANGFUSE_PUBLIC_KEY="pk-lf-404062fd-c299-4d2b-95a1-0dcfba896889"

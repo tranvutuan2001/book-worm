@@ -36,6 +36,7 @@ from src.config.config import (
     PDF_SCHEMA_PATH,
 )
 from src.core.exceptions import DocumentNotFoundError, DocumentProcessingError
+from src.domain.entity.agent import AgentFactory
 from src.domain.entity.message import Message
 from src.domain.enums import Role
 from src.domain.value_object.chat_model_setting import ChatModelSettings
@@ -204,12 +205,14 @@ class PDFSummarizationService:
             timestamp=int(time.time() * 1000),
         )
         try:
+            step1_agent = AgentFactory.summary(
+                system_prompt=_STEP1_SYSTEM,
+                model_settings=ChatModelSettings(max_tokens=12000),
+            )
             refined = self._llm.agent_complete_chat(
                 model_path=chat_model,
                 message_list=[request_message],
-                system_prompt=_STEP1_SYSTEM,
-                tools=[],
-                model_settings=ChatModelSettings(max_tokens=12000),
+                agent=step1_agent,
             )
             return refined
         except Exception as exc:
@@ -247,12 +250,14 @@ class PDFSummarizationService:
                 timestamp=int(time.time() * 1000),
             )
             try:
+                step2_agent = AgentFactory.summary(
+                    system_prompt=_STEP2_SPLIT_SYSTEM,
+                    model_settings=ChatModelSettings(json_schema=JSON_ARRAY_OF_STRINGS_SCHEMA),
+                )
                 raw_output = self._llm.agent_complete_chat(
                     model_path=chat_model,
                     message_list=[message],
-                    system_prompt=_STEP2_SPLIT_SYSTEM,
-                    tools=[],
-                    model_settings=ChatModelSettings(json_schema=JSON_ARRAY_OF_STRINGS_SCHEMA),
+                    agent=step2_agent,
                 )
             except Exception as exc:
                 logger.error(
@@ -373,15 +378,17 @@ class PDFSummarizationService:
                 timestamp=int(time.time() * 1000),
             )
             try:
-                raw_output = self._llm.agent_complete_chat(
-                    message_list=[user_message],
+                step3_agent = AgentFactory.summary(
                     system_prompt=step3_system,
-                    tools=[],
-                    model_path=chat_model,
                     model_settings=ChatModelSettings(
                         json_schema=schema_str,
                         max_tokens=max_tokens,
                     ),
+                )
+                raw_output = self._llm.agent_complete_chat(
+                    message_list=[user_message],
+                    agent=step3_agent,
+                    model_path=chat_model,
                 )
             except Exception as exc:
                 logger.error(

@@ -17,6 +17,7 @@ import time
 from pydantic_ai import RunContext
 from src.container import container
 from src.config.config import DEFAULT_CHAT_MODEL
+from src.domain.entity.agent import AgentFactory
 from src.domain.entity.message import Message
 from src.domain.enums import Role
 from src.infra.logging_config import setup_logging
@@ -91,8 +92,9 @@ def test1() -> bool:
     reply = llm_service.agent_complete_chat(
         model_path=CHAT_MODEL,
         message_list=[_msg(Role.USER, "What is the capital of France?")],
-        system_prompt="You are a concise assistant. Answer in one sentence.",
-        tools=[],
+        agent=AgentFactory.document_assistant(
+            system_prompt="You are a concise assistant. Answer in one sentence.",
+        ),
     )
     _result("1a. Single-turn factual question", reply)
 
@@ -104,8 +106,9 @@ def test1() -> bool:
             _msg(Role.ASSISTANT, "Nice to meet you, Alice!", idx=2),
             _msg(Role.USER,      "What is my name?", idx=3),
         ],
-        system_prompt="You are a concise assistant.",
-        tools=[],
+        agent=AgentFactory.document_assistant(
+            system_prompt="You are a concise assistant.",
+        ),
     )
     _result("1b. Multi-turn memory", reply)
     return True
@@ -126,8 +129,10 @@ def test2() -> bool:
     reply = llm_service.agent_complete_chat(
         model_path=CHAT_MODEL,
         message_list=[_msg(Role.USER, "What is 347 + 658?")],
-        system_prompt=SYSTEM_PROMPT,
-        tools=TOOLS,
+        agent=AgentFactory.document_assistant(
+            system_prompt=SYSTEM_PROMPT,
+            tools=TOOLS,
+        ),
     )
 
     _result("2a. add(347, 658) — expected 1005", reply)

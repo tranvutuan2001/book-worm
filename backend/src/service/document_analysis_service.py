@@ -31,6 +31,7 @@ from src.config.config import (
 )
 from src.core.exceptions import DocumentProcessingError
 from src.core.utils import write_json_file
+from src.domain.entity.agent import AgentFactory
 from src.domain.entity.message import Message
 from src.domain.enums import Role
 from src.domain.value_object.chat_model_setting import ChatModelSettings
@@ -290,16 +291,18 @@ class DocumentAnalysisService:
                 timestamp=int(time.time()),
             )
             try:
-                summary = self._llm.agent_complete_chat(
-                    message_list=[user_msg],
+                summary_agent = AgentFactory.summary(
                     system_prompt=_SECTION_SUMMARY_SYSTEM,
-                    model_path=DEFAULT_CHAT_MODEL,
-                    tools=[],
                     model_settings=ChatModelSettings(
                         temperature=0.2,
                         frequency_penalty=0.2,
                         max_tokens=20000,
                     ),
+                )
+                summary = self._llm.agent_complete_chat(
+                    message_list=[user_msg],
+                    agent=summary_agent,
+                    model_path=DEFAULT_CHAT_MODEL,
                 )
                 logger.info("Section summary %d–%d done", i + 1, end)
                 logger.info("Summary:\n%s", summary)
@@ -332,16 +335,18 @@ class DocumentAnalysisService:
                 timestamp=int(time.time()),
             )
             try:
-                chapter = self._llm.agent_complete_chat(
-                    message_list=[user_msg],
+                chapter_agent = AgentFactory.summary(
                     system_prompt=_CHAPTER_SUMMARY_SYSTEM,
-                    model_path=DEFAULT_CHAT_MODEL,
-                    tools=[],
                     model_settings=ChatModelSettings(
                         temperature=0.2,
                         frequency_penalty=0.2,
                         max_tokens=20000,
                     ),
+                )
+                chapter = self._llm.agent_complete_chat(
+                    message_list=[user_msg],
+                    agent=chapter_agent,
+                    model_path=DEFAULT_CHAT_MODEL,
                 )
                 chapters.append(chapter)
             except Exception as exc:

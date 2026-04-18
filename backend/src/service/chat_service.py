@@ -15,6 +15,7 @@ from typing import List
 
 from src.core.exceptions import DocumentNotFoundError, LLMError
 from src.config.config import DATA_DIR
+from src.domain.entity.agent import AgentFactory
 from src.domain.entity.conversation import Conversation
 from src.domain.entity.message import Message
 from src.domain.enums import Role
@@ -135,10 +136,13 @@ class ChatService:
     def _generate_answer(self, conversation: Conversation, tools: tuple) -> str:
         try:
             system_prompt = f"{_SYSTEM_PROMPT}\n\nDocument: {conversation.document_name}"
-            return self._llm.agent_complete_chat(
-                message_list=conversation.message_list,
+            agent = AgentFactory.document_assistant(
                 system_prompt=system_prompt,
                 tools=list(tools),
+            )
+            return self._llm.agent_complete_chat(
+                message_list=conversation.message_list,
+                agent=agent,
                 model_path=conversation.chat_model,
             )
         except Exception as exc:
@@ -181,10 +185,13 @@ class ChatService:
         req_logger.info("Starting verification step…")
         try:
             verification_system_prompt = f"{_VERIFICATION_SYSTEM_PROMPT}\n\nDocument: {document_name}"
-            verified = self._llm.agent_complete_chat(
-                message_list=verification_message,
+            verify_agent = AgentFactory.verify(
                 system_prompt=verification_system_prompt,
                 tools=list(tools),
+            )
+            verified = self._llm.agent_complete_chat(
+                message_list=verification_message,
+                agent=verify_agent,
                 model_path=chat_model,
             )
             req_logger.info("Verification complete (%d chars)", len(verified))

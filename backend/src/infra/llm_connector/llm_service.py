@@ -8,7 +8,7 @@ lifecycle (loading, caching, unloading) is delegated to :class:`LLMManager`.
 
 import logging
 import os
-from typing import Any, Callable, List
+from typing import List
 
 from langfuse import get_client
 from pydantic_ai import Agent
@@ -25,9 +25,9 @@ from src.config.config import (
     LANGFUSE_PUBLIC_KEY,
     LANGFUSE_SECRET_KEY,
 )
+from src.domain.entity.agent import Agent as DomainAgent
 from src.domain.entity.message import Message
 from src.domain.enums import Role
-from src.domain.value_object.chat_model_setting import ChatModelSettings
 from src.infra.llm_connector.llm_manager import LLMManager
 
 logger = logging.getLogger("app.infra.llm_service")
@@ -67,47 +67,41 @@ class LLMService:
         self,
         model_path: str,
         message_list: List[Message],
-        system_prompt: str,
-        tools: List[Callable[..., Any]],
-        max_retries: int = 3,
-        model_settings: ChatModelSettings | None = None,
+        agent: DomainAgent,
     ) -> str:
         """
         Run a full chat turn with tool-calling support via Pydantic AI Agent.
 
+        The domain :class:`~src.domain.entity.agent.Agent` is translated into
+        a Pydantic AI ``Agent`` internally; callers never need to interact with
+        the Pydantic AI API directly.
+
         Args:
-            model_path:     Local path (or HF name) of the chat model.
-            message_list:   Conversation history as ``Message`` objects.
-            system_prompt:  System instruction to prepend to the conversation.
-            tools:          Plain Python functions decorated with
-                            ``pydantic_ai.tool`` (or bare callables).
-            max_retries:    Maximum retries on validation errors (default 3).
-            model_settings: :class:`ChatModelSettings` controlling token limits,
-                            temperature, frequency penalty, and optional JSON
-                            schema.  Defaults are loaded from ``config.py``.
+            model_path:   Local path (or HF name) of the chat model.
+            message_list: Conversation history as ``Message`` objects.
+            agent:        Domain agent carrying the system prompt, tools,
+                          model settings, and retry count.
 
         Returns:
             The final assistant text response.
         """
-        if model_settings is None:
-            model_settings = ChatModelSettings()
         backend = self._manager.get_chat_model(model_path)
 
-        agent: Agent[None, str] = Agent(
+        pydantic_agent: Agent[None, str] = Agent(
             model=backend,
-            instructions=system_prompt,
-            retries=max_retries,
+            instructions=agent.system_prompt,
+            retries=agent.max_retries,
             instrument=True,
             model_settings={
-                "max_tokens": model_settings.max_tokens,
-                "temperature": model_settings.temperature,
-                "frequency_penalty": model_settings.frequency_penalty,
-                "json_schema": model_settings.json_schema,
+                "max_tokens": agent.model_settings.max_tokens,
+                "temperature": agent.model_settings.temperature,
+                "frequency_penalty": agent.model_settings.frequency_penalty,
+                "json_schema": agent.model_settings.json_schema,
             },
         )
 
-        for tool in tools:
-            agent.tool(tool)
+        for tool in agent.tools:
+            pydantic_agent.tool(tool)
 
         history: list[ModelMessage] = []
         for msg in message_list[:-1]:
@@ -122,14 +116,15 @@ class LLMService:
 
         user_query = message_list[-1].content if message_list else ""
 
-        result = agent.run_sync(
+        result = pydantic_agent.run_sync(
             user_query,
             message_history=history if history else None,
         )
 
         langfuse.flush()
         logger.info(
-            "Agent completed: %d messages, output length=%d",
+            "Agent [%s] completed: %d messages, output length=%d",
+            agent.agent_type.value,
             len(result.all_messages()),
             len(result.output),
         )
