@@ -4,6 +4,8 @@
 #
 #    pip-compile requirements.in
 #
+ag-ui-protocol==0.1.15
+    # via pydantic-ai-slim
 aiohappyeyeballs==2.6.1
     # via aiohttp
 aiohttp==3.13.5
@@ -16,17 +18,33 @@ annotated-doc==0.0.4
     #   typer
 annotated-types==0.7.0
     # via pydantic
+anthropic==0.96.0
+    # via pydantic-ai-slim
 anyio==4.12.1
     # via
+    #   anthropic
+    #   google-genai
+    #   groq
     #   httpx
+    #   mcp
     #   openai
+    #   pydantic-evals
+    #   sse-starlette
     #   starlette
     #   watchfiles
+argcomplete==3.6.3
+    # via pydantic-ai-slim
 attrs==25.4.0
     # via
     #   aiohttp
     #   jsonschema
     #   referencing
+boto3==1.42.89
+    # via pydantic-ai-slim
+botocore==1.42.89
+    # via
+    #   boto3
+    #   s3transfer
 certifi==2026.2.25
     # via
     #   httpcore
@@ -44,8 +62,15 @@ click==8.3.1
     # via
     #   typer
     #   uvicorn
+cohere==6.1.0
+    # via pydantic-ai-slim
+colorama==0.4.6
+    # via griffecli
 cryptography==46.0.5
-    # via pdfminer-six
+    # via
+    #   google-auth
+    #   pdfminer-six
+    #   pyjwt
 datasets==4.8.4
     # via mlx-vlm
 dependency-injector==4.49.0
@@ -55,13 +80,25 @@ dill==0.4.1
     #   datasets
     #   multiprocess
 distro==1.9.0
-    # via openai
+    # via
+    #   anthropic
+    #   google-genai
+    #   groq
+    #   openai
+docstring-parser==0.18.0
+    # via anthropic
+eval-type-backport==0.3.1
+    # via
+    #   mistralai
+    #   pydantic-ai-slim
 faiss-cpu==1.13.2
     # via -r requirements.in
 fastapi==0.135.1
     # via
     #   -r requirements.in
     #   mlx-vlm
+fastavro==1.12.1
+    # via cohere
 filelock==3.25.2
     # via
     #   datasets
@@ -76,6 +113,23 @@ fsspec[http]==2026.2.0
     #   datasets
     #   huggingface-hub
     #   torch
+google-auth[requests]==2.49.2
+    # via
+    #   google-genai
+    #   pydantic-ai-slim
+google-genai==1.73.1
+    # via pydantic-ai-slim
+griffe==2.0.2
+    # via pydantic-ai-slim
+griffecli==2.0.2
+    # via griffe
+griffelib==2.0.2
+    # via
+    #   griffe
+    #   griffecli
+    #   pydantic-ai-slim
+groq==1.1.2
+    # via pydantic-ai-slim
 h11==0.16.0
     # via
     #   httpcore
@@ -88,14 +142,23 @@ httptools==0.7.1
     # via uvicorn
 httpx==0.28.1
     # via
+    #   anthropic
+    #   cohere
     #   datasets
+    #   google-genai
+    #   groq
     #   huggingface-hub
-    #   langgraph-sdk
-    #   langsmith
+    #   mcp
+    #   mistralai
     #   openai
-huggingface-hub==1.7.1
+    #   pydantic-ai-slim
+    #   pydantic-graph
+httpx-sse==0.4.3
+    # via mcp
+huggingface-hub[inference]==1.7.1
     # via
     #   datasets
+    #   pydantic-ai-slim
     #   tokenizers
     #   transformers
 idna==3.11
@@ -104,6 +167,8 @@ idna==3.11
     #   httpx
     #   requests
     #   yarl
+importlib-metadata==8.7.1
+    # via opentelemetry-api
 iniconfig==2.3.0
     # via pytest
 jinja2==3.1.6
@@ -111,49 +176,37 @@ jinja2==3.1.6
     #   mlx-lm
     #   torch
 jiter==0.13.0
-    # via openai
-jsonpatch==1.33
-    # via langchain-core
-jsonpointer==3.0.0
-    # via jsonpatch
+    # via
+    #   anthropic
+    #   openai
+jmespath==1.1.0
+    # via
+    #   boto3
+    #   botocore
+jsonpath-python==1.1.5
+    # via mistralai
 jsonschema==4.26.0
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   mcp
 jsonschema-specifications==2025.9.1
     # via jsonschema
-langchain==1.2.12
-    # via -r requirements.in
-langchain-core==1.2.19
+logfire-api==4.32.1
     # via
-    #   langchain
-    #   langchain-openai
-    #   langchain-text-splitters
-    #   langgraph
-    #   langgraph-checkpoint
-    #   langgraph-prebuilt
-langchain-openai==1.1.11
-    # via -r requirements.in
-langchain-text-splitters==1.1.1
-    # via -r requirements.in
-langgraph==1.1.2
-    # via langchain
-langgraph-checkpoint==4.0.1
-    # via
-    #   langgraph
-    #   langgraph-prebuilt
-langgraph-prebuilt==1.0.8
-    # via langgraph
-langgraph-sdk==0.3.11
-    # via langgraph
-langsmith==0.7.17
-    # via langchain-core
+    #   pydantic-evals
+    #   pydantic-graph
 markdown-it-py==4.0.0
     # via rich
 markupsafe==3.0.3
     # via jinja2
+mcp==1.27.0
+    # via pydantic-ai-slim
 mdurl==0.1.2
     # via markdown-it-py
 miniaudio==1.61
     # via mlx-vlm
+mistralai==2.4.0
+    # via pydantic-ai-slim
 mlx==0.31.1
     # via
     #   mlx-lm
@@ -185,22 +238,23 @@ numpy==2.4.3
     #   transformers
     #   xgrammar
 openai==2.28.0
-    # via langchain-openai
+    # via
+    #   -r requirements.in
+    #   pydantic-ai-slim
 opencv-python==4.13.0.92
     # via mlx-vlm
-orjson==3.11.7
+opentelemetry-api==1.39.1
     # via
-    #   langgraph-sdk
-    #   langsmith
-ormsgpack==1.12.2
-    # via langgraph-checkpoint
+    #   mistralai
+    #   opentelemetry-semantic-conventions
+    #   pydantic-ai-slim
+opentelemetry-semantic-conventions==0.60b1
+    # via mistralai
 packaging==26.0
     # via
     #   datasets
     #   faiss-cpu
     #   huggingface-hub
-    #   langchain-core
-    #   langsmith
     #   pytest
     #   transformers
 pandas==3.0.2
@@ -215,6 +269,8 @@ pillow==12.1.1
     #   pdfplumber
 pluggy==1.6.0
     # via pytest
+prompt-toolkit==3.0.52
+    # via pydantic-ai-slim
 propcache==0.4.1
     # via
     #   aiohttp
@@ -223,40 +279,74 @@ protobuf==7.34.0
     # via mlx-lm
 pyarrow==23.0.1
     # via datasets
+pyasn1==0.6.3
+    # via pyasn1-modules
+pyasn1-modules==0.4.2
+    # via google-auth
 pycparser==3.0
     # via cffi
 pydantic==2.12.5
     # via
     #   -r requirements.in
+    #   ag-ui-protocol
+    #   anthropic
+    #   cohere
     #   fastapi
-    #   langchain
-    #   langchain-core
-    #   langgraph
-    #   langsmith
+    #   google-genai
+    #   groq
+    #   mcp
+    #   mistralai
     #   openai
+    #   pydantic-ai-slim
+    #   pydantic-evals
+    #   pydantic-graph
+    #   pydantic-settings
     #   xgrammar
+pydantic-ai==0.6.2
+    # via -r requirements.in
+pydantic-ai-slim[ag-ui,anthropic,bedrock,cli,cohere,evals,google,groq,huggingface,mcp,mistral,openai,retries,vertexai]==0.6.2
+    # via
+    #   pydantic-ai
+    #   pydantic-evals
 pydantic-core==2.41.5
-    # via pydantic
+    # via
+    #   cohere
+    #   pydantic
+pydantic-evals==0.6.2
+    # via pydantic-ai-slim
+pydantic-graph==0.6.2
+    # via pydantic-ai-slim
+pydantic-settings==2.13.1
+    # via mcp
 pygments==2.19.2
     # via
     #   pytest
     #   rich
+pyjwt[crypto]==2.12.1
+    # via mcp
 pypdfium2==5.6.0
     # via pdfplumber
 pytest==9.0.2
     # via -r requirements.in
 python-dateutil==2.9.0.post0
-    # via pandas
+    # via
+    #   botocore
+    #   mistralai
+    #   pandas
 python-dotenv==1.2.2
-    # via uvicorn
+    # via
+    #   pydantic-settings
+    #   uvicorn
 python-multipart==0.0.22
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   mcp
 pyyaml==6.0.3
     # via
     #   datasets
     #   huggingface-hub
-    #   langchain-core
     #   mlx-lm
+    #   pydantic-evals
     #   transformers
     #   uvicorn
 referencing==0.37.0
@@ -264,25 +354,27 @@ referencing==0.37.0
     #   jsonschema
     #   jsonschema-specifications
 regex==2026.2.28
-    # via
-    #   tiktoken
-    #   transformers
+    # via transformers
 requests==2.32.5
     # via
     #   -r requirements.in
+    #   cohere
     #   datasets
-    #   langsmith
+    #   google-auth
+    #   google-genai
     #   mlx-vlm
-    #   requests-toolbelt
-    #   tiktoken
-requests-toolbelt==1.0.0
-    # via langsmith
+    #   pydantic-ai-slim
 rich==14.3.3
-    # via typer
+    # via
+    #   pydantic-ai-slim
+    #   pydantic-evals
+    #   typer
 rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
+s3transfer==0.16.0
+    # via boto3
 safetensors==0.7.0
     # via transformers
 sentencepiece==0.2.1
@@ -292,17 +384,29 @@ shellingham==1.5.4
 six==1.17.0
     # via python-dateutil
 sniffio==1.3.1
-    # via openai
+    # via
+    #   anthropic
+    #   google-genai
+    #   groq
+    #   openai
+sse-starlette==3.3.4
+    # via mcp
 starlette==0.52.1
-    # via fastapi
+    # via
+    #   fastapi
+    #   mcp
+    #   pydantic-ai-slim
+    #   sse-starlette
 sympy==1.14.0
     # via torch
 tenacity==9.1.4
-    # via langchain-core
-tiktoken==0.12.0
-    # via langchain-openai
+    # via
+    #   google-genai
+    #   pydantic-ai-slim
 tokenizers==0.22.2
-    # via transformers
+    # via
+    #   cohere
+    #   transformers
 torch==2.10.0
     # via xgrammar
 tqdm==4.67.3
@@ -321,12 +425,20 @@ typer==0.24.1
     # via
     #   huggingface-hub
     #   transformers
+types-requests==2.33.0.20260408
+    # via cohere
 typing-extensions==4.15.0
     # via
+    #   anthropic
+    #   cohere
     #   fastapi
+    #   google-genai
+    #   groq
     #   huggingface-hub
-    #   langchain-core
+    #   mcp
     #   openai
+    #   opentelemetry-api
+    #   opentelemetry-semantic-conventions
     #   pydantic
     #   pydantic-core
     #   torch
@@ -335,34 +447,40 @@ typing-extensions==4.15.0
 typing-inspection==0.4.2
     # via
     #   fastapi
+    #   mcp
+    #   mistralai
     #   pydantic
+    #   pydantic-ai-slim
+    #   pydantic-graph
+    #   pydantic-settings
 urllib3==2.6.3
-    # via requests
-uuid-utils==0.14.1
     # via
-    #   langchain-core
-    #   langsmith
+    #   botocore
+    #   requests
+    #   types-requests
 uvicorn[standard]==0.41.0
     # via
     #   -r requirements.in
+    #   mcp
     #   mlx-vlm
 uvloop==0.22.1
     # via uvicorn
 watchfiles==1.1.1
     # via uvicorn
+wcwidth==0.6.0
+    # via prompt-toolkit
 websockets==16.0
-    # via uvicorn
+    # via
+    #   google-genai
+    #   uvicorn
 xgrammar==0.1.32
     # via -r requirements.in
 xxhash==3.6.0
-    # via
-    #   datasets
-    #   langgraph
-    #   langsmith
+    # via datasets
 yarl==1.23.0
     # via aiohttp
-zstandard==0.25.0
-    # via langsmith
+zipp==3.23.1
+    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

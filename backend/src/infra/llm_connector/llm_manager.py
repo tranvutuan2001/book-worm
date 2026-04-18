@@ -1,16 +1,12 @@
 import logging
 import threading
 from pathlib import Path
-from typing import Any, ClassVar, List, Literal, TypedDict
-
-from langchain_core.runnables import ConfigurableField
+from typing import Any, ClassVar, List, Literal, TypedDict, Union
 
 from src.config import config
 from src.infra.llm_connector.external_llm import LMStudioChatModel, LMStudioEmbeddingModel
-from src.infra.llm_connector.local_llm.mlx_chat import MLXChatModel
+from src.infra.llm_connector.local_llm.mlx_chat import MLXChatModel, MLXChatModelFactory
 from src.infra.llm_connector.local_llm.mlx_embedding import MLXEmbeddingModel
-from src.infra.llm_connector.local_llm.parsing_service import ParsingService
-from langchain.chat_models.base import BaseChatModel
 
 logger = logging.getLogger("app.llm_connector")
 
@@ -53,8 +49,8 @@ class LLMManager:
     _loading: ClassVar[set[str]] = set()
     _lock: ClassVar[threading.Lock] = threading.Lock()
 
-    def __init__(self, parsing_service: ParsingService) -> None:
-        self._parsing_service = parsing_service
+    def __init__(self, mlx_chat_factory: MLXChatModelFactory) -> None:
+        self._mlx_chat_factory = mlx_chat_factory
         # Instance-level model caches.
         # Keys are resolved local paths (local backend) or
         # "lm_studio:<model_type>:<model_id>" strings (lm_studio backend).
@@ -106,7 +102,7 @@ class LLMManager:
             return self._embedding_models
         return self._chat_models
 
-    def _create_lm_studio_chat(self, model_path: str) -> BaseChatModel:
+    def _create_lm_studio_chat(self, model_path: str) -> LMStudioChatModel:
         """Create and return a new ``LMStudioChatModel`` instance (no caching)."""
         model_id = model_path or config.LM_STUDIO_DEFAULT_CHAT_MODEL
         logger.info(
@@ -117,22 +113,6 @@ class LLMManager:
             base_url=config.LM_STUDIO_BASE_URL,
             api_key=config.LM_STUDIO_API_KEY,
             model=model_id,
-        ).configurable_fields(
-            max_tokens=ConfigurableField(
-                id="max_tokens",
-                name="Max Tokens",
-                description="Maximum number of tokens to generate for this run",
-            ),
-            temperature=ConfigurableField(
-                id="temperature",
-                name="Temperature",
-                description="Sampling temperature for this run",
-            ),
-            json_schema=ConfigurableField(
-                id="json_schema",
-                name="JSON Schema",
-                description="Optional JSON schema for constrained decoding",
-            ),
         )
 
     def _create_lm_studio_embedding(self, model_path: str) -> Any:
@@ -193,26 +173,7 @@ class LLMManager:
             if model_type == "embedding":
                 self._embedding_models[resolved] = MLXEmbeddingModel(resolved)
             else:
-                self._chat_models[resolved] = MLXChatModel(
-                    model_path=resolved,
-                    parsing_service=self._parsing_service,
-                ).configurable_fields(
-                    max_tokens=ConfigurableField(
-                        id="max_tokens",
-                        name="Max Tokens",
-                        description="Maximum number of tokens to generate for this run",
-                    ),
-                    temperature=ConfigurableField(
-                        id="temperature",
-                        name="Temperature",
-                        description="Sampling temperature for this run",
-                    ),
-                    json_schema=ConfigurableField(
-                        id="json_schema",
-                        name="JSON Schema",
-                        description="Optional JSON schema for constrained decoding",
-                    ),
-                )
+                self._chat_models[resolved] = self._mlx_chat_factory(resolved)
             logger.info(f"[LLMManager] Model loaded successfully: {resolved}")
         except Exception:
             logger.exception(f"[LLMManager] Failed to load model: {resolved}")
@@ -317,7 +278,9 @@ class LLMManager:
     # Model access (used by LLMService)
     # ------------------------------------------------------------------
 
-    def get_chat_model(self, model_path: str) -> BaseChatModel:
+    ChatModel = Union[MLXChatModel, LMStudioChatModel]
+
+    def get_chat_model(self, model_path: str) -> ChatModel:
         """
         Return the chat model instance for *model_path*, auto-loading if needed.
 

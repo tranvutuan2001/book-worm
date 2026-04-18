@@ -1,9 +1,9 @@
 """
-LangChain tools for document retrieval used by the chat agent.
+Pydantic AI tools for document retrieval used by the chat agent.
 
-These tools are passed to the LLM agent and called automatically when the
-model decides it needs more context from the document.  They read from the
-pre-computed JSON artefacts stored under ``DATA_DIR / <document_name>/``.
+These are plain Python functions that the Pydantic AI ``Agent`` can call
+when the model decides it needs more context from the document.  They read
+from the pre-computed JSON artefacts stored under ``DATA_DIR / <document_name>/``.
 """
 
 import json
@@ -14,7 +14,7 @@ from typing import List
 
 import faiss
 import numpy as np
-from langchain.tools import tool
+from pydantic_ai import RunContext
 
 from src.config.config import DATA_DIR, DEFAULT_EMBEDDING_MODEL, TOP_K_CHUNKS
 from src.infra.llm_connector import LLMService
@@ -58,17 +58,12 @@ def _all_chunks(document_name: str) -> List[str]:
 
 
 # ---------------------------------------------------------------------------
-# Tools
+# Tools (plain functions — registered with pydantic_ai.Agent)
 # ---------------------------------------------------------------------------
 
-@tool(
-    description=(
-        "Retrieve the most relevant text passages from the document based on "
-        "the input question. Returns a list of relevant text chunks."
-    )
-)
-def get_the_most_relevant_chunks(question: str, document_name: str) -> List[str]:
-    """Semantic search over pre-computed chunk embeddings using FAISS."""
+def get_the_most_relevant_chunks(ctx: RunContext[None], question: str, document_name: str) -> List[str]:
+    """Retrieve the most relevant text passages from the document based on
+    the input question. Returns a list of relevant text chunks."""
     try:
         chunk_embeddings = _chunk_embeddings(document_name)
         dimension = len(chunk_embeddings[0])
@@ -97,9 +92,8 @@ def get_the_most_relevant_chunks(question: str, document_name: str) -> List[str]
         raise
 
 
-@tool(description="Return a high-level summary of the entire document.")
-def get_document_summary(document_name: str) -> str:
-    """Read chapter-level summaries and join them into a single summary."""
+def get_document_summary(ctx: RunContext[None], document_name: str) -> str:
+    """Return a high-level summary of the entire document."""
     try:
         path = DATA_DIR / document_name / f"{document_name}_chapter_summaries.json"
 
@@ -121,6 +115,6 @@ def get_document_summary(document_name: str) -> str:
         )
         raise
 
-@tool(description="Utility function to count total number of words in a text.")
-def word_count_tool(text: str) -> int:
+def word_count_tool(ctx: RunContext[None], text: str) -> int:
+    """Utility function to count total number of words in a text."""
     return len(text.split())

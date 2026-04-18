@@ -43,6 +43,9 @@ from src.service.tools.document_retrieval_tool import (
     get_document_summary,
 )
 
+# Sentinel used for the RunContext parameter (no dependency data needed)
+_NO_CTX: None = None
+
 logger = logging.getLogger("app.service.pdf_summarization")
 
 JSON_ARRAY_OF_STRINGS_SCHEMA: str = json.dumps(
@@ -182,7 +185,7 @@ class PDFSummarizationService:
         """Fetch the raw document summary directly, then refine it with complete_chat."""
         logger.info("[step1] Fetching raw document summary for '%s'", document_name)
         try:
-            base_summary: str = get_document_summary.invoke({"document_name": document_name})
+            base_summary: str = get_document_summary(_NO_CTX, document_name=document_name)
         except Exception as exc:
             logger.error("[step1] get_document_summary failed: %s\n%s", exc, traceback.format_exc())
             raise DocumentProcessingError(

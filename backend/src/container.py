@@ -8,18 +8,20 @@ FastAPI can resolve ``Depends(Provide[Container.<provider>])`` at startup.
 Dependency graph
 ----------------
 ParsingService
-  └─ LLMManager
-       ├─ LLMService
-       │    ├─ DocumentAnalysisService
-       │    │    └─ DocumentService
-       │    ├─ ChatService
-       │    └─ PDFSummarizationService
-       └─ ModelService
+  └─ MLXChatModelFactory   ← parsing_service injected directly into MLXChatModel
+       └─ LLMManager
+            ├─ LLMService
+            │    ├─ DocumentAnalysisService
+            │    │    └─ DocumentService
+            │    ├─ ChatService
+            │    └─ PDFSummarizationService
+            └─ ModelService
 """
 
 from dependency_injector import containers, providers
 
 from src.infra.llm_connector.local_llm.parsing_service import ParsingService
+from src.infra.llm_connector.local_llm.mlx_chat import MLXChatModelFactory
 from src.infra.llm_connector.llm_manager import LLMManager
 from src.infra.llm_connector.llm_service import LLMService
 from src.service.chat_service import ChatService
@@ -40,9 +42,14 @@ class Container(containers.DeclarativeContainer):
 
     parsing_service = providers.Singleton(ParsingService)
 
+    mlx_chat_factory = providers.Singleton(
+        MLXChatModelFactory,
+        parsing_service=parsing_service,
+    )
+
     llm_manager = providers.Singleton(
         LLMManager,
-        parsing_service=parsing_service,
+        mlx_chat_factory=mlx_chat_factory,
     )
 
     llm_service = providers.Singleton(

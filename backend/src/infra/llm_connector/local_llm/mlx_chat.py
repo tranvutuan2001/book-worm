@@ -1,276 +1,357 @@
+"""
+MLX chat model — Pydantic AI compatible local model.
+
+``MLXChatModel`` loads an MLX model from disk and implements the
+``pydantic_ai.models.Model`` interface so it can be passed directly to a
+Pydantic AI ``Agent``.  It also exposes a lower-level ``complete()`` method
+for non-agent (single-turn/multi-turn) inference used by ``LLMService``.
+
+Tool schemas are injected into the tokenizer chat-template so that models
+with native function-calling markup (Qwen, Gemma, etc.) work transparently.
+JSON-schema constrained decoding is handled via xgrammar when available.
+"""
+
+from __future__ import annotations
+
+import asyncio
 import json
 import logging
-import traceback
-from typing import Any, Optional, Protocol, Sequence, runtime_checkable
+from pathlib import Path
+from typing import Any
 
 import mlx.nn as nn
-from mlx_lm import generate
+from mlx_lm import generate, load as mlx_load
 from mlx_lm.sample_utils import make_sampler, make_logits_processors
 
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import (
-    AIMessage,
-    BaseMessage,
-    HumanMessage,
-    SystemMessage,
-    ToolMessage,
+from pydantic_ai import models
+from pydantic_ai.messages import (
+    ModelMessage,
+    ModelRequest,
+    ModelResponse,
+    TextPart,
+    ToolCallPart,
 )
-from langchain_core.outputs import ChatGeneration, ChatResult
-from langchain_core.callbacks.manager import CallbackManagerForLLMRun
-from langchain_core.tools import BaseTool
-from pydantic import Field, PrivateAttr
+from pydantic_ai.models import ModelRequestParameters, ModelSettings
 
-from mlx_lm import load as mlx_load
-
+from src.domain.entity.chat_response import ChatResponse
 from src.infra.llm_connector.local_llm.parsing_service import ParsingService
 from src.infra.llm_connector.local_llm.xgrammar_processor import make_json_schema_logits_processor
 
 logger = logging.getLogger("app.llm_connector")
 
-
-@runtime_checkable
-class _ChatTokenizer(Protocol):
-    """Structural interface for the chat tokenizer returned by ``mlx_lm.load``."""
-
-    def apply_chat_template(
-        self,
-        conversation: list[dict[str, object]],
-        **kwargs: object,
-    ) -> str: ...
+# Mapping from keywords in the model name to the parser key in ParsingService.
+_TEMPLATE_KEYWORDS: list[tuple[str, str]] = [
+    ("qwen", "qwen"),
+    ("gemma", "gemma"),
+]
+_DEFAULT_TEMPLATE = "qwen"
 
 
-# (backbone, tokenizer) pair as returned by mlx_lm.load
-_ModelPair = tuple[nn.Module, _ChatTokenizer]
+def _detect_template(model_path: str) -> str:
+    """Heuristically pick a ParsingService template name for *model_path*."""
+    name_lower = Path(model_path).name.lower()
+    jinja_path = Path(model_path) / "chat_template.jinja"
+    template_hint = (
+        jinja_path.read_text(errors="ignore").lower()
+        if jinja_path.exists()
+        else ""
+    )
+    for keyword, template in _TEMPLATE_KEYWORDS:
+        if keyword in name_lower or keyword in template_hint:
+            return template
+    logger.warning(
+        "[MLXChatModel] Could not detect chat template for '%s'; "
+        "using default '%s'",
+        model_path,
+        _DEFAULT_TEMPLATE,
+    )
+    return _DEFAULT_TEMPLATE
 
 
-class MLXChatModel(BaseChatModel):
+def _tool_def_to_schema(tool_def: Any) -> dict[str, Any]:
+    """Convert a pydantic_ai ToolDefinition to an OpenAI-style tool schema dict."""
+    return {
+        "type": "function",
+        "function": {
+            "name": tool_def.name,
+            "description": tool_def.description or "",
+            "parameters": tool_def.parameters_json_schema,
+        },
+    }
+
+
+def _messages_to_chat_dicts(
+    messages: list[ModelMessage],
+    model_request_parameters: ModelRequestParameters,
+) -> tuple[str | None, list[dict[str, Any]]]:
     """
-    LangChain BaseChatModel implementation backed by a locally-stored MLX model.
+    Convert Pydantic AI ``ModelMessage`` objects to plain chat dicts.
 
-    Uses mlx-lm for inference. The model files must already exist on disk at
-    `model_path` in a format compatible with mlx-lm (e.g. converted Llama /
-    Mistral / Phi weights).
-
-    Tool-calling is supported for models whose tokenizer chat-template includes
-    native function-calling markup (e.g. Llama-3.1 / Mistral function-calling
-    variants). For models without native tool markup the bound tools are
-    serialised as a JSON schema block inside the system prompt.
+    Returns
+    -------
+    instructions : str | None
+        System/instruction text for the current request.
+    chat_dicts : list[dict]
+        Conversation history (without system message).
     """
+    instructions = models.Model._get_instructions(messages, model_request_parameters)
+    chat_dicts: list[dict[str, Any]] = []
 
-    model_path: str = Field(description="Absolute path to the local MLX model directory")
-    parsing_service: ParsingService = Field(description="Shared ParsingService used to parse raw model output")
-    max_tokens: int = Field(default=4000, description="Maximum number of tokens to generate")
-    temperature: float = Field(default=0.1, description="Sampling temperature")
-    frequency_penalty: Optional[float] = Field(default=0, description="Frequency penalty: additive penalty proportional to how often a token has appeared in context")
-    json_schema: Optional[str] = Field(default=None, description="Optional JSON schema string for xgrammar constrained decoding")
-
-    # Loaded (model, tokenizer) pair — populated in model_post_init.
-    _model_pair: Optional[_ModelPair] = PrivateAttr(default=None)
-
-    # Tools bound via bind_tools(); kept as serialisable dicts
-    _bound_tools: list[dict[str, object]] = []
-
-    def model_post_init(self, __context: Any) -> None:
-        """Load the MLX model from disk immediately after construction."""
-        logger.info(f"Loading MLX chat model from: {self.model_path}")
-        self._model_pair = mlx_load(self.model_path)
-        logger.info(f"MLX chat model loaded successfully: {self.model_path}")
-
-    @property
-    def _llm_type(self) -> str:
-        return "mlx-chat"
-
-    # ------------------------------------------------------------------
-    # Tool binding
-    # ------------------------------------------------------------------
-
-    def bind_tools(
-        self,
-        tools: Sequence[BaseTool | dict[str, object]],
-        **kwargs: object,
-    ) -> "MLXChatModel":
-        """
-        Return a copy of this model with the given tools attached.
-
-        Each tool is converted to an OpenAI-style function-schema dict so that
-        models whose chat-template understands that format will receive proper
-        tool definitions.  For models without native tool-calling, the schemas
-        are injected into the system prompt automatically inside `_generate`.
-        """
-        tool_schemas = []
-        for t in tools:
-            if isinstance(t, BaseTool):
-                tool_schemas.append(
+    for msg in messages:
+        if isinstance(msg, ModelRequest):
+            for part in msg.parts:
+                kind = getattr(part, "part_kind", None)
+                if kind == "user-prompt":
+                    content = part.content
+                    if not isinstance(content, str):
+                        content = " ".join(
+                            c if isinstance(c, str) else (c.get("text", "") if isinstance(c, dict) else "")
+                            for c in content
+                        )
+                    chat_dicts.append({"role": "user", "content": content})
+                elif kind == "tool-return":
+                    chat_dicts.append({
+                        "role": "tool",
+                        "tool_call_id": part.tool_call_id,
+                        "content": str(part.content),
+                    })
+                elif kind == "retry-prompt":
+                    chat_dicts.append({"role": "user", "content": str(part.content)})
+        elif isinstance(msg, ModelResponse):
+            text_parts = [p for p in msg.parts if getattr(p, "part_kind", None) == "text"]
+            tool_parts = [p for p in msg.parts if getattr(p, "part_kind", None) == "tool-call"]
+            msg_dict: dict[str, Any] = {"role": "assistant"}
+            if text_parts:
+                msg_dict["content"] = text_parts[0].content
+            if tool_parts:
+                msg_dict["tool_calls"] = [
                     {
+                        "id": p.tool_call_id,
                         "type": "function",
                         "function": {
-                            "name": t.name,
-                            "description": t.description or "",
-                            "parameters": t.args_schema.schema() if t.args_schema else {},
+                            "name": p.tool_name,
+                            "arguments": (
+                                json.dumps(p.args)
+                                if isinstance(p.args, dict)
+                                else (p.args or "{}")
+                            ),
                         },
                     }
-                )
-            elif isinstance(t, dict):
-                tool_schemas.append(t)
-            else:
-                # Assume it has a .schema() method (e.g. pydantic model)
-                tool_schemas.append(t)
+                    for p in tool_parts
+                ]
+            chat_dicts.append(msg_dict)
 
-        new_instance = self.model_copy()
-        # Ensure the copied instance shares the already-loaded weights.
-        new_instance._model_pair = self._model_pair
-        new_instance._bound_tools = tool_schemas
-        return new_instance
+    return instructions, chat_dicts
+
+
+class MLXChatModel(models.Model):
+    """
+    Local MLX chat model implementing the Pydantic AI ``Model`` interface.
+
+    Loads weights from *model_path* on construction and holds the
+    ``mlx_lm`` model/tokenizer pair in memory for the lifetime of the
+    instance.
+
+    Parameters
+    ----------
+    model_path:
+        Absolute path to the model directory.
+    parsing_service:
+        Application-wide :class:`ParsingService` injected directly — used to
+        extract tool calls and thinking blocks from raw model output.
+    """
+
+    def __init__(
+        self,
+        model_path: str,
+        parsing_service: ParsingService,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__()
+        self._model_path = model_path
+        self._parsing_service = parsing_service
+        self._template_name = _detect_template(model_path)
+
+        logger.info("[MLXChatModel] Loading model from '%s' …", model_path)
+        self._mlx_model: nn.Module
+        self._tokenizer: Any
+        self._mlx_model, self._tokenizer = mlx_load(model_path)
+        logger.info("[MLXChatModel] Model loaded: '%s'", model_path)
 
     # ------------------------------------------------------------------
-    # Core generation
+    # pydantic_ai.models.Model interface
     # ------------------------------------------------------------------
+
+    @property
+    def model_name(self) -> str:
+        """Short identifier — the last directory component of the model path."""
+        return Path(self._model_path).name
+
+    @property
+    def system(self) -> str:
+        return "mlx"
+
+    async def request(
+        self,
+        messages: list[ModelMessage],
+        model_settings: ModelSettings | None,
+        model_request_parameters: ModelRequestParameters,
+    ) -> ModelResponse:
+        """Run a single inference turn (called by Pydantic AI Agent)."""
+        settings = model_settings or {}
+        max_tokens: int = settings.get("max_tokens", 4000)
+        temperature: float = settings.get("temperature", 0.1)
+        frequency_penalty: float = settings.get("frequency_penalty", 0.0)
+        json_schema: str | None = settings.get("json_schema", None)
+
+        tool_schemas = [
+            _tool_def_to_schema(t)
+            for t in model_request_parameters.function_tools
+        ] + [
+            _tool_def_to_schema(t)
+            for t in model_request_parameters.output_tools
+        ]
+
+        instructions, chat_dicts = _messages_to_chat_dicts(
+            messages, model_request_parameters
+        )
+
+        loop = asyncio.get_event_loop()
+        raw_output: str = await loop.run_in_executor(
+            None,
+            lambda: self._generate(
+                instructions=instructions,
+                chat_dicts=chat_dicts,
+                tool_schemas=tool_schemas,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                frequency_penalty=frequency_penalty,
+                json_schema=json_schema,
+            ),
+        )
+
+        chat_response = self._parsing_service.parse(raw_output, self._template_name)
+        return self._to_model_response(chat_response)
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _build_prompt(
+        self,
+        instructions: str | None,
+        chat_dicts: list[dict[str, Any]],
+        tool_schemas: list[dict[str, Any]],
+    ) -> str:
+        """Apply the tokenizer chat template and return the prompt string."""
+        full_messages: list[dict[str, Any]] = []
+        if instructions:
+            full_messages.append({"role": "system", "content": instructions})
+        full_messages.extend(chat_dicts)
+
+        kwargs: dict[str, Any] = {
+            "tokenize": False,
+            "add_generation_prompt": True,
+        }
+        if tool_schemas:
+            kwargs["tools"] = tool_schemas
+
+        try:
+            prompt: str = self._tokenizer.apply_chat_template(full_messages, **kwargs)
+        except Exception as exc:
+            logger.warning(
+                "[MLXChatModel] apply_chat_template failed (%s); "
+                "falling back to plain concatenation",
+                exc,
+            )
+            prompt = "\n".join(
+                f"{m['role'].upper()}: {m.get('content', '')}"
+                for m in full_messages
+            )
+        return prompt
 
     def _generate(
         self,
-        messages: list[BaseMessage],
-        stop: Optional[list[str]] = None,
-        run_manager: Optional[CallbackManagerForLLMRun] = None,
-        **kwargs: Any,
-    ) -> ChatResult:
-        if self._model_pair is None:
-            error_msg = f"MLX chat model is not loaded for path '{self.model_path}'"
-            logger.error(error_msg)
-            raise RuntimeError(error_msg)
-        model, tokenizer = self._model_pair
+        *,
+        instructions: str | None,
+        chat_dicts: list[dict[str, Any]],
+        tool_schemas: list[dict[str, Any]],
+        max_tokens: int,
+        temperature: float,
+        frequency_penalty: float,
+        json_schema: str | None,
+    ) -> str:
+        """Run synchronous MLX generation and return the raw output string."""
+        prompt = self._build_prompt(instructions, chat_dicts, tool_schemas)
+        sampler = make_sampler(temp=temperature)
 
-        print(f'max_tokens: {self.max_tokens}, temperature: {self.temperature}, frequency_penalty: {self.frequency_penalty}, json_schema: {self.json_schema}')
-
-        chat_messages = self._to_chat_dicts(messages)
-
-        # Build the prompt string via the tokenizer chat-template
-        try:
-            template_kwargs: dict[str, object] = {
-                "tokenize": False,
-                "add_generation_prompt": True,
-            }
-            if self._bound_tools:
-                # Pass tools to the template if it accepts them; fall back to
-                # injecting a JSON block into the system prompt otherwise.
-                try:
-                    prompt = tokenizer.apply_chat_template(
-                        chat_messages,
-                        tools=self._bound_tools,
-                        **template_kwargs,
-                    )
-                except TypeError:
-                    # Template doesn't accept 'tools' kwarg → inject manually
-                    chat_messages = self._inject_tools_into_system(chat_messages)
-                    prompt = tokenizer.apply_chat_template(chat_messages, **template_kwargs)
-            else:
-                prompt = tokenizer.apply_chat_template(chat_messages, **template_kwargs)
-        except Exception as e:
-            error_msg = f"Failed to apply chat template: {e}"
-            logger.error(error_msg)
-            print(f"❌ {error_msg}\n{traceback.format_exc()}")
-            raise
-
-        penalty_processors = make_logits_processors(frequency_penalty=self.frequency_penalty)
-        if self.frequency_penalty is not None:
-            logger.info(f"[MLXChatModel] frequency_penalty={self.frequency_penalty} enabled")
-
-        logits_processors = list(penalty_processors) if penalty_processors else []
-        if self.json_schema is not None:
-            processor = make_json_schema_logits_processor(
-                tokenizer, self.json_schema
-            )
-            if processor is not None:
-                logits_processors.append(processor)
-                logger.info("[MLXChatModel] xgrammar constrained decoding enabled")
-        logits_processors = logits_processors or None
-
-        # Run inference
-        try:
-            logger.info(
-                f"Running MLX generation: model={self.model_path}, "
-                f"max_tokens={self.max_tokens}, temperature={self.temperature}"
-            )
-            response_text = generate(
-                model,
-                tokenizer,
-                prompt=prompt,
-                max_tokens=self.max_tokens,
-                sampler=make_sampler(temp=self.temperature),
-                logits_processors=logits_processors,
-                verbose=False,
-                kv_bits=4,
-            )
-            logger.info("MLX generation complete")
-        except Exception as e:
-            error_msg = f"MLX generate() failed: {e}"
-            logger.error(error_msg)
-            print(f"❌ {error_msg}\n{traceback.format_exc()}")
-            raise
-
-        ai_message = self.parsing_service.parse(response_text, "qwen")
-        logger.info(
-            f"Parsed response: tool_calls={len(ai_message.tool_calls)}, "
-            f"has_thinking={'thinking' in ai_message.additional_kwargs}"
+        logits_processors = make_logits_processors(
+            logit_bias=None,
         )
-        return ChatResult(generations=[ChatGeneration(message=ai_message)])
+        if json_schema:
+            xg_processor = make_json_schema_logits_processor(
+                self._tokenizer, json_schema
+            )
+            if xg_processor is not None:
+                logits_processors = [xg_processor] + (logits_processors or [])
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
+        logger.debug(
+            "[MLXChatModel] Generating: max_tokens=%d temperature=%.2f tools=%d json_schema=%s",
+            max_tokens,
+            temperature,
+            len(tool_schemas),
+            bool(json_schema),
+        )
+
+        output: str = generate(
+            self._mlx_model,
+            self._tokenizer,
+            prompt=prompt,
+            max_tokens=max_tokens,
+            sampler=sampler,
+            logits_processors=logits_processors if logits_processors else None,
+            verbose=False,
+        )
+        return output
 
     @staticmethod
-    def _to_chat_dicts(messages: list[BaseMessage]) -> list[dict[str, object]]:
-        """Convert LangChain message objects to plain dicts for the tokenizer."""
-        result = []
-        for msg in messages:
-            if isinstance(msg, SystemMessage):
-                result.append({"role": "system", "content": str(msg.content)})
-            elif isinstance(msg, HumanMessage):
-                result.append({"role": "user", "content": str(msg.content)})
-            elif isinstance(msg, AIMessage):
-                d: dict[str, object] = {
-                    "role": "assistant",
-                    "content": str(msg.content),
-                }
-                if msg.tool_calls:
-                    # Convert to the format the Qwen3 chat template expects:
-                    # {"function": {"name": ..., "arguments": {...}}}
-                    d["tool_calls"] = [
-                        {"function": {"name": tc["name"], "arguments": tc["args"]}}
-                        for tc in msg.tool_calls
-                    ]
-                result.append(d)
-            elif isinstance(msg, ToolMessage):
-                # Qwen3 template expects tool responses as role="tool" with a
-                # tool_call_id so it can pair them up.  Name is optional.
-                d = {
-                    "role": "tool",
-                    "content": str(msg.content),
-                    "tool_call_id": msg.tool_call_id or "",
-                }
-                if hasattr(msg, "name") and msg.name:
-                    d["name"] = msg.name
-                result.append(d)
-            else:
-                result.append({"role": "user", "content": str(msg.content)})
-        return result
+    def _to_model_response(chat_response: ChatResponse) -> ModelResponse:
+        """Convert a ``ChatResponse`` to a Pydantic AI ``ModelResponse``."""
+        parts: list[Any] = []
 
-    @staticmethod
-    def _inject_tools_into_system(
-        chat_messages: list[dict[str, object]],
-        tool_schemas: Optional[list[dict[str, object]]] = None,
-    ) -> list[dict[str, object]]:
-        """Prepend (or append to) the system message with JSON tool schemas."""
-        if not tool_schemas:
-            return chat_messages
-        tool_block = (
-            "\n\n# Available tools\n"
-            "You may call one or more of the following functions to complete the request.\n"
-            f"```json\n{json.dumps(tool_schemas, indent=2)}\n```"
+        for tc in chat_response.tool_calls:
+            parts.append(
+                ToolCallPart(
+                    tool_name=tc.name,
+                    args=tc.args,
+                    tool_call_id=tc.id,
+                )
+            )
+
+        if chat_response.content:
+            parts.append(TextPart(content=chat_response.content))
+
+        if not parts:
+            parts.append(TextPart(content=""))
+
+        return ModelResponse(parts=parts)
+
+
+class MLXChatModelFactory:
+    """
+    Thin factory that creates :class:`MLXChatModel` instances with
+    *parsing_service* pre-injected.
+
+    Intended to be registered as a singleton in the DI container so that
+    :class:`~src.infra.llm_connector.llm_manager.LLMManager` never needs to
+    depend on :class:`ParsingService` directly.
+    """
+
+    def __init__(self, parsing_service: ParsingService) -> None:
+        self._parsing_service = parsing_service
+
+    def __call__(self, model_path: str) -> MLXChatModel:
+        return MLXChatModel(
+            model_path=model_path,
+            parsing_service=self._parsing_service,
         )
-        messages = list(chat_messages)
-        if messages and messages[0]["role"] == "system":
-            messages[0] = {**messages[0], "content": messages[0]["content"] + tool_block}
-        else:
-            messages.insert(0, {"role": "system", "content": tool_block.strip()})
-        return messages

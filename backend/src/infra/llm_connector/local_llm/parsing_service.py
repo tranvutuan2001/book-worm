@@ -5,9 +5,9 @@ import logging
 import re
 import uuid
 from abc import ABC, abstractmethod
-from langchain_core.messages import AIMessage
-from langchain_core.messages.tool import ToolCall
+
 from src.config.config import DEFAULT_CHAT_TEMPLATE
+from src.domain.entity.chat_response import ChatResponse, ToolCall
 
 
 logger = logging.getLogger("app.llm_connector")
@@ -18,10 +18,10 @@ logger = logging.getLogger("app.llm_connector")
 # ---------------------------------------------------------------------------
 
 class BaseResponseParser(ABC):
-    """Convert a raw model output string into a LangChain ``AIMessage``."""
+    """Convert a raw model output string into a ``ChatResponse``."""
 
     @abstractmethod
-    def parse(self, raw: str) -> AIMessage: ...
+    def parse(self, raw: str) -> ChatResponse: ...
 
 
 # ---------------------------------------------------------------------------
@@ -35,7 +35,7 @@ class Qwen3ResponseParser(BaseResponseParser):
     _FUNCTION_RE = re.compile(r"<function=([^>]+)>")
     _PARAM_RE = re.compile(r"<parameter=([^>]+)>\n?(.*?)\n?</parameter>", re.DOTALL)
 
-    def parse(self, raw: str) -> AIMessage:
+    def parse(self, raw: str) -> ChatResponse:
         thinking_blocks = self._THINK_RE.findall(raw)
         thinking_text = "\n".join(
             re.sub(r"^<think>|</think>$", "", b, flags=re.DOTALL).strip()
@@ -55,13 +55,15 @@ class Qwen3ResponseParser(BaseResponseParser):
                 tool_calls.append(tc)
 
         content = self._TOOL_CALL_RE.sub("", text).strip()
-        additional_kwargs: dict[str, str] = {}
-        if thinking_text:
-            additional_kwargs["thinking"] = thinking_text
 
-        return AIMessage(content=content, tool_calls=tool_calls, additional_kwargs=additional_kwargs)
+        return ChatResponse(
+            content=content,
+            tool_calls=tool_calls,
+            thinking=thinking_text or None,
+        )
 
-    def _parse_tool_call_block(self, block: str) -> ToolCall | None:
+    @staticmethod
+    def _parse_tool_call_block(block: str) -> ToolCall | None:
         # Format 1 — standard JSON: {"name": "...", "arguments": {...}}
         try:
             data = json.loads(block)
@@ -74,11 +76,11 @@ class Qwen3ResponseParser(BaseResponseParser):
             pass
 
         # Format 2 — XML-param: <function=NAME>\n<parameter=K>V</parameter>\n</function>
-        fn_match = self._FUNCTION_RE.search(block)
+        fn_match = Qwen3ResponseParser._FUNCTION_RE.search(block)
         if fn_match:
             fn_name = fn_match.group(1).strip()
             args: dict[str, object] = {}
-            for p in self._PARAM_RE.finditer(block):
+            for p in Qwen3ResponseParser._PARAM_RE.finditer(block):
                 key = p.group(1).strip()
                 value_raw = p.group(2).strip()
                 try:
@@ -121,7 +123,7 @@ class Gemma4ResponseParser(BaseResponseParser):
     # Gemma string delimiter
     _GEMMA_QUOTE = '<|"|>'
 
-    def parse(self, raw: str) -> AIMessage:
+    def parse(self, raw: str) -> ChatResponse:
         # --- 1. Extract and strip thinking blocks ---
         thinking_parts = self._THINK_RE.findall(raw)
         thinking_text = "\n".join(p.strip() for p in thinking_parts)
@@ -157,14 +159,10 @@ class Gemma4ResponseParser(BaseResponseParser):
             content = content[:start] + content[end:]
         content = content.strip()
 
-        additional_kwargs: dict[str, str] = {}
-        if thinking_text:
-            additional_kwargs["thinking"] = thinking_text
-
-        return AIMessage(
+        return ChatResponse(
             content=content,
             tool_calls=tool_calls,
-            additional_kwargs=additional_kwargs,
+            thinking=thinking_text or None,
         )
 
     # ------------------------------------------------------------------
@@ -267,7 +265,7 @@ class ParsingService:
             name: cls() for name, cls in _REGISTRY.items()
         }
 
-    def parse(self, raw: str, template_name: str) -> AIMessage:
+    def parse(self, raw: str, template_name: str) -> ChatResponse:
         parser = self._parsers.get(template_name.lower())
         if parser is None:
             logger.warning(

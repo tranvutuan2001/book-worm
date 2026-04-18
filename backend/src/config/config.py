@@ -71,7 +71,7 @@ SUFFIX_CHAPTER_EMBEDDINGS = "_chapter_summary_embeddings.json"
 # Which inference backend to use for chat completions and embeddings.
 #   "local"     — MLX models loaded directly in-process (Apple Silicon only).
 #   "lm_studio" — Remote LM Studio instance via OpenAI-compatible HTTP API.
-LLM_BACKEND: Literal["local", "lm_studio"] = "local"
+LLM_BACKEND: Literal["local", "lm_studio"] = "lm_studio"
 
 # ---------------------------------------------------------------------------
 # LM Studio connection settings

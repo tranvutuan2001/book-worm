@@ -1,1 +1,1 @@
-"""LangChain tools package exposed to the LLM agent."""
+"""Pydantic AI tools package exposed to the LLM agent."""

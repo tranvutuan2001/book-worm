@@ -13,8 +13,6 @@ from typing import List, Optional
 
 import pdfplumber
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-
 from src.config.config import (
     CHUNK_OVERLAP,
     CHUNK_SIZE,
@@ -38,6 +36,88 @@ from src.domain.enums import Role
 from src.infra.llm_connector import LLMService
 
 logger = logging.getLogger("app.service")
+
+# ---------------------------------------------------------------------------
+# Text-splitting helper (replaces langchain RecursiveCharacterTextSplitter)
+# ---------------------------------------------------------------------------
+
+_SEPARATORS = ["\n\n", "\n", " ", ""]
+
+
+def _recursive_split(
+    text: str,
+    chunk_size: int,
+    chunk_overlap: int,
+    separators: list[str] | None = None,
+) -> list[str]:
+    """Split *text* into chunks of at most *chunk_size* characters.
+
+    Tries to split on the first separator that produces pieces shorter than
+    *chunk_size*; when none do, falls back to a hard character split.
+    Adjacent chunks overlap by *chunk_overlap* characters.
+    """
+    if separators is None:
+        separators = list(_SEPARATORS)
+
+    if not text:
+        return []
+
+    if len(text) <= chunk_size:
+        return [text]
+
+    # Pick the best separator
+    sep = separators[-1]
+    for s in separators:
+        if s in text:
+            sep = s
+            break
+
+    parts = text.split(sep) if sep else list(text)
+
+    chunks: list[str] = []
+    current: list[str] = []
+    current_len = 0
+
+    for part in parts:
+        piece = part if not sep else part
+        piece_len = len(piece) + (len(sep) if current else 0)
+
+        if current_len + piece_len > chunk_size and current:
+            merged = sep.join(current)
+            # If a single merged chunk is still too big, recurse with the
+            # next separator in the list.
+            if len(merged) > chunk_size and len(separators) > 1:
+                chunks.extend(
+                    _recursive_split(merged, chunk_size, chunk_overlap, separators[1:])
+                )
+            else:
+                chunks.append(merged)
+
+            # Overlap: keep trailing parts whose total length ≤ chunk_overlap
+            overlap_parts: list[str] = []
+            overlap_len = 0
+            for p in reversed(current):
+                if overlap_len + len(p) + len(sep) > chunk_overlap:
+                    break
+                overlap_parts.insert(0, p)
+                overlap_len += len(p) + len(sep)
+            current = overlap_parts
+            current_len = overlap_len
+
+        current.append(piece)
+        current_len += piece_len
+
+    if current:
+        merged = sep.join(current)
+        if len(merged) > chunk_size and len(separators) > 1:
+            chunks.extend(
+                _recursive_split(merged, chunk_size, chunk_overlap, separators[1:])
+            )
+        else:
+            chunks.append(merged)
+
+    return [c for c in chunks if c.strip()]
+
 
 # ---------------------------------------------------------------------------
 # Summarisation prompts
@@ -89,10 +169,7 @@ class DocumentAnalysisService:
             pages = self._extract_pages(pdf_path)
             logger.info("Extracted %d pages from '%s'", len(pages), document_name)
 
-            splitter = RecursiveCharacterTextSplitter(
-                chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP
-            )
-            chunks = splitter.split_text("".join(pages))
+            chunks = _recursive_split("".join(pages), CHUNK_SIZE, CHUNK_OVERLAP)
             logger.info("Split into %d chunks", len(chunks))
 
             out_dir = DATA_DIR / document_name
