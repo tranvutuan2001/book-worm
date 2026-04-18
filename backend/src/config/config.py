@@ -71,7 +71,7 @@ SUFFIX_CHAPTER_EMBEDDINGS = "_chapter_summary_embeddings.json"
 # Which inference backend to use for chat completions and embeddings.
 #   "local"     — MLX models loaded directly in-process (Apple Silicon only).
 #   "lm_studio" — Remote LM Studio instance via OpenAI-compatible HTTP API.
-LLM_BACKEND: Literal["local", "lm_studio"] = "lm_studio"
+LLM_BACKEND: Literal["local", "lm_studio"] = "local"
 
 # ---------------------------------------------------------------------------
 # LM Studio connection settings
@@ -87,3 +87,10 @@ LM_STUDIO_API_KEY: str = "lm-studio"
 # Leave empty to fall back to the model_path argument passed by the caller.
 LM_STUDIO_DEFAULT_CHAT_MODEL: str = "qwen3.5-9b-mlx"
 LM_STUDIO_DEFAULT_EMBEDDING_MODEL: str = "text-embedding-qwen3-embedding-0.6b"
+
+
+# ---------------------------------------------------------------------------
+# Langfuse config
+LANGFUSE_SECRET_KEY="sk-lf-eeb9e41e-0630-4365-8272-e9a7832960ec"
+LANGFUSE_PUBLIC_KEY="pk-lf-404062fd-c299-4d2b-95a1-0dcfba896889"
+LANGFUSE_BASE_URL="http://localhost:3000"

@@ -7,8 +7,10 @@ lifecycle (loading, caching, unloading) is delegated to :class:`LLMManager`.
 """
 
 import logging
+import os
 from typing import Any, Callable, List
 
+from langfuse import get_client
 from pydantic_ai import Agent
 from pydantic_ai.messages import (
     ModelMessage,
@@ -18,11 +20,22 @@ from pydantic_ai.messages import (
     UserPromptPart,
 )
 
+from src.config.config import LANGFUSE_BASE_URL, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY
 from src.domain.entity.message import Message
 from src.domain.enums import Role
 from src.infra.llm_connector.llm_manager import LLMManager
 
 logger = logging.getLogger("app.llm_connector")
+
+# ---------------------------------------------------------------------------
+# Langfuse monitoring setup
+# ---------------------------------------------------------------------------
+os.environ["LANGFUSE_PUBLIC_KEY"] = LANGFUSE_PUBLIC_KEY
+os.environ["LANGFUSE_SECRET_KEY"] = LANGFUSE_SECRET_KEY
+os.environ["LANGFUSE_HOST"] = LANGFUSE_BASE_URL
+
+langfuse = get_client()
+Agent.instrument_all()
 
 
 class LLMService:
@@ -76,6 +89,7 @@ class LLMService:
         agent: Agent[None, str] = Agent(
             model=backend,
             instructions=system_prompt,
+            instrument=True,
             model_settings={
                 "max_tokens": max_tokens or 4000,
                 "temperature": temperature or 0.1,
@@ -101,6 +115,7 @@ class LLMService:
             user_query,
             message_history=history if history else None,
         )
+        langfuse.flush()
         return result.output
 
     def agent_complete_chat(
@@ -139,6 +154,7 @@ class LLMService:
             model=backend,
             instructions=system_prompt,
             retries=max_retries,
+            instrument=True,
             model_settings={
                 "max_tokens": max_tokens or 4000,
                 "temperature": temperature or 0.1,
@@ -168,6 +184,7 @@ class LLMService:
             message_history=history if history else None,
         )
 
+        langfuse.flush()
         logger.info(
             "Agent completed: %d messages, output length=%d",
             len(result.all_messages()),
