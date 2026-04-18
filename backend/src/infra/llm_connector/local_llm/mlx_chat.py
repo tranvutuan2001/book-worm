@@ -36,37 +36,9 @@ from pydantic_ai.models import ModelRequestParameters, ModelSettings
 from src.domain.entity.chat_response import ChatResponse
 from src.infra.llm_connector.local_llm.parsing_service import ParsingService
 from src.infra.llm_connector.local_llm.xgrammar_processor import make_json_schema_logits_processor
+from src.config.config import DEFAULT_CHAT_TEMPLATE
 
 logger = logging.getLogger("app.llm_connector")
-
-# Mapping from keywords in the model name to the parser key in ParsingService.
-_TEMPLATE_KEYWORDS: list[tuple[str, str]] = [
-    ("qwen", "qwen"),
-    ("gemma", "gemma"),
-]
-_DEFAULT_TEMPLATE = "qwen"
-
-
-def _detect_template(model_path: str) -> str:
-    """Heuristically pick a ParsingService template name for *model_path*."""
-    name_lower = Path(model_path).name.lower()
-    jinja_path = Path(model_path) / "chat_template.jinja"
-    template_hint = (
-        jinja_path.read_text(errors="ignore").lower()
-        if jinja_path.exists()
-        else ""
-    )
-    for keyword, template in _TEMPLATE_KEYWORDS:
-        if keyword in name_lower or keyword in template_hint:
-            return template
-    logger.warning(
-        "[MLXChatModel] Could not detect chat template for '%s'; "
-        "using default '%s'",
-        model_path,
-        _DEFAULT_TEMPLATE,
-    )
-    return _DEFAULT_TEMPLATE
-
 
 def _tool_def_to_schema(tool_def: Any) -> dict[str, Any]:
     """Convert a pydantic_ai ToolDefinition to an OpenAI-style tool schema dict."""
@@ -170,7 +142,7 @@ class MLXChatModel(models.Model):
         super().__init__()
         self._model_path = model_path
         self._parsing_service = parsing_service
-        self._template_name = _detect_template(model_path)
+        self._template_name = DEFAULT_CHAT_TEMPLATE
 
         logger.info("[MLXChatModel] Loading model from '%s' …", model_path)
         self._mlx_model: nn.Module
