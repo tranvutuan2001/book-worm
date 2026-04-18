@@ -103,9 +103,7 @@ def _messages_to_chat_dicts(
                         "function": {
                             "name": p.tool_name,
                             "arguments": (
-                                p.args
-                                if isinstance(p.args, dict)
-                                else (json.loads(p.args) if p.args else {})
+                                p.args if isinstance(p.args, dict) else (json.loads(p.args) if p.args else {})
                             ),
                         },
                     }
