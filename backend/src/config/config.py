@@ -31,9 +31,9 @@ PDF_EXAMPLE_PATH: Path = PROJECT_ROOT / "pdf-example.json"
 # Default model paths (relative to PROJECT_ROOT)
 # ---------------------------------------------------------------------------
 
-DEFAULT_CHAT_MODEL: str = "models/chat/mlx-community/Qwen3.5-9B-MLX-4bit"
+DEFAULT_LOCAL_CHAT_MODEL: str = "models/chat/mlx-community/Qwen3.5-9B-MLX-4bit"
 DEFAULT_CHAT_TEMPLATE: str = "qwen"
-DEFAULT_EMBEDDING_MODEL: str = "models/embedding/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"
+DEFAULT_LOCAL_EMBEDDING_MODEL: str = "models/embedding/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"
 
 # ---------------------------------------------------------------------------
 # Document analysis parameters
@@ -41,16 +41,16 @@ DEFAULT_EMBEDDING_MODEL: str = "models/embedding/mlx-community/Qwen3-Embedding-0
 
 CHUNK_SIZE: int = 1000
 CHUNK_OVERLAP: int = 100
-CHUNKS_PER_SECTION: int = 5
-SECTIONS_PER_CHAPTER: int = 10
+CHUNKS_PER_SECTION: int = 10
+SECTIONS_PER_CHAPTER: int = 15
 MAX_EMBEDDING_RETRIES: int = 3
 
 # ---------------------------------------------------------------------------
 # LLM inference parameters
 # ---------------------------------------------------------------------------
 
-CHAT_MAX_TOKENS: int = 2048
-CHAT_TEMPERATURE: float = 0.1
+CHAT_MAX_TOKENS: int | None = None
+CHAT_TEMPERATURE: float = 0.2
 TOP_K_CHUNKS: int = 3
 
 # ---------------------------------------------------------------------------
@@ -68,19 +68,8 @@ SUFFIX_CHAPTER_EMBEDDINGS = "_chapter_summary_embeddings.json"
 # LLM backend selection
 # ---------------------------------------------------------------------------
 
-# Which inference backend to use for chat completions and embeddings.
-#   "local"     — MLX models loaded directly in-process (Apple Silicon only).
-#   "lm_studio" — Remote LM Studio instance via OpenAI-compatible HTTP API.
-LLM_BACKEND: Literal["local", "lm_studio"] = "local"
-
-# ---------------------------------------------------------------------------
-# LM Studio connection settings
-# (only used when LLM_BACKEND = "lm_studio")
-# ---------------------------------------------------------------------------
-
+LLM_BACKEND: Literal["local", "lm_studio"] = "lm_studio"
 LM_STUDIO_BASE_URL: str = "http://localhost:1234/v1"
-
-# LM Studio accepts any non-empty string as the API key.
 LM_STUDIO_API_KEY: str = "lm-studio"
 
 # Model identifiers exactly as they appear in LM Studio's model list.
@@ -88,44 +77,10 @@ LM_STUDIO_API_KEY: str = "lm-studio"
 LM_STUDIO_DEFAULT_CHAT_MODEL: str = "qwen3.5-9b-mlx"
 LM_STUDIO_DEFAULT_EMBEDDING_MODEL: str = "text-embedding-qwen3-embedding-0.6b"
 
-
 # ---------------------------------------------------------------------------
-# Default agent system prompts
-# ---------------------------------------------------------------------------
+DEFAULT_CHAT_MODEL = LM_STUDIO_DEFAULT_CHAT_MODEL if LLM_BACKEND == "lm_studio" else DEFAULT_LOCAL_CHAT_MODEL
+DEFAULT_EMBEDDING_MODEL = LM_STUDIO_DEFAULT_EMBEDDING_MODEL if LLM_BACKEND == "lm_studio" else DEFAULT_LOCAL_EMBEDDING_MODEL
 
-AGENT_SUMMARY_SYSTEM_PROMPT: str = (
-    "You are a summarization expert.\n"
-    "Condense the provided text into a high-density, structured summary.\n"
-    "Focus on hard facts, key concepts, names, and metrics.\n"
-    "Use a professional, note-taking style.\n"
-    "Output ONLY the summary — no meta-commentary."
-)
-
-AGENT_VERIFY_SYSTEM_PROMPT: str = (
-    "You are a strict verification assistant.\n"
-    "Your task is to check whether the provided answer correctly addresses "
-    "the given task.\n"
-    "CRITICAL RULES:\n"
-    "  - Use only information verifiable with the provided tools.\n"
-    "  - Remove any claims that cannot be verified.\n"
-    "  - Do NOT add information from your own knowledge.\n"
-    "  - Do NOT make assumptions beyond what tools confirm.\n"
-    "  - If uncertain, remove the questionable content rather than keeping it.\n"
-    "Return only the fact-checked final answer with no meta-commentary."
-)
-
-AGENT_DOCUMENT_ASSISTANT_SYSTEM_PROMPT: str = (
-    "You are a knowledgeable assistant in a document-analyzing system.\n"
-    "Answer in the language of the question.\n"
-    "Use the tools to retrieve the information needed to answer.\n"
-    "All answers must be grounded in knowledge retrieved from the tools.\n"
-    "Do not fabricate answers that are not supported by the tools.\n"
-    "At the end of your response, briefly cite which part of the document "
-    "informed your answer.\n"
-    "Format your answer for human readability.\n"
-    'If the answer cannot be found even after using the tools, respond with:\n'
-    '"The provided data is not sufficient to answer this question."'
-)
 
 # ---------------------------------------------------------------------------
 # Langfuse config

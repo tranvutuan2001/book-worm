@@ -296,7 +296,6 @@ class DocumentAnalysisService:
                     model_settings=ChatModelSettings(
                         temperature=0.2,
                         frequency_penalty=0.2,
-                        max_tokens=20000,
                     ),
                 )
                 summary = self._llm.agent_complete_chat(
@@ -340,7 +339,6 @@ class DocumentAnalysisService:
                     model_settings=ChatModelSettings(
                         temperature=0.2,
                         frequency_penalty=0.2,
-                        max_tokens=20000,
                     ),
                 )
                 chapter = self._llm.agent_complete_chat(
