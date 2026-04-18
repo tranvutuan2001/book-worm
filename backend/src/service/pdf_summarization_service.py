@@ -182,7 +182,7 @@ class PDFSummarizationService:
     # ------------------------------------------------------------------
 
     def _step1_generate_summary(self, document_name: str, chat_model: str) -> str:
-        """Fetch the raw document summary directly, then refine it with complete_chat."""
+        """Fetch the raw document summary directly, then refine it with agent_complete_chat."""
         logger.info("[step1] Fetching raw document summary for '%s'", document_name)
         try:
             base_summary: str = get_document_summary(_NO_CTX, document_name=document_name)
@@ -203,10 +203,11 @@ class PDFSummarizationService:
             timestamp=int(time.time() * 1000),
         )
         try:
-            refined = self._llm.complete_chat(
+            refined = self._llm.agent_complete_chat(
                 model_path=chat_model,
                 message_list=[request_message],
                 system_prompt=_STEP1_SYSTEM,
+                tools=[],
                 max_tokens=12000,
             )
             return refined
@@ -245,10 +246,11 @@ class PDFSummarizationService:
                 timestamp=int(time.time() * 1000),
             )
             try:
-                raw_output = self._llm.complete_chat(
+                raw_output = self._llm.agent_complete_chat(
                     model_path=chat_model,
                     message_list=[message],
                     system_prompt=_STEP2_SPLIT_SYSTEM,
+                    tools=[],
                     json_schema=JSON_ARRAY_OF_STRINGS_SCHEMA,
                 )
             except Exception as exc:

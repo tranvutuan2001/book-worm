@@ -289,10 +289,11 @@ class DocumentAnalysisService:
                 timestamp=int(time.time()),
             )
             try:
-                summary = self._llm.complete_chat(
+                summary = self._llm.agent_complete_chat(
                     message_list=[user_msg],
                     system_prompt=_SECTION_SUMMARY_SYSTEM,
                     model_path=DEFAULT_CHAT_MODEL,
+                    tools=[],
                     temperature=0.2,
                     frequency_penalty=0.2,
                     max_tokens=20000
@@ -328,10 +329,11 @@ class DocumentAnalysisService:
                 timestamp=int(time.time()),
             )
             try:
-                chapter = self._llm.complete_chat(
+                chapter = self._llm.agent_complete_chat(
                     message_list=[user_msg],
                     system_prompt=_CHAPTER_SUMMARY_SYSTEM,
                     model_path=DEFAULT_CHAT_MODEL,
+                    tools=[],
                     temperature=0.2,
                     frequency_penalty=0.2,
                     max_tokens=20000

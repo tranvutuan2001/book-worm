@@ -2,7 +2,7 @@
 Integration tests for LLMService.
 
 Covers:
-  1. Simple chat  — complete_chat(), single-turn and multi-turn
+  1. Simple chat  — agent_complete_chat(), single-turn and multi-turn
   2. Tool calling — agent_complete_chat() with custom inline tools
 
 Tools are plain Python functions with ``ctx: RunContext[None]`` as the first
@@ -88,15 +88,16 @@ print(f"  chat model: {CHAT_MODEL}")
 def test1() -> bool:
     _header("Test 1 — Simple chat (no tools)")
     # 1a. Single-turn factual question
-    reply = llm_service.complete_chat(
+    reply = llm_service.agent_complete_chat(
         model_path=CHAT_MODEL,
         message_list=[_msg(Role.USER, "What is the capital of France?")],
         system_prompt="You are a concise assistant. Answer in one sentence.",
+        tools=[],
     )
     _result("1a. Single-turn factual question", reply)
 
     # 1b. Multi-turn — model must recall earlier context
-    reply = llm_service.complete_chat(
+    reply = llm_service.agent_complete_chat(
         model_path=CHAT_MODEL,
         message_list=[
             _msg(Role.USER,      "My name is Alice.", idx=1),
@@ -104,6 +105,7 @@ def test1() -> bool:
             _msg(Role.USER,      "What is my name?", idx=3),
         ],
         system_prompt="You are a concise assistant.",
+        tools=[],
     )
     _result("1b. Multi-turn memory", reply)
     return True
@@ -133,6 +135,6 @@ def test2() -> bool:
 # ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
-
+test1()
 test2()
 _header("All tests completed")

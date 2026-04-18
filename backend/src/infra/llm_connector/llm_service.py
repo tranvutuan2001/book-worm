@@ -44,8 +44,7 @@ class LLMService:
 
     Responsibilities
     ----------------
-    * :meth:`complete_chat`       — single-turn or multi-turn chat completion.
-    * :meth:`agent_complete_chat` — chat completion with tool-calling (Pydantic AI Agent).
+    * :meth:`agent_complete_chat` — chat completion with or without tool-calling (Pydantic AI Agent).
     * :meth:`embed_text`          — text embedding.
 
     All model lifecycle (loading, caching, unloading) is delegated to
@@ -58,65 +57,6 @@ class LLMService:
     # ------------------------------------------------------------------
     # Inference
     # ------------------------------------------------------------------
-
-    def complete_chat(
-        self,
-        model_path: str,
-        message_list: List[Message],
-        system_prompt: str,
-        json_schema: str = None,
-        temperature: float = None,
-        max_tokens: int = None,
-        frequency_penalty: float = None,
-    ) -> str:
-        """
-        Run a pure chat completion without any agent or tool-calling.
-
-        Args:
-            model_path:        Local path (or HF name) of the chat model.
-            message_list:      Conversation history as ``Message`` objects.
-            system_prompt:     System instruction to prepend to the conversation.
-            json_schema:       Optional JSON Schema string for constrained decoding.
-            temperature:       Sampling temperature for this request.
-            max_tokens:        Maximum number of tokens to generate.
-            frequency_penalty: Frequency penalty for this request.
-
-        Returns:
-            The assistant reply as a plain string.
-        """
-        backend = self._manager.get_chat_model(model_path)
-
-        agent: Agent[None, str] = Agent(
-            model=backend,
-            instructions=system_prompt,
-            instrument=True,
-            model_settings={
-                "max_tokens": max_tokens or 4000,
-                "temperature": temperature or 0.1,
-                "frequency_penalty": frequency_penalty or 0,
-                "json_schema": json_schema,
-            },
-        )
-
-        history: list[ModelMessage] = []
-        for msg in message_list[:-1]:
-            if msg.role == Role.USER:
-                history.append(
-                    ModelRequest(parts=[UserPromptPart(content=msg.content)])
-                )
-            elif msg.role == Role.ASSISTANT:
-                history.append(
-                    ModelResponse(parts=[TextPart(content=msg.content)])
-                )
-
-        user_query = message_list[-1].content if message_list else ""
-
-        result = agent.run_sync(
-            user_query,
-            message_history=history if history else None,
-        )
-        langfuse.flush()
-        return result.output
 
     def agent_complete_chat(
         self,

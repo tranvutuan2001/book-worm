@@ -10,7 +10,7 @@ and must not be used by callers.
 Public API
 ----------
 * :class:`LLMManager`        — loading, caching, unloading, and getting models.
-* :class:`LLMService`        — inference entry-point: complete_chat and embed_text.
+* :class:`LLMService`        — inference entry-point: agent_complete_chat and embed_text.
 * :class:`LoadedModelRecord` — TypedDict returned by ``LLMManager.list_loaded_models``.
 * :class:`ModelType`         — ``Literal["chat", "embedding"]`` type alias.
 """
