@@ -38,6 +38,7 @@ from src.config.config import (
 from src.core.exceptions import DocumentNotFoundError, DocumentProcessingError
 from src.domain.entity.message import Message
 from src.domain.enums import Role
+from src.domain.value_object.chat_model_setting import ChatModelSettings
 from src.infra.llm_connector.llm_service import LLMService
 from src.service.tools.document_retrieval_tool import (
     get_document_summary,
@@ -208,7 +209,7 @@ class PDFSummarizationService:
                 message_list=[request_message],
                 system_prompt=_STEP1_SYSTEM,
                 tools=[],
-                max_tokens=12000,
+                model_settings=ChatModelSettings(max_tokens=12000),
             )
             return refined
         except Exception as exc:
@@ -251,7 +252,7 @@ class PDFSummarizationService:
                     message_list=[message],
                     system_prompt=_STEP2_SPLIT_SYSTEM,
                     tools=[],
-                    json_schema=JSON_ARRAY_OF_STRINGS_SCHEMA,
+                    model_settings=ChatModelSettings(json_schema=JSON_ARRAY_OF_STRINGS_SCHEMA),
                 )
             except Exception as exc:
                 logger.error(
@@ -377,8 +378,10 @@ class PDFSummarizationService:
                     system_prompt=step3_system,
                     tools=[],
                     model_path=chat_model,
-                    json_schema=schema_str,
-                    max_tokens=max_tokens,
+                    model_settings=ChatModelSettings(
+                        json_schema=schema_str,
+                        max_tokens=max_tokens,
+                    ),
                 )
             except Exception as exc:
                 logger.error(

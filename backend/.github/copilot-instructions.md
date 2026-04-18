@@ -32,7 +32,6 @@ container.py     → Dependency-injection wiring (singleton providers)
 - Use `logging.getLogger("app.<layer>")` (e.g. `app.service`, `app.route`) — never `print()`.
 - Follow the request-logging helpers: `start_request_logging` / `end_request_logging` / `get_request_logger` from `src.infra.logging_config`.
 - Constants belong in `src/config/config.py`; import them by name.
-- File paths must be constructed via `pathlib.Path`; never `os.path.join`.
 
 ---
 

@@ -33,6 +33,7 @@ from src.core.exceptions import DocumentProcessingError
 from src.core.utils import write_json_file
 from src.domain.entity.message import Message
 from src.domain.enums import Role
+from src.domain.value_object.chat_model_setting import ChatModelSettings
 from src.infra.llm_connector import LLMService
 
 logger = logging.getLogger("app.service")
@@ -294,9 +295,11 @@ class DocumentAnalysisService:
                     system_prompt=_SECTION_SUMMARY_SYSTEM,
                     model_path=DEFAULT_CHAT_MODEL,
                     tools=[],
-                    temperature=0.2,
-                    frequency_penalty=0.2,
-                    max_tokens=20000
+                    model_settings=ChatModelSettings(
+                        temperature=0.2,
+                        frequency_penalty=0.2,
+                        max_tokens=20000,
+                    ),
                 )
                 logger.info("Section summary %d–%d done", i + 1, end)
                 logger.info("Summary:\n%s", summary)
@@ -334,9 +337,11 @@ class DocumentAnalysisService:
                     system_prompt=_CHAPTER_SUMMARY_SYSTEM,
                     model_path=DEFAULT_CHAT_MODEL,
                     tools=[],
-                    temperature=0.2,
-                    frequency_penalty=0.2,
-                    max_tokens=20000
+                    model_settings=ChatModelSettings(
+                        temperature=0.2,
+                        frequency_penalty=0.2,
+                        max_tokens=20000,
+                    ),
                 )
                 chapters.append(chapter)
             except Exception as exc:
