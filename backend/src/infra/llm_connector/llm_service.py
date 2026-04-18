@@ -25,7 +25,7 @@ from src.domain.entity.message import Message
 from src.domain.enums import Role
 from src.infra.llm_connector.llm_manager import LLMManager
 
-logger = logging.getLogger("app.llm_connector")
+logger = logging.getLogger("app.infra.llm_service")
 
 # ---------------------------------------------------------------------------
 # Langfuse monitoring setup

@@ -38,7 +38,7 @@ from src.infra.llm_connector.local_llm.parsing_service import ParsingService
 from src.infra.llm_connector.local_llm.xgrammar_processor import make_json_schema_logits_processor
 from src.config.config import DEFAULT_CHAT_TEMPLATE
 
-logger = logging.getLogger("app.llm_connector")
+logger = logging.getLogger("app.infra.mlx_chat")
 
 class MLXChatModel(models.Model):
     """
@@ -223,18 +223,7 @@ class MLXChatModel(models.Model):
         if tool_schemas:
             kwargs["tools"] = tool_schemas
 
-        try:
-            prompt: str = self._tokenizer.apply_chat_template(full_messages, **kwargs)
-        except Exception as exc:
-            logger.warning(
-                "[MLXChatModel] apply_chat_template failed (%s); "
-                "falling back to plain concatenation",
-                exc,
-            )
-            prompt = "\n".join(
-                f"{m['role'].upper()}: {m.get('content', '')}"
-                for m in full_messages
-            )
+        prompt: str = self._tokenizer.apply_chat_template(full_messages, **kwargs)
         return prompt
 
     def _generate(
@@ -261,14 +250,6 @@ class MLXChatModel(models.Model):
             )
             if xg_processor is not None:
                 logits_processors = [xg_processor] + (logits_processors or [])
-
-        logger.debug(
-            "[MLXChatModel] Generating: max_tokens=%d temperature=%.2f tools=%d json_schema=%s",
-            max_tokens,
-            temperature,
-            len(tool_schemas),
-            bool(json_schema),
-        )
 
         output: str = generate(
             self._mlx_model,

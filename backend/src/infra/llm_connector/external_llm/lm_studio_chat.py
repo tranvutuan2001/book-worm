@@ -29,7 +29,7 @@ from pydantic_ai.models import ModelRequestParameters, ModelSettings
 
 from src.domain.entity.chat_response import ChatResponse, ToolCall
 
-logger = logging.getLogger("app.llm_connector")
+logger = logging.getLogger("app.infra.lm_studio_chat")
 
 
 def _tool_def_to_schema(tool_def: Any) -> dict[str, Any]:

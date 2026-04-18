@@ -8,7 +8,7 @@ from src.infra.llm_connector.external_llm import LMStudioChatModel, LMStudioEmbe
 from src.infra.llm_connector.local_llm.mlx_chat import MLXChatModel, MLXChatModelFactory
 from src.infra.llm_connector.local_llm.mlx_embedding import MLXEmbeddingModel
 
-logger = logging.getLogger("app.llm_connector")
+logger = logging.getLogger("app.infra.llm_manager")
 
 # Project root: four levels up from this file (backend/)
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -92,7 +92,6 @@ class LLMManager:
             _PROJECT_ROOT / "models" / "embedding" / stripped,
         ):
             if candidate.exists():
-                logger.debug(f"Resolved model path '{model_path}' → '{candidate}'")
                 return str(candidate)
 
         return model_path
@@ -105,10 +104,6 @@ class LLMManager:
     def _create_lm_studio_chat(self, model_path: str) -> LMStudioChatModel:
         """Create and return a new ``LMStudioChatModel`` instance (no caching)."""
         model_id = model_path or config.LM_STUDIO_DEFAULT_CHAT_MODEL
-        logger.info(
-            f"[LLMManager] Creating LMStudioChatModel: model='{model_id}' "
-            f"base_url='{config.LM_STUDIO_BASE_URL}'"
-        )
         return LMStudioChatModel(
             base_url=config.LM_STUDIO_BASE_URL,
             api_key=config.LM_STUDIO_API_KEY,
@@ -118,10 +113,6 @@ class LLMManager:
     def _create_lm_studio_embedding(self, model_path: str) -> Any:
         """Create and return a new ``LMStudioEmbeddingModel`` instance (no caching)."""
         model_id = model_path or config.LM_STUDIO_DEFAULT_EMBEDDING_MODEL
-        logger.info(
-            f"[LLMManager] Creating LMStudioEmbeddingModel: model='{model_id}' "
-            f"base_url='{config.LM_STUDIO_BASE_URL}'"
-        )
         return LMStudioEmbeddingModel(
             base_url=config.LM_STUDIO_BASE_URL,
             api_key=config.LM_STUDIO_API_KEY,

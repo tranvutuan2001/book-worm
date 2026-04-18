@@ -13,7 +13,7 @@ from typing import List
 
 import openai
 
-logger = logging.getLogger("app.llm_connector")
+logger = logging.getLogger("app.infra.lm_studio_embedding")
 
 
 class LMStudioEmbeddingModel:

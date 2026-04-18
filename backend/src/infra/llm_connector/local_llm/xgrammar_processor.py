@@ -17,16 +17,14 @@ Usage::
 
 from __future__ import annotations
 
-import json
-import logging
 from typing import TYPE_CHECKING, Any
+import xgrammar as xgr
+
 
 import numpy as np
 
 if TYPE_CHECKING:
     import mlx.core as mx
-
-logger = logging.getLogger("app.llm_connector.xgrammar")
 
 
 class XGrammarMLXLogitsProcessor:
@@ -140,47 +138,29 @@ def make_json_schema_logits_processor(
         ``None`` when xgrammar is not installed or the processor cannot be
         constructed (a warning is logged in both cases).
     """
-    try:
-        import xgrammar as xgr
-    except ImportError:
-        logger.warning(
-            "xgrammar is not installed — constrained decoding is disabled. "
-            "Run `pip install xgrammar` to enable it."
-        )
-        return None
+    # Unwrap mlx_lm TokenizerWrapper if necessary so xgrammar gets a real
+    # HuggingFace PreTrainedTokenizer.
+    raw_tokenizer = getattr(tokenizer, "_tokenizer", tokenizer)
 
-    try:
-        # Unwrap mlx_lm TokenizerWrapper if necessary so xgrammar gets a real
-        # HuggingFace PreTrainedTokenizer.
-        raw_tokenizer = getattr(tokenizer, "_tokenizer", tokenizer)
+    # Resolve vocabulary size.
+    # IMPORTANT: use len(raw_tokenizer) — not tokenizer.vocab_size — because
+    # vocab_size is the *base* size and excludes added/special tokens.
+    # len(tokenizer) reflects the full vocabulary (base + added tokens),
+    # which matches the model's embedding matrix and avoids xgrammar's
+    # "token id X is out of range" warning.
+    if vocab_size is None:
+        try:
+            vocab_size = len(raw_tokenizer)
+        except TypeError:
+            # Fallback: some tokenizer wrappers don't support len()
+            if hasattr(raw_tokenizer, "vocab_size"):
+                vocab_size = raw_tokenizer.vocab_size
+            else:
+                vocab_size = len(raw_tokenizer.get_vocab())
 
-        # Resolve vocabulary size.
-        # IMPORTANT: use len(raw_tokenizer) — not tokenizer.vocab_size — because
-        # vocab_size is the *base* size and excludes added/special tokens.
-        # len(tokenizer) reflects the full vocabulary (base + added tokens),
-        # which matches the model's embedding matrix and avoids xgrammar's
-        # "token id X is out of range" warning.
-        if vocab_size is None:
-            try:
-                vocab_size = len(raw_tokenizer)
-            except TypeError:
-                # Fallback: some tokenizer wrappers don't support len()
-                if hasattr(raw_tokenizer, "vocab_size"):
-                    vocab_size = raw_tokenizer.vocab_size
-                else:
-                    vocab_size = len(raw_tokenizer.get_vocab())
-
-        tokenizer_info = xgr.TokenizerInfo.from_huggingface(
-            raw_tokenizer, vocab_size=vocab_size
-        )
-        compiler = xgr.GrammarCompiler(tokenizer_info)
-        compiled_grammar = compiler.compile_json_schema(json_schema)
-        return XGrammarMLXLogitsProcessor(compiled_grammar)
-
-    except Exception as exc:
-        logger.warning(
-            "Failed to build xgrammar logits processor (%s) — "
-            "falling back to unconstrained generation.",
-            exc,
-        )
-        return None
+    tokenizer_info = xgr.TokenizerInfo.from_huggingface(
+        raw_tokenizer, vocab_size=vocab_size
+    )
+    compiler = xgr.GrammarCompiler(tokenizer_info)
+    compiled_grammar = compiler.compile_json_schema(json_schema)
+    return XGrammarMLXLogitsProcessor(compiled_grammar)

@@ -42,21 +42,6 @@ def setup_logging():
     app_log_handler.setFormatter(formatter)
     root_logger.addHandler(app_log_handler)
 
-    # LLM-specific logger writes to its own file and does not propagate to root
-    llm_log_handler = RotatingFileHandler(
-        os.path.join(logs_dir, "llm.log"),
-        maxBytes=10 * 1024 * 1024,  # 10 MB
-        backupCount=5
-    )
-    llm_log_handler.setLevel(logging.INFO)
-    llm_log_handler.setFormatter(formatter)
-
-    llm_logger = logging.getLogger('app.llm_connector')
-    llm_logger.handlers.clear()
-    llm_logger.addHandler(llm_log_handler)
-    llm_logger.setLevel(logging.INFO)
-    llm_logger.propagate = False
-
 
 def get_request_logger(logger_name: str = "app") -> logging.Logger:
     """Return a logger for the given name."""

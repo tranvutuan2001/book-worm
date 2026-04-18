@@ -10,7 +10,7 @@ from src.config.config import DEFAULT_CHAT_TEMPLATE
 from src.domain.entity.chat_response import ChatResponse, ToolCall
 
 
-logger = logging.getLogger("app.llm_connector")
+logger = logging.getLogger("app.infra.parsing_service")
 
 
 # ---------------------------------------------------------------------------

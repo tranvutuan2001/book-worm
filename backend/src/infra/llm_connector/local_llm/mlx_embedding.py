@@ -16,7 +16,7 @@ class _Tokenizer(Protocol):
 # (backbone, tokenizer) pair as returned by mlx_lm.load
 _ModelPair = tuple[nn.Module, _Tokenizer]
 
-logger = logging.getLogger("app.llm_connector")
+logger = logging.getLogger("app.infra.mlx_embedding")
 
 
 class MLXEmbeddingModel:
