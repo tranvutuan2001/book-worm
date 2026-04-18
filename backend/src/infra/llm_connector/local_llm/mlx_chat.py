@@ -239,10 +239,11 @@ class MLXChatModel(models.Model):
     ) -> str:
         """Run synchronous MLX generation and return the raw output string."""
         prompt = self._build_prompt(instructions, chat_dicts, tool_schemas)
-        sampler = make_sampler(temp=temperature, repetition_penalty=frequency_penalty if frequency_penalty else None)
+        sampler = make_sampler(temp=temperature)
 
         logits_processors = make_logits_processors(
             logit_bias=None,
+            frequency_penalty=frequency_penalty if frequency_penalty else None,
         )
         if json_schema:
             xg_processor = make_json_schema_logits_processor(
