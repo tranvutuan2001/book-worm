@@ -103,21 +103,6 @@ class AgentFactory:
         model_settings: ChatModelSettings | None = None,
         max_retries: int = 3,
     ) -> Agent:
-        """Create a summarization agent.
-
-        The agent condenses text into a high-density, structured representation.
-        The default system prompt is
-        :data:`~src.config.config.AGENT_SUMMARY_SYSTEM_PROMPT`.
-
-        Args:
-            system_prompt:  Optional override for the default prompt.
-            model_settings: Generation settings; defaults to
-                            :class:`~src.domain.value_object.chat_model_setting.ChatModelSettings`.
-            max_retries:    Validation-error retries.
-
-        Returns:
-            A configured :class:`Agent` of type :attr:`~src.domain.enums.AgentType.SUMMARY`.
-        """
         return Agent(
             agent_type=AgentType.SUMMARY,
             system_prompt=system_prompt or AGENT_SUMMARY_SYSTEM_PROMPT,
@@ -134,22 +119,6 @@ class AgentFactory:
         model_settings: ChatModelSettings | None = None,
         max_retries: int = 3,
     ) -> Agent:
-        """Create a verification agent.
-
-        The agent examines a (task, result) pair and must answer **yes** or
-        **no**.  The default system prompt is
-        :data:`~src.config.config.AGENT_VERIFY_SYSTEM_PROMPT`.
-
-        Args:
-            system_prompt:  Optional override for the default prompt.
-            tools:          Optional retrieval callables for fact-checking.
-            model_settings: Generation settings; defaults to
-                            :class:`~src.domain.value_object.chat_model_setting.ChatModelSettings`.
-            max_retries:    Validation-error retries.
-
-        Returns:
-            A configured :class:`Agent` of type :attr:`~src.domain.enums.AgentType.VERIFY`.
-        """
         return Agent(
             agent_type=AgentType.VERIFY,
             system_prompt=system_prompt or AGENT_VERIFY_SYSTEM_PROMPT,
@@ -166,25 +135,6 @@ class AgentFactory:
         model_settings: ChatModelSettings | None = None,
         max_retries: int = 3,
     ) -> Agent:
-        """Create a document-assistant agent.
-
-        The agent answers user questions about a document by invoking
-        retrieval tools as needed.  The default system prompt is
-        :data:`~src.config.config.AGENT_DOCUMENT_ASSISTANT_SYSTEM_PROMPT`.
-
-        Args:
-            system_prompt:  Optional override / enrichment of the default prompt
-                            (e.g. append the document name).
-            tools:          Retrieval callables (chunk search, summary fetch,
-                            etc.).
-            model_settings: Generation settings; defaults to
-                            :class:`~src.domain.value_object.chat_model_setting.ChatModelSettings`.
-            max_retries:    Validation-error retries.
-
-        Returns:
-            A configured :class:`Agent` of type
-            :attr:`~src.domain.enums.AgentType.DOCUMENT_ASSISTANT`.
-        """
         return Agent(
             agent_type=AgentType.DOCUMENT_ASSISTANT,
             system_prompt=system_prompt or AGENT_DOCUMENT_ASSISTANT_SYSTEM_PROMPT,
