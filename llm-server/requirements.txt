@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+dependency-injector
+langfuse
+openai
+anthropic
+mlx-lm
+pytest
+pytest-asyncio
+httpx
+python-dotenv

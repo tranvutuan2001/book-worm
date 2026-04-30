@@ -1,0 +1,24 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+mlx-lm = "*"
+fastapi = "*"
+uvicorn = "*"
+pydantic = "*"
+pydantic-settings = "*"
+dependency-injector = "*"
+langfuse = "*"
+openai = "*"
+anthropic = "*"
+pytest = "*"
+pytest-asyncio = "*"
+httpx = "*"
+python-dotenv = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.13"
