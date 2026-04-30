@@ -43,7 +43,7 @@ AnthropicProvider(LLMProvider): Uses the anthropic Python SDK.
 
 Error Mapping: Each provider must catch its specific errors (e.g., openai.RateLimitError or MLX memory overflows) and re-raise them as a custom Domain error (e.g., LLMGenerationException).
 
-### IV. Web Layer (/app/web/)
+### IV. API Layer (/app/api/)
 FastAPI endpoints. Fast, minimal, and completely ignorant of the underlying LLM provider.
 
 ## 3. Dependency Injection Configuration

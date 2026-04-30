@@ -23,7 +23,7 @@ A minimalist, strictly-typed LLM server using FastAPI, dependency-injector, and 
 
 3. Run the server:
    ```bash
-   uvicorn app.web.main:app --reload
+   uvicorn app.main:app --reload
    ```
 
 ## API Usage

@@ -10,20 +10,20 @@ class Container(containers.DeclarativeContainer):
     
     # Provider Selection Logic
     llm_provider = providers.Selector(
-        config.llm_backend,
+        config.llm.backend,
         openai=providers.Singleton(
             OpenAIProvider,
-            api_key=config.openai_api_key,
-            model=config.openai_model
+            api_key=config.llm.openai_key,
+            model=config.llm.openai_model
         ),
         anthropic=providers.Singleton(
             AnthropicProvider,
-            api_key=config.anthropic_api_key,
-            model=config.anthropic_model
+            api_key=config.llm.anthropic_key,
+            model=config.llm.anthropic_model
         ),
         mlx=providers.Singleton(
             MLXProvider,
-            model_path=config.mlx_model_path
+            model_path=config.llm.mlx_path
         )
     )
     
