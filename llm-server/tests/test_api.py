@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from app.main import app
+from main import app
 from app.containers import Container
 from unittest.mock import AsyncMock
 
@@ -26,3 +26,18 @@ async def test_generate_endpoint(client, mock_llm_provider):
         assert response.status_code == 200
         assert response.json() == {"content": "Mocked LLM Response"}
         mock_llm_provider.generate.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_embedding_endpoint(client, mock_embedding_provider):
+    # Override the container provider with the mock
+    with app.container.embedding_provider.override(mock_embedding_provider):
+        payload = {
+            "input": "Hello world"
+        }
+        response = client.post("/embeddings", json=payload)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "embedding" in data
+        assert data["embedding"] == [0.1, 0.2, 0.3]
+        mock_embedding_provider.embed.assert_called_once_with("Hello world")

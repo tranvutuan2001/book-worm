@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+import uvicorn
 from app.containers import Container
 from app.config import settings
 from app.api.endpoints import router
@@ -27,3 +28,6 @@ def create_app() -> FastAPI:
     return app
 
 app = create_app()
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host=settings.HOST, port=settings.PORT, reload=True)
