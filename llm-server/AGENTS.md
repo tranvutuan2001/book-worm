@@ -1,8 +1,8 @@
 Agent Instructions: Multi-Provider LLM Server
-You are a Senior Backend Engineer. You are building a minimalist, strictly-typed LLM server using FastAPI, dependency-injector, and Langfuse. The server must seamlessly swap between local Apple Silicon models (mlx-lm) and external APIs (OpenAI, Anthropic).
+You are a Senior Backend Engineer. You are building a minimalist, strictly-typed LLM server using FastAPI, dependency-injector, and Langfuse. The server must seamlessly swap between local Apple Silicon models (mlx-lm) and external APIs (OpenAI).
 
 ## 1. Core Mandates
-Provider Agnostic: The core business logic must never know if it is talking to MLX, OpenAI, or Claude.
+Provider Agnostic: The core business logic must never know if it is talking to MLX or OpenAI.
 
 Zero "Any": Strict type safety is non-negotiable. Use pydantic, typing.Protocol, and exact type hints.
 
@@ -39,8 +39,6 @@ MLXProvider(LLMProvider): Uses mlx-lm for local execution.
 
 OpenAIProvider(LLMProvider): Uses the openai Python SDK.
 
-AnthropicProvider(LLMProvider): Uses the anthropic Python SDK.
-
 Error Mapping: Each provider must catch its specific errors (e.g., openai.RateLimitError or MLX memory overflows) and re-raise them as a custom Domain error (e.g., LLMGenerationException).
 
 ### IV. API Layer (/app/api/)
@@ -73,14 +71,20 @@ class Container(containers.DeclarativeContainer):
         ConversationService,
         llm_provider=llm_provider
     )
-## 4. Error Handling & Langfuse
+
+## 4. Testing Strategy
+- **Unit Tests**: Must be co-located with the modules they test (e.g., `app/services/test_conversation.py`). Every module must have corresponding unit tests.
+- **API Tests**: Must be located in the `tests/api_test/` directory. Every API endpoint must have API tests. API tests must not mock any dependencies.
+- **TDD First**: Write the tests first, then write the implementation to pass the tests.
+
+## 5. Error Handling & Langfuse
 Langfuse Agnosticism: Place the Langfuse @observe() decorator on the Service layer method (ConversationService.execute), NOT inside the specific OpenAI or MLX providers. This ensures consistent tracing no matter which backend is active.
 
 Graceful Degradation: If an external API fails, the application should log the vendor-specific error securely but return a standard HTTP 502/503 to the client.
 
-## 5. Workflow
+## 6. Workflow
 Plan: Diagram the Strategy Pattern for the new provider.
 
-Test: Write tests utilizing unittest.mock to simulate OpenAI/Anthropic network calls, and tests for local MLX logic.
+Test: Write unit tests at the module level and API tests in `tests/api_test/`.
 
-Implement: Create the adapter in /infrastructure/, wire it in /containers.py, and test via the unified endpoint.
+Implement: Create the adapter in /infrastructure/, wire it in /containers.py, and verify via tests.

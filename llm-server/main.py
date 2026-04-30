@@ -12,8 +12,6 @@ def create_app() -> FastAPI:
             "backend": settings.LLM_BACKEND,
             "openai_key": settings.OPENAI_API_KEY,
             "openai_model": settings.OPENAI_MODEL,
-            "anthropic_key": settings.ANTHROPIC_API_KEY,
-            "anthropic_model": settings.ANTHROPIC_MODEL,
             "mlx_path": settings.MLX_MODEL_PATH,
         }
     })

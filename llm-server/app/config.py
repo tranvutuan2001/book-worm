@@ -2,13 +2,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
 class Settings(BaseSettings):
-    LLM_BACKEND: str = "mlx"  # openai, anthropic, mlx
+    LLM_BACKEND: str = "mlx"  # openai, mlx
     
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-4o"
-    
-    ANTHROPIC_API_KEY: Optional[str] = None
-    ANTHROPIC_MODEL: str = "claude-3-5-sonnet-20240620"
     
     MLX_MODEL_PATH: str = "models/chat/unsloth/gemma-4-E4B-it-UD-MLX-4bit"
     
