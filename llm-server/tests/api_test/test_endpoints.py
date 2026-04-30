@@ -1,8 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
 from main import app
-from app.containers import Container
-from unittest.mock import AsyncMock
 
 @pytest.fixture
 def client():
@@ -13,31 +11,30 @@ def test_health_check(client):
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
 
-@pytest.mark.asyncio
-async def test_generate_endpoint(client, mock_llm_provider):
-    # Override the container provider with the mock
-    with app.container.llm_provider.override(mock_llm_provider):
-        payload = {
-            "messages": [{"role": "user", "content": "Hello"}],
-            "max_tokens": 10
-        }
-        response = client.post("/generate", json=payload)
-        
-        assert response.status_code == 200
-        assert response.json() == {"content": "Mocked LLM Response"}
-        mock_llm_provider.generate.assert_called_once()
+def test_generate_endpoint(client):
+    payload = {
+        "messages": [{"role": "user", "content": "Say 'hello'"}],
+        "max_tokens": 10
+    }
+    response = client.post("/generate", json=payload)
+    
+    # Asserting 200 (Success) or 502 (Bad Gateway/Provider Error) 
+    # depending on environment configuration, but the goal is to not mock.
+    assert response.status_code == 200
+    data = response.json()
+    assert "content" in data
+    assert isinstance(data["content"], str)
+    assert len(data["content"]) > 0
 
-@pytest.mark.asyncio
-async def test_embedding_endpoint(client, mock_embedding_provider):
-    # Override the container provider with the mock
-    with app.container.embedding_provider.override(mock_embedding_provider):
-        payload = {
-            "input": "Hello world"
-        }
-        response = client.post("/embeddings", json=payload)
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert "embedding" in data
-        assert data["embedding"] == [0.1, 0.2, 0.3]
-        mock_embedding_provider.embed.assert_called_once_with("Hello world")
+def test_embedding_endpoint(client):
+    payload = {
+        "input": "Hello world"
+    }
+    response = client.post("/embeddings", json=payload)
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert "embedding" in data
+    assert isinstance(data["embedding"], list)
+    assert len(data["embedding"]) > 0
+    assert all(isinstance(x, float) for x in data["embedding"])

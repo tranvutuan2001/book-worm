@@ -1,6 +1,7 @@
 from dependency_injector import containers, providers
 from app.infrastructure.openai_adapter import OpenAIProvider
 from app.infrastructure.mlx_adapter import MLXProvider
+from app.infrastructure.mock_adapter import MockProvider
 from app.services.conversation import ConversationService
 from app.services.embedding import EmbeddingService
 from app.config import settings
@@ -19,7 +20,8 @@ class Container(containers.DeclarativeContainer):
         mlx=providers.Singleton(
             MLXProvider,
             model_path=config.llm.mlx_path
-        )
+        ),
+        mock=providers.Singleton(MockProvider)
     )
     
     # Provider Selection Logic for Embeddings
@@ -33,7 +35,8 @@ class Container(containers.DeclarativeContainer):
         mlx=providers.Singleton(
             MLXProvider,
             model_path=config.llm.mlx_path
-        )
+        ),
+        mock=providers.Singleton(MockProvider)
     )
     
     conversation_service = providers.Factory(
