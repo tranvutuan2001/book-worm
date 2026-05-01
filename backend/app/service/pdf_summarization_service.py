@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any
 import re
 import jsonschema
+from langfuse import observe
 
 from app.config.config import (
     DATA_DIR,
@@ -115,6 +116,7 @@ class PDFSummarizationService:
         self._schema: dict[str, Any] | None = None  # loaded lazily
         self._example: list[Any] | None = None  # loaded lazily
 
+    @observe()
     async def summarize(
         self,
         document_name: str,

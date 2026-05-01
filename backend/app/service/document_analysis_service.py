@@ -10,6 +10,7 @@ import logging
 import time
 from pathlib import Path
 from typing import List, Optional
+from langfuse import observe
 
 import pdfplumber
 
@@ -146,6 +147,7 @@ class DocumentAnalysisService:
     # Public entry point
     # ------------------------------------------------------------------
 
+    @observe()
     async def pre_analyze_document(
         self,
         pdf_path: str,

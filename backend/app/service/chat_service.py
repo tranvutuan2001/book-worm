@@ -11,6 +11,7 @@ to HTTP responses by the API route layer.
 import logging
 import time
 import traceback
+from langfuse import observe
 from app.core.exceptions import DocumentNotFoundError, LLMError
 from app.config.config import DATA_DIR
 from app.domain.entity.agent import AgentFactory
@@ -67,6 +68,7 @@ class ChatService:
     # Public API
     # ------------------------------------------------------------------
 
+    @observe()
     async def ask(self, conversation: Conversation) -> str:
         """Answer the user's latest question about a document.
 
