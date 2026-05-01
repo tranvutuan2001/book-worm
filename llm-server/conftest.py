@@ -1,7 +1,8 @@
 import os
 import pytest
 from unittest.mock import AsyncMock
-from app.domain.protocols import LLMProvider, EmbeddingProvider
+from app.domain.llm_provider import LLMProvider
+from app.domain.embedding_provider import EmbeddingProvider
 
 @pytest.fixture
 def mock_llm_provider():

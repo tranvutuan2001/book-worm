@@ -1,7 +1,7 @@
 from openai import AsyncOpenAI, OpenAIError
 from typing import List
-from app.domain.protocols import EmbeddingProvider
-from app.domain.exceptions import LLMGenerationException
+from app.domain.embedding_provider import EmbeddingProvider
+from app.domain.llm_exception import LLMGenerationException
 
 class OpenAIEmbeddingProvider(EmbeddingProvider):
     """OpenAI-based implementation of the EmbeddingProvider."""

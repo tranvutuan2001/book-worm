@@ -2,8 +2,9 @@ import pytest
 from unittest.mock import MagicMock, patch
 from app.infrastructure.mlx_llm_provider import MLXLLMProvider
 from app.infrastructure.mlx_model import MLXModel
-from app.domain.models import Message, Role
-from app.domain.exceptions import LLMGenerationException
+from app.domain.message import Message
+from app.domain.message_role import MessageRole
+from app.domain.llm_exception import LLMGenerationException
 
 @pytest.fixture
 def mock_mlx_model():
@@ -20,7 +21,7 @@ async def test_mlx_llm_provider_generate(mock_mlx_model):
         mock_mlx_lm.generate.return_value = "MLX Response"
         
         provider = MLXLLMProvider(mlx_model=mlx_model)
-        messages = [Message(role=Role.USER, content="Hello")]
+        messages = [Message(role=MessageRole.USER, content="Hello")]
         
         response = await provider.generate(messages, max_tokens=10)
         
@@ -35,7 +36,7 @@ async def test_mlx_llm_provider_error(mock_mlx_model):
         mock_mlx_lm.generate.side_effect = Exception("MLX Error")
         
         provider = MLXLLMProvider(mlx_model=mlx_model)
-        messages = [Message(role=Role.USER, content="Hello")]
+        messages = [Message(role=MessageRole.USER, content="Hello")]
         
         with pytest.raises(LLMGenerationException) as excinfo:
             await provider.generate(messages, max_tokens=10)

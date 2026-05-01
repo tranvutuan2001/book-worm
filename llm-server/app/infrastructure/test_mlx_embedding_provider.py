@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from app.infrastructure.mlx_embedding_provider import MLXEmbeddingProvider
 from app.infrastructure.mlx_model import MLXModel
-from app.domain.exceptions import LLMGenerationException
+from app.domain.llm_exception import LLMGenerationException
 
 @pytest.fixture
 def mock_mlx_model():

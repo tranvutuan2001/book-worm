@@ -1,11 +1,12 @@
 import pytest
 from app.services.conversation import ConversationService
-from app.domain.models import Message, Role
+from app.domain.message import Message
+from app.domain.message_role import MessageRole
 
 @pytest.mark.asyncio
 async def test_conversation_service_execution(mock_llm_provider):
     service = ConversationService(llm_provider=mock_llm_provider)
-    messages = [Message(role=Role.USER, content="Hello")]
+    messages = [Message(role=MessageRole.USER, content="Hello")]
     
     response = await service.execute(messages, max_tokens=10)
     

@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
-from app.domain.models import LLMBackend
+from app.domain.llm_backend import LLMBackend
 
 class Settings(BaseSettings):
     LLM_BACKEND: LLMBackend

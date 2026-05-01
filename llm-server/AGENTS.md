@@ -20,17 +20,40 @@ Business-Centric Naming: Always use clear names for classes, attributes, and fun
 
 ## 2. Four-Layer Architecture & Provider Strategy
 ### I. Domain Layer (/app/domain/)
-Define the universal Message and CompletionRequest Pydantic models.
+The **Domain Layer** is the heart of the software. It contains the business logic, rules, and core data structures. It must be completely isolated from external concerns like databases, APIs, or frameworks (e.g., FastAPI, OpenAI SDK).
 
-Crucial: Define the LLMProvider Protocol:
+#### 1. Core Concepts
+- **Entities**: Objects that have a distinct identity that persists through different states (e.g., a `ChatSession` with a unique ID).
+- **Value Objects**: Objects that have no conceptual identity and are defined entirely by their attributes. They are immutable and represent a descriptive aspect of the domain (e.g., a `Message` or `ModelParameters`).
+- **Protocols (Interfaces)**: These define the "contracts" that the Infrastructure layer must fulfill. The domain dictates *what* it needs, not *how* it is implemented.
 
-Python
+#### 2. Example: Domain Models & Protocols
+
+```python
+# app/domain/models.py
+from pydantic import BaseModel, Field
+from typing import List
+from uuid import UUID
+
+class Message(BaseModel): # Value Object
+    role: str
+    content: str
+
+class ChatSession(BaseModel): # Entity
+    id: UUID
+    messages: List[Message] = Field(default_factory=list)
+    
+    def append_message(self, message: Message) -> None:
+        self.messages.append(message)
+
+# app/domain/protocols.py
 from typing import Protocol
-from app.domain.models import Message
 
 class LLMProvider(Protocol):
-    async def generate(self, messages: list[Message], max_tokens: int) -> str:
+    async def generate(self, messages: List[Message], max_tokens: int) -> str:
+        """Contract for generating text from an LLM."""
         ...
+```
 ### II. Services / Use Case Layer (/app/services/)
 Contains the ConversationService.
 

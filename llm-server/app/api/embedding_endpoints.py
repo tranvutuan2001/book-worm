@@ -1,23 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException
 from dependency_injector.wiring import inject, Provide
 from app.containers import Container
-from app.domain.models import EmbeddingRequest, EmbeddingResponse
-from app.domain.exceptions import LLMGenerationException
+from app.domain.embedding_context import EmbeddingContext
+from app.domain.text_embedding import TextEmbedding
+from app.domain.llm_exception import LLMGenerationException
 from app.services.embedding import EmbeddingService
 from app.config import settings
 
 router = APIRouter()
 
-@router.post("/embeddings", response_model=EmbeddingResponse)
+@router.post("/embeddings", response_model=TextEmbedding)
 @inject
 async def embed_text(
-    request: EmbeddingRequest,
+    request: EmbeddingContext,
     service: EmbeddingService = Depends(Provide[Container.embedding_service])
 ):
     """Endpoint for generating text embeddings using the configured provider."""
     try:
-        embedding = await service.execute(request.input)
-        return EmbeddingResponse(embedding=embedding, model=request.model or settings.LLM_BACKEND)
+        embedding = await service.execute(request.input_text)
+        return TextEmbedding(embedding=embedding, model=request.model_name or settings.LLM_BACKEND)
     except LLMGenerationException as e:
         raise HTTPException(status_code=502, detail=str(e))
     except Exception as e:

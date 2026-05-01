@@ -1,8 +1,8 @@
 import mlx_lm
 from typing import List
-from app.domain.models import Message
-from app.domain.protocols import LLMProvider
-from app.domain.exceptions import LLMGenerationException
+from app.domain.message import Message
+from app.domain.llm_provider import LLMProvider
+from app.domain.llm_exception import LLMGenerationException
 from app.infrastructure.mlx_model import MLXModel
 
 class MLXLLMProvider(LLMProvider):

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from app.infrastructure.openai_embedding_provider import OpenAIEmbeddingProvider
-from app.domain.exceptions import LLMGenerationException
+from app.domain.llm_exception import LLMGenerationException
 from openai import OpenAIError
 
 @pytest.mark.asyncio
