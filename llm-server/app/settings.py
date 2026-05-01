@@ -6,7 +6,6 @@ class Settings(BaseSettings):
 
     OPENAI_API_KEY: str | None = None
     OPENAI_MODEL: str | None = None
-    MLX_MODEL_PATH: str | None = None
     MLX_CHAT_MODEL_PATH: str | None = None
     MLX_EMBEDDING_MODEL_PATH: str | None = None
     
