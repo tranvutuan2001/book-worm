@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from dependency_injector.wiring import inject, Provide
-from app.containers import Container
+from app.container import Container
 from app.domain.value_objects.chat_context import ChatContext
 from app.domain.exceptions.llm_exception import LLMGenerationException
-from app.services.conversation import ConversationService
+from app.services.text_generation_service import TextGenerationService
 
 router = APIRouter()
 
@@ -11,7 +11,7 @@ router = APIRouter()
 @inject
 async def generate_completion(
     request: ChatContext,
-    service: ConversationService = Depends(Provide[Container.conversation_service])
+    service: TextGenerationService = Depends(Provide[Container.text_generation_service])
 ) -> dict[str, object]:
     """Endpoint for generating text completions using the configured LLM provider."""
     try:

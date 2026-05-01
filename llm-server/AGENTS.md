@@ -94,8 +94,8 @@ class Container(containers.DeclarativeContainer):
         openai=providers.Factory(OpenAIProvider, api_key=config.llm.openai_key),
     )
     
-    conversation_service = providers.Factory(
-        ConversationService,
+    text_generation_service = providers.Factory(
+        TextGenerationService,
         llm_provider=llm_provider
     )
 
@@ -138,7 +138,7 @@ Prioritize domain language over technical jargon.
 
 *** Good Example:**
 ```python
-class ConversationService:
+class TextGenerationService:
     async def brainstorm_ideas(self, topic: str) -> list[Idea]: ...
     
 class PurchaseOrder:

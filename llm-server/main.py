@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 import uvicorn
-from app.containers import Container
-from app.config import settings
+from app.container import Container
+from app.settings import settings
 from app.api.chat_endpoints import router as chat_router
 from app.api.embedding_endpoints import router as embedding_router
 from app.api.health_endpoints import router as health_router

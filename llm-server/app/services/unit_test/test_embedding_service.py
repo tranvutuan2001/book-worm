@@ -1,5 +1,5 @@
 import pytest
-from app.services.embedding import EmbeddingService
+from app.services.embedding_service import EmbeddingService
 
 @pytest.mark.asyncio
 async def test_embedding_service_execution(mock_embedding_provider):

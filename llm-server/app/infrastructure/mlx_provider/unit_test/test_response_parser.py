@@ -1,5 +1,5 @@
 import pytest
-from app.infrastructure.mlx_provider.response_parser import MLXResponseParser
+from app.infrastructure.mlx_provider.mlx_response_parser import MLXResponseParser
 
 def test_strip_thoughts():
     # Test DeepSeek/Qwen style

@@ -1,7 +1,7 @@
 import mlx.core as mx
 from app.domain.protocols.embedding_provider import EmbeddingProvider
 from app.domain.exceptions.llm_exception import LLMGenerationException
-from app.infrastructure.mlx_provider.model_loader import MLXModel
+from app.infrastructure.mlx_provider.mlx_model import MLXModel
 
 class MLXEmbeddingProvider(EmbeddingProvider):
     """MLX-based implementation of the EmbeddingProvider."""

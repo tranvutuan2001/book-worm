@@ -3,7 +3,7 @@ from app.domain.value_objects.message import Message, ToolCall, ToolCallFunction
 from app.domain.value_objects.message_role import MessageRole
 from app.domain.protocols.llm_provider import LLMProvider
 from app.domain.exceptions.llm_exception import LLMGenerationException
-from app.infrastructure.mlx_provider.model_loader import MLXModel
+from app.infrastructure.mlx_provider.mlx_model import MLXModel
 
 class MLXLLMProvider(LLMProvider):
     """MLX-based implementation of the LLMProvider."""
@@ -51,7 +51,7 @@ class MLXLLMProvider(LLMProvider):
                 max_tokens=max_tokens,
                 verbose=False
             )
-            from app.infrastructure.mlx_provider.response_parser import MLXResponseParser
+            from app.infrastructure.mlx_provider.mlx_response_parser import MLXResponseParser
             clean_content, tool_calls_data = MLXResponseParser.parse(response)
             
             domain_tool_calls = None

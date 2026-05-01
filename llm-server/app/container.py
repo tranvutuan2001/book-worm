@@ -1,13 +1,13 @@
 from dependency_injector import containers, providers
 from openai import AsyncOpenAI
-from app.infrastructure.openai_provider.llm_provider import OpenAILLMProvider
-from app.infrastructure.openai_provider.embedding_provider import OpenAIEmbeddingProvider
-from app.infrastructure.mlx_provider.model_loader import MLXModel
-from app.infrastructure.mlx_provider.llm_provider import MLXLLMProvider
-from app.infrastructure.mlx_provider.embedding_provider import MLXEmbeddingProvider
-from app.services.conversation import ConversationService
-from app.services.embedding import EmbeddingService
-from app.config import settings
+from app.infrastructure.openai_provider.openai_llm_provider import OpenAILLMProvider
+from app.infrastructure.openai_provider.openai_embedding_provider import OpenAIEmbeddingProvider
+from app.infrastructure.mlx_provider.mlx_model import MLXModel
+from app.infrastructure.mlx_provider.mlx_llm_provider import MLXLLMProvider
+from app.infrastructure.mlx_provider.mlx_embedding_provider import MLXEmbeddingProvider
+from app.services.text_generation_service import TextGenerationService
+from app.services.embedding_service import EmbeddingService
+from app.settings import settings
 
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
@@ -55,8 +55,8 @@ class Container(containers.DeclarativeContainer):
         )
     )
     
-    conversation_service = providers.Factory(
-        ConversationService,
+    text_generation_service = providers.Factory(
+        TextGenerationService,
         llm_provider=llm_provider
     )
 

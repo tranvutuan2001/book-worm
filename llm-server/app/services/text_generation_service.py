@@ -1,7 +1,7 @@
 from app.domain.protocols.llm_provider import LLMProvider
 from app.domain.value_objects.message import Message
 
-class ConversationService:
+class TextGenerationService:
     def __init__(self, llm_provider: LLMProvider):
         self.llm_provider = llm_provider
 

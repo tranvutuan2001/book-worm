@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from dependency_injector.wiring import inject, Provide
-from app.containers import Container
+from app.container import Container
 from app.domain.value_objects.embedding_context import EmbeddingContext
 from app.domain.value_objects.text_embedding import TextEmbedding
 from app.domain.exceptions.llm_exception import LLMGenerationException
-from app.services.embedding import EmbeddingService
-from app.config import settings
+from app.services.embedding_service import EmbeddingService
+from app.settings import settings
 
 router = APIRouter()
 

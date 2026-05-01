@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from app.infrastructure.openai_provider.llm_provider import OpenAILLMProvider
+from app.infrastructure.openai_provider.openai_llm_provider import OpenAILLMProvider
 from app.domain.value_objects.message import Message
 from app.domain.value_objects.message_role import MessageRole
 from app.domain.exceptions.llm_exception import LLMGenerationException

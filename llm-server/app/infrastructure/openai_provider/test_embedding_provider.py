@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from app.infrastructure.openai_provider.embedding_provider import OpenAIEmbeddingProvider
+from app.infrastructure.openai_provider.openai_embedding_provider import OpenAIEmbeddingProvider
 from app.domain.exceptions.llm_exception import LLMGenerationException
 from openai import OpenAIError
 
