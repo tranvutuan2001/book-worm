@@ -1,5 +1,5 @@
 from typing import Protocol, List
-from app.domain.message import Message
+from app.domain.value_objects.message import Message
 
 class LLMProvider(Protocol):
     """Protocol defining the contract for LLM text generation."""

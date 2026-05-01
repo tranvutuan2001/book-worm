@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List
-from app.domain.message import Message
+from app.domain.value_objects.message import Message
 
 class ChatContext(BaseModel):
     """Value Object representing the input context for a chat generation request."""

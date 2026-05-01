@@ -1,6 +1,6 @@
 from langfuse import observe
-from app.domain.llm_provider import LLMProvider
-from app.domain.message import Message
+from app.domain.protocols.llm_provider import LLMProvider
+from app.domain.value_objects.message import Message
 from typing import List
 
 class ConversationService:

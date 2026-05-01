@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from app.domain.message_role import MessageRole
+from app.domain.value_objects.message_role import MessageRole
 
 class Message(BaseModel):
     """Value Object representing a single message in a conversation."""

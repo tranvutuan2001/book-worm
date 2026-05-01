@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List
 from uuid import UUID, uuid4
-from app.domain.message import Message
+from app.domain.value_objects.message import Message
 
 class ChatSession(BaseModel):
     """Entity representing a persistent chat session with a unique identity."""

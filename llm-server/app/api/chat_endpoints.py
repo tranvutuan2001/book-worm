@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from dependency_injector.wiring import inject, Provide
 from app.containers import Container
-from app.domain.chat_context import ChatContext
-from app.domain.llm_exception import LLMGenerationException
+from app.domain.value_objects.chat_context import ChatContext
+from app.domain.exceptions.llm_exception import LLMGenerationException
 from app.services.conversation import ConversationService
 
 router = APIRouter()

@@ -1,10 +1,10 @@
 from dependency_injector import containers, providers
 from openai import AsyncOpenAI
-from app.infrastructure.openai_llm_provider import OpenAILLMProvider
-from app.infrastructure.openai_embedding_provider import OpenAIEmbeddingProvider
-from app.infrastructure.mlx_model import MLXModel
-from app.infrastructure.mlx_llm_provider import MLXLLMProvider
-from app.infrastructure.mlx_embedding_provider import MLXEmbeddingProvider
+from app.infrastructure.openai_provider.llm_provider import OpenAILLMProvider
+from app.infrastructure.openai_provider.embedding_provider import OpenAIEmbeddingProvider
+from app.infrastructure.mlx_provider.model_loader import MLXModel
+from app.infrastructure.mlx_provider.llm_provider import MLXLLMProvider
+from app.infrastructure.mlx_provider.embedding_provider import MLXEmbeddingProvider
 from app.services.conversation import ConversationService
 from app.services.embedding import EmbeddingService
 from app.config import settings

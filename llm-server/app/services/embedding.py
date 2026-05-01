@@ -1,5 +1,5 @@
 from typing import List
-from app.domain.embedding_provider import EmbeddingProvider
+from app.domain.protocols.embedding_provider import EmbeddingProvider
 from langfuse import observe
 
 class EmbeddingService:

@@ -1,7 +1,7 @@
 import pytest
 from app.services.conversation import ConversationService
-from app.domain.message import Message
-from app.domain.message_role import MessageRole
+from app.domain.value_objects.message import Message
+from app.domain.value_objects.message_role import MessageRole
 
 @pytest.mark.asyncio
 async def test_conversation_service_execution(mock_llm_provider):

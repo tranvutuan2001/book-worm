@@ -1,9 +1,9 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from app.infrastructure.openai_llm_provider import OpenAILLMProvider
-from app.domain.message import Message
-from app.domain.message_role import MessageRole
-from app.domain.llm_exception import LLMGenerationException
+from app.infrastructure.openai_provider.llm_provider import OpenAILLMProvider
+from app.domain.value_objects.message import Message
+from app.domain.value_objects.message_role import MessageRole
+from app.domain.exceptions.llm_exception import LLMGenerationException
 from openai import OpenAIError
 
 @pytest.mark.asyncio

@@ -1,8 +1,8 @@
 from openai import AsyncOpenAI, OpenAIError
 from typing import List
-from app.domain.message import Message
-from app.domain.llm_provider import LLMProvider
-from app.domain.llm_exception import LLMGenerationException
+from app.domain.value_objects.message import Message
+from app.domain.protocols.llm_provider import LLMProvider
+from app.domain.exceptions.llm_exception import LLMGenerationException
 
 class OpenAILLMProvider(LLMProvider):
     """OpenAI-based implementation of the LLMProvider."""
