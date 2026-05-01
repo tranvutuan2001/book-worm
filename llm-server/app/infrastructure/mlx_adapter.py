@@ -6,11 +6,15 @@ from app.domain.protocols import LLMProvider, EmbeddingProvider
 from app.domain.exceptions import LLMGenerationException
 import asyncio
 
-class MLXProvider(LLMProvider, EmbeddingProvider):
+class MLXModel:
+    """Shared resource for MLX model and tokenizer."""
     def __init__(self, model_path: str):
         self.model_path = model_path
-        # Model loading can be deferred or done here
         self.model, self.tokenizer = mlx_lm.load(model_path)
+
+class MLXLLMProvider(LLMProvider):
+    def __init__(self, mlx_model: MLXModel):
+        self.mlx_model = mlx_model
 
     async def generate(self, messages: List[Message], max_tokens: int) -> str:
         try:
@@ -20,8 +24,8 @@ class MLXProvider(LLMProvider, EmbeddingProvider):
             
             # Running directly to avoid 'no Stream' errors with asyncio.to_thread
             response = mlx_lm.generate(
-                model=self.model,
-                tokenizer=self.tokenizer,
+                model=self.mlx_model.model,
+                tokenizer=self.mlx_model.tokenizer,
                 prompt=prompt,
                 max_tokens=max_tokens,
                 verbose=False
@@ -34,25 +38,25 @@ class MLXProvider(LLMProvider, EmbeddingProvider):
                 original_error=e
             )
 
+class MLXEmbeddingProvider(EmbeddingProvider):
+    def __init__(self, mlx_model: MLXModel):
+        self.mlx_model = mlx_model
+
     async def embed(self, text: str) -> List[float]:
         try:
             # Tokenize text
-            tokens = self.tokenizer.encode(text)
+            tokens = self.mlx_model.tokenizer.encode(text)
             tokens_mx = mx.array([tokens])
             
             # Get embeddings from the model
-            # Note: This is a simplified implementation that extracts the last hidden state
-            # for the last token. This might vary by model architecture.
             def _get_embedding():
-                output = self.model(tokens_mx)
-                # output is typically a tuple or a tensor depending on the model
+                output = self.mlx_model.model(tokens_mx)
                 if isinstance(output, tuple):
                     hidden_states = output[0]
                 else:
                     hidden_states = output
                 
-                # Take the last token's hidden state and average across sequence or take last
-                # For simplicity, we take the mean of all token embeddings
+                # Take the mean of all token embeddings
                 embedding = mx.mean(hidden_states, axis=1)
                 return embedding.tolist()[0]
 

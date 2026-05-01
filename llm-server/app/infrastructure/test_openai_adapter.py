@@ -1,11 +1,11 @@
 import pytest
 from unittest.mock import AsyncMock, patch
-from app.infrastructure.openai_adapter import OpenAIProvider
+from app.infrastructure.openai_adapter import OpenAILLMProvider, OpenAIEmbeddingProvider
 from app.domain.models import Message, Role
 from app.domain.exceptions import LLMGenerationException
 
 @pytest.mark.asyncio
-async def test_openai_provider_generate():
+async def test_openai_llm_provider_generate():
     with patch("app.infrastructure.openai_adapter.AsyncOpenAI") as mock_openai:
         mock_client = mock_openai.return_value
         mock_client.chat.completions.create = AsyncMock()
@@ -13,7 +13,7 @@ async def test_openai_provider_generate():
             AsyncMock(message=AsyncMock(content="OpenAI Response"))
         ]
         
-        provider = OpenAIProvider(api_key="test-key")
+        provider = OpenAILLMProvider(client=mock_client)
         messages = [Message(role=Role.USER, content="Hello")]
         
         response = await provider.generate(messages, max_tokens=10)
@@ -22,7 +22,7 @@ async def test_openai_provider_generate():
         mock_client.chat.completions.create.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_openai_provider_embed():
+async def test_openai_embedding_provider_embed():
     with patch("app.infrastructure.openai_adapter.AsyncOpenAI") as mock_openai:
         mock_client = mock_openai.return_value
         mock_client.embeddings.create = AsyncMock()
@@ -30,20 +30,20 @@ async def test_openai_provider_embed():
             AsyncMock(embedding=[0.1, 0.2, 0.3])
         ]
         
-        provider = OpenAIProvider(api_key="test-key")
+        provider = OpenAIEmbeddingProvider(client=mock_client)
         response = await provider.embed("Hello")
         
         assert response == [0.1, 0.2, 0.3]
         mock_client.embeddings.create.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_openai_provider_error():
+async def test_openai_llm_provider_error():
     with patch("app.infrastructure.openai_adapter.AsyncOpenAI") as mock_openai:
         from openai import OpenAIError
         mock_client = mock_openai.return_value
         mock_client.chat.completions.create = AsyncMock(side_effect=OpenAIError("API Error"))
         
-        provider = OpenAIProvider(api_key="test-key")
+        provider = OpenAILLMProvider(client=mock_client)
         messages = [Message(role=Role.USER, content="Hello")]
         
         with pytest.raises(LLMGenerationException) as excinfo:

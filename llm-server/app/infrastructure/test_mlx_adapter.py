@@ -1,19 +1,22 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from app.infrastructure.mlx_adapter import MLXProvider
+from app.infrastructure.mlx_adapter import MLXLLMProvider, MLXEmbeddingProvider, MLXModel
 from app.domain.models import Message, Role
 from app.domain.exceptions import LLMGenerationException
 
 @pytest.fixture
-def mock_mlx_lm():
-    with patch("app.infrastructure.mlx_adapter.mlx_lm") as mock:
-        mock.load.return_value = (MagicMock(), MagicMock())
-        mock.generate.return_value = "MLX Response"
-        yield mock
+def mock_mlx_model():
+    with patch("app.infrastructure.mlx_adapter.mlx_lm") as mock_mlx_lm:
+        mock_mlx_lm.load.return_value = (MagicMock(), MagicMock())
+        model = MLXModel(model_path="test-path")
+        yield model, mock_mlx_lm
 
 @pytest.mark.asyncio
-async def test_mlx_provider_generate(mock_mlx_lm):
-    provider = MLXProvider(model_path="test-path")
+async def test_mlx_llm_provider_generate(mock_mlx_model):
+    mlx_model, mock_mlx_lm = mock_mlx_model
+    mock_mlx_lm.generate.return_value = "MLX Response"
+    
+    provider = MLXLLMProvider(mlx_model=mlx_model)
     messages = [Message(role=Role.USER, content="Hello")]
     
     response = await provider.generate(messages, max_tokens=10)
@@ -22,10 +25,11 @@ async def test_mlx_provider_generate(mock_mlx_lm):
     mock_mlx_lm.generate.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_mlx_provider_error(mock_mlx_lm):
+async def test_mlx_llm_provider_error(mock_mlx_model):
+    mlx_model, mock_mlx_lm = mock_mlx_model
     mock_mlx_lm.generate.side_effect = Exception("MLX Error")
     
-    provider = MLXProvider(model_path="test-path")
+    provider = MLXLLMProvider(mlx_model=mlx_model)
     messages = [Message(role=Role.USER, content="Hello")]
     
     with pytest.raises(LLMGenerationException) as excinfo:

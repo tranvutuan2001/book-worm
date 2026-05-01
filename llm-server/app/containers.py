@@ -1,6 +1,7 @@
 from dependency_injector import containers, providers
-from app.infrastructure.openai_adapter import OpenAIProvider
-from app.infrastructure.mlx_adapter import MLXProvider
+from openai import AsyncOpenAI
+from app.infrastructure.openai_adapter import OpenAILLMProvider, OpenAIEmbeddingProvider
+from app.infrastructure.mlx_adapter import MLXModel, MLXLLMProvider, MLXEmbeddingProvider
 from app.services.conversation import ConversationService
 from app.services.embedding import EmbeddingService
 from app.domain.models import LLMBackend
@@ -9,17 +10,28 @@ from app.config import settings
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
     
+    # Common Resources
+    openai_client = providers.Singleton(
+        AsyncOpenAI,
+        api_key=config.llm.openai_key
+    )
+    
+    mlx_model = providers.Singleton(
+        MLXModel,
+        model_path=config.llm.mlx_path
+    )
+    
     # Provider Selection Logic for LLM
     llm_provider = providers.Selector(
         config.llm.backend,
         openai=providers.Singleton(
-            OpenAIProvider,
-            api_key=config.llm.openai_key,
+            OpenAILLMProvider,
+            client=openai_client,
             model=config.llm.openai_model
         ),
         mlx=providers.Singleton(
-            MLXProvider,
-            model_path=config.llm.mlx_path
+            MLXLLMProvider,
+            mlx_model=mlx_model
         )
     )
     
@@ -27,13 +39,12 @@ class Container(containers.DeclarativeContainer):
     embedding_provider = providers.Selector(
         config.llm.backend,
         openai=providers.Singleton(
-            OpenAIProvider,
-            api_key=config.llm.openai_key,
-            model=config.llm.openai_model
+            OpenAIEmbeddingProvider,
+            client=openai_client
         ),
         mlx=providers.Singleton(
-            MLXProvider,
-            model_path=config.llm.mlx_path
+            MLXEmbeddingProvider,
+            mlx_model=mlx_model
         )
     )
     
