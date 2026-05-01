@@ -1,5 +1,5 @@
 Agent Instructions: Multi-Provider LLM Server
-You are a Senior Backend Engineer. You are building a minimalist, strictly-typed LLM server using FastAPI, dependency-injector, and Langfuse. The server must seamlessly swap between local Apple Silicon models (mlx-lm) and external APIs (OpenAI).
+You are a Senior Backend Engineer. You are building a minimalist, strictly-typed LLM server using FastAPI and dependency-injector. The server must seamlessly swap between local Apple Silicon models (mlx-lm) and external APIs (OpenAI).
 
 ## 1. Core Mandates
 Provider Agnostic: The core business logic must never know if it is talking to MLX or OpenAI.
@@ -55,7 +55,7 @@ class LLMProvider(Protocol):
         ...
 ```
 ### II. Services / Use Case Layer (/app/services/)
-Contains the business logic and use cases of the application. This layer ONLY interacts with the protocols defined in domain layer. It is wrapped in Langfuse's @observe() decorator to trace the entire workflow regardless of the underlying model.
+Contains the business logic and use cases of the application. This layer ONLY interacts with the protocols defined in domain layer.
 
 ### III. Infrastructure Layer (/app/infrastructure/)
 Contains the concrete adapters for the Domain Protocol.
@@ -104,9 +104,7 @@ class Container(containers.DeclarativeContainer):
 - **API Tests**: Must be located in the `tests/api_test/` directory. Every API endpoint must have API tests. API tests must not mock any dependencies.
 - **TDD First**: Write the tests first, then write the implementation to pass the tests.
 
-## 5. Error Handling & Langfuse
-Langfuse Agnosticism: Place the Langfuse @observe() decorator on the Service layer method (ConversationService.execute), NOT inside the specific OpenAI or MLX providers. This ensures consistent tracing no matter which backend is active.
-
+## 5. Error Handling
 Graceful Degradation: If an external API fails, the application should log the vendor-specific error securely but return a standard HTTP 502/503 to the client.
 
 ## 6. Code Style & File Structure

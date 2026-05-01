@@ -10,10 +10,6 @@ class Settings(BaseSettings):
     MLX_CHAT_MODEL_PATH: str | None = None
     MLX_EMBEDDING_MODEL_PATH: str | None = None
     
-    LANGFUSE_PUBLIC_KEY: str | None
-    LANGFUSE_SECRET_KEY: str | None
-    LANGFUSE_HOST: str
-
     HOST: str
     PORT: int
 

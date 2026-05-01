@@ -1,12 +1,11 @@
 # Multi-Provider LLM Server
 
-A minimalist, strictly-typed LLM server using FastAPI, dependency-injector, and Langfuse.
+A minimalist, strictly-typed LLM server using FastAPI and dependency-injector.
 
 ## Features
 - **Provider Agnostic**: Swap between OpenAI, Anthropic, and local MLX models via configuration.
 - **Strictly Typed**: Full Pydantic and Python Protocol support.
 - **Formal DI**: Managed by `dependency-injector`.
-- **Observability**: Integrated with Langfuse at the service layer.
 
 ## Setup
 
