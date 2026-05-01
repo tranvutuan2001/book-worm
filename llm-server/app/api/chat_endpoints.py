@@ -15,8 +15,12 @@ async def generate_completion(
 ):
     """Endpoint for generating text completions using the configured LLM provider."""
     try:
-        content = await service.execute(request.messages, request.max_tokens)
-        return {"content": content}
+        response_message = await service.execute(
+            messages=request.messages, 
+            max_tokens=request.max_tokens,
+            tools=request.tools
+        )
+        return response_message.model_dump(exclude_none=True)
     except LLMGenerationException as e:
         raise HTTPException(status_code=502, detail=str(e))
     except Exception as e:

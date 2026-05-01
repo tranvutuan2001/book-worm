@@ -1,6 +1,7 @@
 from openai import AsyncOpenAI, OpenAIError
-from typing import List
-from app.domain.value_objects.message import Message
+from typing import List, Optional, Dict, Any
+from app.domain.value_objects.message import Message, ToolCall, ToolCallFunction
+from app.domain.value_objects.message_role import MessageRole
 from app.domain.protocols.llm_provider import LLMProvider
 from app.domain.exceptions.llm_exception import LLMGenerationException
 
@@ -11,18 +12,52 @@ class OpenAILLMProvider(LLMProvider):
         self.client = client
         self.model = model
 
-    async def generate(self, messages: List[Message], max_tokens: int) -> str:
+    async def generate(self, messages: List[Message], max_tokens: int, tools: Optional[List[Dict[str, Any]]] = None) -> Message:
         try:
-            formatted_messages = [
-                {"role": m.role.value, "content": m.content} 
-                for m in messages
-            ]
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=formatted_messages,
-                max_tokens=max_tokens
+            formatted_messages = []
+            for m in messages:
+                msg_dict = {"role": m.role.value}
+                if m.content is not None:
+                    msg_dict["content"] = m.content
+                if m.tool_calls:
+                    msg_dict["tool_calls"] = [tc.model_dump() for tc in m.tool_calls]
+                if m.tool_call_id:
+                    msg_dict["tool_call_id"] = m.tool_call_id
+                if m.name:
+                    msg_dict["name"] = m.name
+                formatted_messages.append(msg_dict)
+            
+            kwargs = {
+                "model": self.model,
+                "messages": formatted_messages,
+                "max_tokens": max_tokens
+            }
+            if tools:
+                kwargs["tools"] = tools
+
+            response = await self.client.chat.completions.create(**kwargs)
+            
+            response_msg = response.choices[0].message
+            
+            domain_tool_calls = None
+            if response_msg.tool_calls:
+                domain_tool_calls = [
+                    ToolCall(
+                        id=tc.id,
+                        type=tc.type,
+                        function=ToolCallFunction(
+                            name=tc.function.name,
+                            arguments=tc.function.arguments
+                        )
+                    )
+                    for tc in response_msg.tool_calls
+                ]
+            
+            return Message(
+                role=MessageRole(response_msg.role),
+                content=response_msg.content,
+                tool_calls=domain_tool_calls
             )
-            return response.choices[0].message.content or ""
         except OpenAIError as e:
             raise LLMGenerationException(
                 message=str(e),

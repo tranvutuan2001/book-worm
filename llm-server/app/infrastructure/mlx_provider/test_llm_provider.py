@@ -25,7 +25,8 @@ async def test_mlx_llm_provider_generate(mock_mlx_model):
         
         response = await provider.generate(messages, max_tokens=10)
         
-        assert response == "MLX Response"
+        assert response.content == "MLX Response"
+        assert response.role == MessageRole.ASSISTANT
         mock_mlx_lm.generate.assert_called_once()
 
 @pytest.mark.asyncio

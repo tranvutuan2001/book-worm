@@ -11,7 +11,7 @@ async def test_openai_llm_provider_generate():
     mock_client = MagicMock()
     mock_client.chat.completions.create = AsyncMock()
     mock_client.chat.completions.create.return_value.choices = [
-        MagicMock(message=MagicMock(content="OpenAI Response"))
+        MagicMock(message=MagicMock(content="OpenAI Response", role="assistant", tool_calls=None))
     ]
     
     provider = OpenAILLMProvider(client=mock_client)
@@ -19,7 +19,8 @@ async def test_openai_llm_provider_generate():
     
     response = await provider.generate(messages, max_tokens=10)
     
-    assert response == "OpenAI Response"
+    assert response.content == "OpenAI Response"
+    assert response.role == MessageRole.ASSISTANT
     mock_client.chat.completions.create.assert_called_once()
 
 @pytest.mark.asyncio
