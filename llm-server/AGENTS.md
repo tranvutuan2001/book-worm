@@ -12,6 +12,8 @@ TDD First: Write the pytest suite using mocks for the external APIs before writi
 
 Always use pipenv for dependency management and development.
 
+DO NOT, I repeat, NEVER use multiple inheritance. One class is allowed to inherit from maximum one class only.
+
 ## 2. Four-Layer Architecture & Provider Strategy
 ### I. Domain Layer (/app/domain/)
 Define the universal Message and CompletionRequest Pydantic models.

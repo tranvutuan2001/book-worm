@@ -7,6 +7,10 @@ class Role(str, Enum):
     USER = "user"
     ASSISTANT = "assistant"
 
+class LLMBackend(str, Enum):
+    OPENAI = "openai"
+    MLX = "mlx"
+
 class Message(BaseModel):
     role: Role
     content: str

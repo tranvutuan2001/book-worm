@@ -1,3 +1,4 @@
 models/
 .pytest_cache/
 .env
+local_test.py
