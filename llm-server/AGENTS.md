@@ -14,6 +14,10 @@ Always use pipenv for dependency management and development.
 
 DO NOT, I repeat, NEVER use multiple inheritance. One class is allowed to inherit from maximum one class only.
 
+Single File Responsibility: Each file must have exactly one primary responsibility. One file must contain only one class that is intended for export and use by other modules. While a file can contain multiple classes, all others must be private support classes for the main exported class.
+
+Business-Centric Naming: Always use clear names for classes, attributes, and functions that describe business values and domain concepts, not programming functionality or technical implementation details.
+
 ## 2. Four-Layer Architecture & Provider Strategy
 ### I. Domain Layer (/app/domain/)
 Define the universal Message and CompletionRequest Pydantic models.
@@ -84,7 +88,54 @@ Langfuse Agnosticism: Place the Langfuse @observe() decorator on the Service lay
 
 Graceful Degradation: If an external API fails, the application should log the vendor-specific error securely but return a standard HTTP 502/503 to the client.
 
-## 6. Workflow
+## 6. Code Style & File Structure
+### Single Class Export Policy
+Each file should export exactly one main class.
+
+*** Good Example:**
+```python
+# app/infrastructure/openai_adapter.py
+
+class _OpenAIClientConfig: # Support class (not exported)
+    ...
+
+class OpenAIProvider(LLMProvider): # Main exported class
+    ...
+```
+
+*** Bad Example:**
+```python
+# app/infrastructure/adapters.py
+
+class OpenAIProvider(LLMProvider): # Multiple main classes in one file
+    ...
+
+class MLXProvider(LLMProvider): 
+    ...
+```
+
+### Business-Centric Naming
+Prioritize domain language over technical jargon.
+
+*** Good Example:**
+```python
+class ConversationService:
+    async def brainstorm_ideas(self, topic: str) -> list[Idea]: ...
+    
+class PurchaseOrder:
+    total_amount: Decimal
+```
+
+*** Bad Example:**
+```python
+class TextGeneratorService:
+    async def call_llm_api(self, prompt: str) -> str: ...
+    
+class OrderDataNode:
+    val: float
+```
+
+## 7. Workflow
 Plan: Diagram the Strategy Pattern for the new provider.
 
 Test: Write unit tests at the module level and API tests in `tests/api_test/`.
