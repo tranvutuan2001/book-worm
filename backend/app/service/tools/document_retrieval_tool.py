@@ -16,15 +16,15 @@ import faiss
 import numpy as np
 from pydantic_ai import RunContext
 
-from src.config.config import DATA_DIR, DEFAULT_EMBEDDING_MODEL, TOP_K_CHUNKS
-from src.infra.llm_connector import LLMService
+from app.config.config import DATA_DIR, DEFAULT_EMBEDDING_MODEL, TOP_K_CHUNKS
+from app.infra.llm_connector import LLMService
 
 logger = logging.getLogger("app.service.tools")
 
 
 def _get_llm_service() -> LLMService:
     """Lazily resolve the LLMService singleton from the application container."""
-    from src.container import container  # late import to avoid circular deps
+    from app.container import container  # late import to avoid circular deps
     return container.llm_service()
 
 

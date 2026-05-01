@@ -28,20 +28,20 @@ from typing import Any
 import re
 import jsonschema
 
-from src.config.config import (
+from app.config.config import (
     DATA_DIR,
     DEFAULT_CHAT_MODEL,
     PDF_DIR,
     PDF_EXAMPLE_PATH,
     PDF_SCHEMA_PATH,
 )
-from src.core.exceptions import DocumentNotFoundError, DocumentProcessingError
-from src.domain.entity.agent import AgentFactory
-from src.domain.entity.message import Message
-from src.domain.enums import Role
-from src.domain.value_object.chat_model_setting import ChatModelSettings
-from src.infra.llm_connector.llm_service import LLMService
-from src.service.tools.document_retrieval_tool import (
+from app.core.exceptions import DocumentNotFoundError, DocumentProcessingError
+from app.domain.entity.agent import AgentFactory
+from app.domain.entity.message import Message
+from app.domain.enums import Role
+from app.domain.value_object.chat_model_setting import ChatModelSettings
+from app.infra.llm_connector.llm_service import LLMService
+from app.service.tools.document_retrieval_tool import (
     get_document_summary,
 )
 
@@ -118,7 +118,6 @@ class PDFSummarizationService:
     async def summarize(
         self,
         document_name: str,
-        chat_model: str = DEFAULT_CHAT_MODEL,
     ) -> dict[str, Any]:
         """Run the full three-step summarisation pipeline.
 
@@ -140,11 +139,11 @@ class PDFSummarizationService:
         schema_str = json.dumps(schema)
 
         logger.info("[summarize] Step 1 — generating text summary: %s", document_name)
-        summary_text = await self._step1_generate_summary(document_name, chat_model)
+        summary_text = await self._step1_generate_summary(document_name)
         logger.info("[summarize] Step 1 complete (%d words)", len(summary_text.split()))
 
         logger.info("[summarize] Step 2 — splitting summary into logical blocks")
-        blocks = await self._step2_split_into_blocks(summary_text, chat_model)
+        blocks = await self._step2_split_into_blocks(summary_text)
         logger.info("[summarize] %d block(s) to process", len(blocks))
 
         pdf_json: list[Any] = []
@@ -153,7 +152,7 @@ class PDFSummarizationService:
                 "[summarize] Step 3 — block %d/%d: generating JSON", i, len(blocks)
             )
             block_json = await self._step3_generate_json(
-                block, chat_model, schema_str=schema_str, max_tokens=8192
+                block, schema_str=schema_str, max_tokens=8192
             )
             logger.info(
                 "[summarize] Step 3 block %d complete (%d nodes)", i, len(block_json)
@@ -183,7 +182,7 @@ class PDFSummarizationService:
     # Step 1 — text summary via LLM + tools
     # ------------------------------------------------------------------
 
-    async def _step1_generate_summary(self, document_name: str, chat_model: str) -> str:
+    async def _step1_generate_summary(self, document_name: str) -> str:
         """Fetch the raw document summary directly, then refine it with agent_complete_chat."""
         logger.info("[step1] Fetching raw document summary for '%s'", document_name)
         try:
@@ -210,7 +209,6 @@ class PDFSummarizationService:
                 model_settings=ChatModelSettings(max_tokens=12000),
             )
             refined = await self._llm.agent_complete_chat(
-                model_path=chat_model,
                 message_list=[request_message],
                 agent=step1_agent,
             )
@@ -226,7 +224,7 @@ class PDFSummarizationService:
     # ------------------------------------------------------------------
 
     async def _step2_split_into_blocks(
-        self, summary_text: str, chat_model: str, max_attempts: int = 5
+        self, summary_text: str, max_attempts: int = 5
     ) -> list[str]:
         """Ask the LLM to segment *summary_text* into self-contained logical blocks.
 
@@ -255,7 +253,6 @@ class PDFSummarizationService:
                     model_settings=ChatModelSettings(json_schema=JSON_ARRAY_OF_STRINGS_SCHEMA),
                 )
                 raw_output = await self._llm.agent_complete_chat(
-                    model_path=chat_model,
                     message_list=[message],
                     agent=step2_agent,
                 )
@@ -348,7 +345,6 @@ class PDFSummarizationService:
     async def _step3_generate_json(
         self,
         block_text: str,
-        chat_model: str,
         max_attempts: int = 5,
         *,
         schema_str: str | None = None,
@@ -388,7 +384,6 @@ class PDFSummarizationService:
                 raw_output = await self._llm.agent_complete_chat(
                     message_list=[user_message],
                     agent=step3_agent,
-                    model_path=chat_model,
                 )
             except Exception as exc:
                 logger.error(

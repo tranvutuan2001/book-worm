@@ -13,13 +13,11 @@ from typing import List, Optional
 
 import pdfplumber
 
-from src.config.config import (
+from app.config.config import (
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     CHUNKS_PER_SECTION,
     DATA_DIR,
-    DEFAULT_CHAT_MODEL,
-    DEFAULT_EMBEDDING_MODEL,
     MAX_EMBEDDING_RETRIES,
     SECTIONS_PER_CHAPTER,
     SUFFIX_CHAPTER_EMBEDDINGS,
@@ -29,13 +27,13 @@ from src.config.config import (
     SUFFIX_SECTION_EMBEDDINGS,
     SUFFIX_SECTION_SUMMARIES,
 )
-from src.core.exceptions import DocumentProcessingError
-from src.core.utils import write_json_file
-from src.domain.entity.agent import AgentFactory
-from src.domain.entity.message import Message
-from src.domain.enums import Role
-from src.domain.value_object.chat_model_setting import ChatModelSettings
-from src.infra.llm_connector import LLMService
+from app.core.exceptions import DocumentProcessingError
+from app.core.utils import write_json_file
+from app.domain.entity.agent import AgentFactory
+from app.domain.entity.message import Message
+from app.domain.enums import Role
+from app.domain.value_object.chat_model_setting import ChatModelSettings
+from app.infra.llm_connector import LLMService
 
 logger = logging.getLogger("app.service")
 
@@ -301,7 +299,6 @@ class DocumentAnalysisService:
                 summary = await self._llm.agent_complete_chat(
                     message_list=[user_msg],
                     agent=summary_agent,
-                    model_path=DEFAULT_CHAT_MODEL,
                 )
                 logger.info("Section summary %d–%d done", i + 1, end)
                 logger.info("Summary:\n%s", summary)
@@ -344,7 +341,6 @@ class DocumentAnalysisService:
                 chapter = await self._llm.agent_complete_chat(
                     message_list=[user_msg],
                     agent=chapter_agent,
-                    model_path=DEFAULT_CHAT_MODEL,
                 )
                 chapters.append(chapter)
             except Exception as exc:
@@ -361,9 +357,7 @@ class DocumentAnalysisService:
         last_exc: Optional[Exception] = None
         for attempt in range(MAX_EMBEDDING_RETRIES):
             try:
-                return await self._llm.embed_text(
-                    model_path=DEFAULT_EMBEDDING_MODEL, text=text
-                )
+                return await self._llm.embed_text(text=text)
             except Exception as exc:
                 last_exc = exc
                 logger.warning(

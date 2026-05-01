@@ -6,11 +6,11 @@ import traceback
 from fastapi import APIRouter, Depends, HTTPException
 from dependency_injector.wiring import Provide, inject
 
-from src.api.schemas.chat import AskResponse
-from src.container import Container
-from src.core.exceptions import DocumentNotFoundError, LLMError
-from src.domain.entity.conversation import Conversation
-from src.service.chat_service import ChatService
+from app.api.schemas.chat import AskResponse
+from app.container import Container
+from app.core.exceptions import DocumentNotFoundError, LLMError
+from app.domain.entity.conversation import Conversation
+from app.service.chat_service import ChatService
 
 logger = logging.getLogger("app.api")
 

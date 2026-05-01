@@ -1,13 +1,10 @@
 from pydantic import BaseModel, Field
-from src.domain.entity.message import Message
-from typing import List, Optional
-
-
+from app.domain.entity.message import Message
 class Conversation(BaseModel):
     id: str = Field(description="Unique identifier for the conversation", example="conv_123")
-    message_list: List[Message] = Field(description="List of messages in the conversation")
+    message_list: list[Message] = Field(description="List of messages in the conversation")
     timestamp: int = Field(description="Unix timestamp when conversation was created", example=1674567890)
-    document_name: Optional[str] = Field(
+    document_name: str | None = Field(
         default=None, 
         description="Name of the document to query (required for /ask endpoint)", 
         example="sample_document_20240120_143022"

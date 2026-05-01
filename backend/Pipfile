@@ -138,6 +138,7 @@ pytest = "*"
 jsonschema = "*"
 xgrammar = "*"
 uvicorn = {extras = ["standard"], version = "*"}
+pytest-asyncio = "*"
 
 [dev-packages]
 

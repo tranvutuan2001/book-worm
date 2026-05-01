@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from src.config.config import (
+from app.config.config import (
     CHAT_MAX_TOKENS,
     CHAT_TEMPERATURE,
 )

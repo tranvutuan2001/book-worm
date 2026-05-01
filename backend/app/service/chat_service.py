@@ -11,21 +11,19 @@ to HTTP responses by the API route layer.
 import logging
 import time
 import traceback
-from typing import List
-
-from src.core.exceptions import DocumentNotFoundError, LLMError
-from src.config.config import DATA_DIR
-from src.domain.entity.agent import AgentFactory
-from src.domain.entity.conversation import Conversation
-from src.domain.entity.message import Message
-from src.domain.enums import Role
-from src.infra.llm_connector import LLMService
-from src.infra.logging_config import (
+from app.core.exceptions import DocumentNotFoundError, LLMError
+from app.config.config import DATA_DIR
+from app.domain.entity.agent import AgentFactory
+from app.domain.entity.conversation import Conversation
+from app.domain.entity.message import Message
+from app.domain.enums import Role
+from app.infra.llm_connector import LLMService
+from app.infra.logging_config import (
     end_request_logging,
     get_request_logger,
     start_request_logging,
 )
-from src.service.tools.document_retrieval_tool import get_the_most_relevant_chunks, get_document_summary
+from app.service.tools.document_retrieval_tool import get_the_most_relevant_chunks, get_document_summary
 
 logger = logging.getLogger("app.service")
 
@@ -105,7 +103,6 @@ class ChatService:
             verified = await self._verify_answer(
                 conversation.message_list,
                 answer,
-                conversation.chat_model,
                 conversation.document_name,
                 tools,
             )
@@ -143,7 +140,6 @@ class ChatService:
             return await self._llm.agent_complete_chat(
                 message_list=conversation.message_list,
                 agent=agent,
-                model_path=conversation.chat_model,
             )
         except Exception as exc:
             logger.error("LLM call failed: %s", exc)
@@ -151,9 +147,8 @@ class ChatService:
 
     async def _verify_answer(
         self,
-        message_list: List[Message],
+        message_list: list[Message],
         answer: str,
-        chat_model: str,
         document_name: str,
         tools: tuple,
     ) -> str:
@@ -192,7 +187,6 @@ class ChatService:
             verified = await self._llm.agent_complete_chat(
                 message_list=verification_message,
                 agent=verify_agent,
-                model_path=chat_model,
             )
             req_logger.info("Verification complete (%d chars)", len(verified))
             return verified

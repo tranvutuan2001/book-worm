@@ -6,17 +6,17 @@ import traceback
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from dependency_injector.wiring import Provide, inject
 
-from src.api.schemas.document import (
+from app.api.schemas.document import (
     DocumentInfo,
     DocumentStatus,
     DocumentsResponse,
     UploadResponse,
 )
-from src.api.schemas.pdf_summarization import SummarizeResponse
-from src.container import Container
-from src.core.exceptions import DocumentNotFoundError, DocumentProcessingError, InvalidDocumentError
-from src.service.document_service import DocumentService
-from src.service.pdf_summarization_service import PDFSummarizationService
+from app.api.schemas.pdf_summarization import SummarizeResponse
+from app.container import Container
+from app.core.exceptions import DocumentNotFoundError, DocumentProcessingError, InvalidDocumentError
+from app.service.document_service import DocumentService
+from app.service.pdf_summarization_service import PDFSummarizationService
 
 logger = logging.getLogger("app.api")
 

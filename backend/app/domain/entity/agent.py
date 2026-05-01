@@ -5,7 +5,7 @@ Agent domain entity.
 needs to run an LLM job: agent type, system prompt, tools, generation settings,
 and retry count.
 
-To construct an :class:`Agent` use :class:`~src.domain.entity.agent_factory.AgentFactory`
+To construct an :class:`Agent` use :class:`~app.domain.entity.agent_factory.AgentFactory`
 rather than instantiating this dataclass directly.
 """
 
@@ -14,8 +14,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from src.domain.enums import AgentType
-from src.domain.value_object.chat_model_setting import ChatModelSettings
+from app.domain.enums import AgentType
+from app.domain.value_object.chat_model_setting import ChatModelSettings
 
 # ---------------------------------------------------------------------------
 # Default system prompts
