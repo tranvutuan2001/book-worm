@@ -77,7 +77,7 @@ async def summarize_document(
 ) -> SummarizeResponse:
     logger.info("POST /documents/%s/summarize", document_name)
     try:
-        result = service.summarize(document_name=document_name)
+        result = await service.summarize(document_name=document_name)
         return SummarizeResponse(
             document_name=document_name,
             output_file=result["output_file"],

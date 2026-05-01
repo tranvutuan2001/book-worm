@@ -101,7 +101,7 @@ class ChatService:
             self._validate_document(conversation.document_name)
 
             tools = (get_the_most_relevant_chunks, get_document_summary)
-            answer = self._generate_answer(conversation, tools)
+            answer = await self._generate_answer(conversation, tools)
             verified = await self._verify_answer(
                 conversation.message_list,
                 answer,
@@ -133,14 +133,14 @@ class ChatService:
                 f"Document '{document_name}' not found at {doc_path}"
             )
 
-    def _generate_answer(self, conversation: Conversation, tools: tuple) -> str:
+    async def _generate_answer(self, conversation: Conversation, tools: tuple) -> str:
         try:
             system_prompt = f"{_SYSTEM_PROMPT}\n\nDocument: {conversation.document_name}"
             agent = AgentFactory.document_assistant(
                 system_prompt=system_prompt,
                 tools=list(tools),
             )
-            return self._llm.agent_complete_chat(
+            return await self._llm.agent_complete_chat(
                 message_list=conversation.message_list,
                 agent=agent,
                 model_path=conversation.chat_model,
@@ -189,7 +189,7 @@ class ChatService:
                 system_prompt=verification_system_prompt,
                 tools=list(tools),
             )
-            verified = self._llm.agent_complete_chat(
+            verified = await self._llm.agent_complete_chat(
                 message_list=verification_message,
                 agent=verify_agent,
                 model_path=chat_model,

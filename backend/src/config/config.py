@@ -68,7 +68,8 @@ SUFFIX_CHAPTER_EMBEDDINGS = "_chapter_summary_embeddings.json"
 # LLM backend selection
 # ---------------------------------------------------------------------------
 
-LLM_BACKEND: Literal["local", "lm_studio"] = "lm_studio"
+LLM_BACKEND: Literal["local", "lm_studio", "server"] = "server"
+LLM_SERVER_URL: str = "http://localhost:8001"
 LM_STUDIO_BASE_URL: str = "http://localhost:1234/v1"
 LM_STUDIO_API_KEY: str = "lm-studio"
 
@@ -80,10 +81,3 @@ LM_STUDIO_DEFAULT_EMBEDDING_MODEL: str = "text-embedding-qwen3-embedding-0.6b"
 # ---------------------------------------------------------------------------
 DEFAULT_CHAT_MODEL = LM_STUDIO_DEFAULT_CHAT_MODEL if LLM_BACKEND == "lm_studio" else DEFAULT_LOCAL_CHAT_MODEL
 DEFAULT_EMBEDDING_MODEL = LM_STUDIO_DEFAULT_EMBEDDING_MODEL if LLM_BACKEND == "lm_studio" else DEFAULT_LOCAL_EMBEDDING_MODEL
-
-
-# ---------------------------------------------------------------------------
-# Langfuse config
-LANGFUSE_SECRET_KEY="sk-lf-eeb9e41e-0630-4365-8272-e9a7832960ec"
-LANGFUSE_PUBLIC_KEY="pk-lf-404062fd-c299-4d2b-95a1-0dcfba896889"
-LANGFUSE_BASE_URL="http://localhost:3000"

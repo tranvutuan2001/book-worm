@@ -115,7 +115,7 @@ class PDFSummarizationService:
         self._schema: dict[str, Any] | None = None  # loaded lazily
         self._example: list[Any] | None = None  # loaded lazily
 
-    def summarize(
+    async def summarize(
         self,
         document_name: str,
         chat_model: str = DEFAULT_CHAT_MODEL,
@@ -140,11 +140,11 @@ class PDFSummarizationService:
         schema_str = json.dumps(schema)
 
         logger.info("[summarize] Step 1 — generating text summary: %s", document_name)
-        summary_text = self._step1_generate_summary(document_name, chat_model)
+        summary_text = await self._step1_generate_summary(document_name, chat_model)
         logger.info("[summarize] Step 1 complete (%d words)", len(summary_text.split()))
 
         logger.info("[summarize] Step 2 — splitting summary into logical blocks")
-        blocks = self._step2_split_into_blocks(summary_text, chat_model)
+        blocks = await self._step2_split_into_blocks(summary_text, chat_model)
         logger.info("[summarize] %d block(s) to process", len(blocks))
 
         pdf_json: list[Any] = []
@@ -152,7 +152,7 @@ class PDFSummarizationService:
             logger.info(
                 "[summarize] Step 3 — block %d/%d: generating JSON", i, len(blocks)
             )
-            block_json = self._step3_generate_json(
+            block_json = await self._step3_generate_json(
                 block, chat_model, schema_str=schema_str, max_tokens=8192
             )
             logger.info(
@@ -183,7 +183,7 @@ class PDFSummarizationService:
     # Step 1 — text summary via LLM + tools
     # ------------------------------------------------------------------
 
-    def _step1_generate_summary(self, document_name: str, chat_model: str) -> str:
+    async def _step1_generate_summary(self, document_name: str, chat_model: str) -> str:
         """Fetch the raw document summary directly, then refine it with agent_complete_chat."""
         logger.info("[step1] Fetching raw document summary for '%s'", document_name)
         try:
@@ -209,7 +209,7 @@ class PDFSummarizationService:
                 system_prompt=_STEP1_SYSTEM,
                 model_settings=ChatModelSettings(max_tokens=12000),
             )
-            refined = self._llm.agent_complete_chat(
+            refined = await self._llm.agent_complete_chat(
                 model_path=chat_model,
                 message_list=[request_message],
                 agent=step1_agent,
@@ -225,7 +225,7 @@ class PDFSummarizationService:
     # Step 2 — split summary into logical blocks
     # ------------------------------------------------------------------
 
-    def _step2_split_into_blocks(
+    async def _step2_split_into_blocks(
         self, summary_text: str, chat_model: str, max_attempts: int = 5
     ) -> list[str]:
         """Ask the LLM to segment *summary_text* into self-contained logical blocks.
@@ -254,7 +254,7 @@ class PDFSummarizationService:
                     system_prompt=_STEP2_SPLIT_SYSTEM,
                     model_settings=ChatModelSettings(json_schema=JSON_ARRAY_OF_STRINGS_SCHEMA),
                 )
-                raw_output = self._llm.agent_complete_chat(
+                raw_output = await self._llm.agent_complete_chat(
                     model_path=chat_model,
                     message_list=[message],
                     agent=step2_agent,
@@ -345,7 +345,7 @@ class PDFSummarizationService:
     # Step 3 — JSON generation via targeted LLM call
     # ------------------------------------------------------------------
 
-    def _step3_generate_json(
+    async def _step3_generate_json(
         self,
         block_text: str,
         chat_model: str,
@@ -385,7 +385,7 @@ class PDFSummarizationService:
                         max_tokens=max_tokens,
                     ),
                 )
-                raw_output = self._llm.agent_complete_chat(
+                raw_output = await self._llm.agent_complete_chat(
                     message_list=[user_message],
                     agent=step3_agent,
                     model_path=chat_model,

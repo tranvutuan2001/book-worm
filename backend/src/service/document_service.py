@@ -90,10 +90,10 @@ class DocumentService:
         except Exception as exc:
             raise DocumentProcessingError(f"Failed to save PDF: {exc}") from exc
 
-        def _run_analysis() -> None:
+        async def _run_analysis() -> None:
             try:
                 logger.info("Background analysis started: %s", doc_name)
-                self._analysis_service.pre_analyze_document(str(pdf_path), doc_name)
+                await self._analysis_service.pre_analyze_document(str(pdf_path), doc_name)
                 logger.info("Background analysis done: %s", doc_name)
             except Exception as exc:
                 logger.error(
@@ -103,9 +103,9 @@ class DocumentService:
                     traceback.format_exc(),
                 )
 
-        thread = threading.Thread(target=_run_analysis, daemon=True)
-        thread.start()
-        logger.info("Analysis thread started for: %s", doc_name)
+        import asyncio
+        asyncio.create_task(_run_analysis())
+        logger.info("Analysis task started for: %s", doc_name)
 
         return DocumentUploadResult(
             document_name=doc_name,

@@ -7,28 +7,21 @@ FastAPI can resolve ``Depends(Provide[Container.<provider>])`` at startup.
 
 Dependency graph
 ----------------
-ParsingService
-  └─ MLXChatModelFactory   ← parsing_service injected directly into MLXChatModel
-       └─ LLMManager
-            ├─ LLMService
-            │    ├─ DocumentAnalysisService
-            │    │    └─ DocumentService
-            │    ├─ ChatService
-            │    └─ PDFSummarizationService
-            └─ ModelService
+LLMService (Remote)
+  ├─ DocumentAnalysisService
+  │    └─ DocumentService
+  ├─ ChatService
+  └─ PDFSummarizationService
 """
 
 from dependency_injector import containers, providers
 
-from src.infra.llm_connector.local_llm.parsing_service import ParsingService
-from src.infra.llm_connector.local_llm.mlx_chat import MLXChatModelFactory
-from src.infra.llm_connector.llm_manager import LLMManager
 from src.infra.llm_connector.llm_service import LLMService
 from src.service.chat_service import ChatService
 from src.service.document_analysis_service import DocumentAnalysisService
 from src.service.document_service import DocumentService
-from src.service.model_service import ModelService
 from src.service.pdf_summarization_service import PDFSummarizationService
+from src.config import config
 
 
 class Container(containers.DeclarativeContainer):
@@ -36,25 +29,12 @@ class Container(containers.DeclarativeContainer):
         modules=[
             "src.api.routes.chat",
             "src.api.routes.document",
-            "src.api.routes.model",
         ]
-    )
-
-    parsing_service = providers.Singleton(ParsingService)
-
-    mlx_chat_factory = providers.Singleton(
-        MLXChatModelFactory,
-        parsing_service=parsing_service,
-    )
-
-    llm_manager = providers.Singleton(
-        LLMManager,
-        mlx_chat_factory=mlx_chat_factory,
     )
 
     llm_service = providers.Singleton(
         LLMService,
-        llm_manager=llm_manager,
+        base_url=config.LLM_SERVER_URL,
     )
 
     document_analysis_service = providers.Singleton(
@@ -75,11 +55,6 @@ class Container(containers.DeclarativeContainer):
     pdf_summarization_service = providers.Singleton(
         PDFSummarizationService,
         llm_service=llm_service,
-    )
-
-    model_service = providers.Singleton(
-        ModelService,
-        llm_manager=llm_manager,
     )
 
 

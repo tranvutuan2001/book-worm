@@ -7,17 +7,6 @@ from src.api.schemas.document import (
     DocumentsResponse,
     UploadResponse,
 )
-from src.api.schemas.model import (
-    DownloadableModelInfo,
-    LoadedModelInfo,
-    ModelDownloadRequest,
-    ModelDownloadResponse,
-    ModelInfo,
-    ModelLoadRequest,
-    ModelLoadResponse,
-    ModelUnloadRequest,
-    ModelUnloadResponse,
-)
 
 __all__ = [
     "AskResponse",
@@ -25,13 +14,4 @@ __all__ = [
     "DocumentStatus",
     "DocumentsResponse",
     "UploadResponse",
-    "DownloadableModelInfo",
-    "LoadedModelInfo",
-    "ModelDownloadRequest",
-    "ModelDownloadResponse",
-    "ModelInfo",
-    "ModelLoadRequest",
-    "ModelLoadResponse",
-    "ModelUnloadRequest",
-    "ModelUnloadResponse",
 ]

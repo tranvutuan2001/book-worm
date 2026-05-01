@@ -148,7 +148,7 @@ class DocumentAnalysisService:
     # Public entry point
     # ------------------------------------------------------------------
 
-    def pre_analyze_document(
+    async def pre_analyze_document(
         self,
         pdf_path: str,
         document_name: str,
@@ -177,10 +177,10 @@ class DocumentAnalysisService:
             out_dir = DATA_DIR / document_name
 
 
-            self._process_chunks(chunks, document_name, out_dir)
+            await self._process_chunks(chunks, document_name, out_dir)
             section_summaries: Optional[List[str]] = None
-            section_summaries = self._process_sections(chunks, document_name, out_dir)
-            self._process_chapters(
+            section_summaries = await self._process_sections(chunks, document_name, out_dir)
+            await self._process_chapters(
                 chunks, document_name, out_dir, section_summaries
             )
 
@@ -197,33 +197,33 @@ class DocumentAnalysisService:
     # Pipeline stages
     # ------------------------------------------------------------------
 
-    def _process_chunks(
+    async def _process_chunks(
         self, chunks: List[str], doc_name: str, out_dir: Path
     ) -> None:
         logger.info("[chunks] Writing %d chunks…", len(chunks))
         write_json_file(chunks, str(out_dir / f"{doc_name}{SUFFIX_CHUNKS}"))
-        embeddings = self._embed_texts(chunks, label="chunk")
+        embeddings = await self._embed_texts(chunks, label="chunk")
         write_json_file(
             embeddings, str(out_dir / f"{doc_name}{SUFFIX_CHUNK_EMBEDDINGS}")
         )
         logger.info("[chunks] Done")
 
-    def _process_sections(
+    async def _process_sections(
         self, chunks: List[str], doc_name: str, out_dir: Path
     ) -> List[str]:
         logger.info("[sections] Building section summaries…")
-        summaries = self._build_section_summaries(chunks)
+        summaries = await self._build_section_summaries(chunks)
         write_json_file(
             summaries, str(out_dir / f"{doc_name}{SUFFIX_SECTION_SUMMARIES}")
         )
-        embeddings = self._embed_texts(summaries, label="section summary")
+        embeddings = await self._embed_texts(summaries, label="section summary")
         write_json_file(
             embeddings, str(out_dir / f"{doc_name}{SUFFIX_SECTION_EMBEDDINGS}")
         )
         logger.info("[sections] Done (%d summaries)", len(summaries))
         return summaries
 
-    def _process_chapters(
+    async def _process_chapters(
         self,
         chunks: List[str],
         doc_name: str,
@@ -232,16 +232,16 @@ class DocumentAnalysisService:
     ) -> None:
         logger.info("[chapters] Building chapter summaries…")
         if section_summaries is None:
-            section_summaries = self._load_or_build_sections(
+            section_summaries = await self._load_or_build_sections(
                 chunks, doc_name, out_dir
             )
 
-        chapter_summaries = self._build_chapter_summaries(section_summaries)
+        chapter_summaries = await self._build_chapter_summaries(section_summaries)
         write_json_file(
             chapter_summaries,
             str(out_dir / f"{doc_name}{SUFFIX_CHAPTER_SUMMARIES}"),
         )
-        embeddings = self._embed_texts(chapter_summaries, label="chapter summary")
+        embeddings = await self._embed_texts(chapter_summaries, label="chapter summary")
         write_json_file(
             embeddings, str(out_dir / f"{doc_name}{SUFFIX_CHAPTER_EMBEDDINGS}")
         )
@@ -275,7 +275,7 @@ class DocumentAnalysisService:
     # Summarisation
     # ------------------------------------------------------------------
 
-    def _build_section_summaries(self, chunks: List[str]) -> List[str]:
+    async def _build_section_summaries(self, chunks: List[str]) -> List[str]:
         summaries: List[str] = []
         for i in range(0, len(chunks), CHUNKS_PER_SECTION):
             batch = chunks[i : i + CHUNKS_PER_SECTION]
@@ -298,7 +298,7 @@ class DocumentAnalysisService:
                         frequency_penalty=0.2,
                     ),
                 )
-                summary = self._llm.agent_complete_chat(
+                summary = await self._llm.agent_complete_chat(
                     message_list=[user_msg],
                     agent=summary_agent,
                     model_path=DEFAULT_CHAT_MODEL,
@@ -312,7 +312,7 @@ class DocumentAnalysisService:
                 ) from exc
         return summaries
 
-    def _build_chapter_summaries(self, section_summaries: List[str]) -> List[str]:
+    async def _build_chapter_summaries(self, section_summaries: List[str]) -> List[str]:
         chapters: List[str] = []
         for i in range(0, len(section_summaries), SECTIONS_PER_CHAPTER):
             batch = section_summaries[i : i + SECTIONS_PER_CHAPTER]
@@ -341,7 +341,7 @@ class DocumentAnalysisService:
                         frequency_penalty=0.2,
                     ),
                 )
-                chapter = self._llm.agent_complete_chat(
+                chapter = await self._llm.agent_complete_chat(
                     message_list=[user_msg],
                     agent=chapter_agent,
                     model_path=DEFAULT_CHAT_MODEL,
@@ -357,11 +357,11 @@ class DocumentAnalysisService:
     # Embedding helpers
     # ------------------------------------------------------------------
 
-    def _embed_text(self, text: str) -> List[float]:
+    async def _embed_text(self, text: str) -> List[float]:
         last_exc: Optional[Exception] = None
         for attempt in range(MAX_EMBEDDING_RETRIES):
             try:
-                return self._llm.embed_text(
+                return await self._llm.embed_text(
                     model_path=DEFAULT_EMBEDDING_MODEL, text=text
                 )
             except Exception as exc:
@@ -373,23 +373,24 @@ class DocumentAnalysisService:
                     exc,
                 )
                 if attempt < MAX_EMBEDDING_RETRIES - 1:
-                    time.sleep(1)
+                    import asyncio
+                    await asyncio.sleep(1)
         raise DocumentProcessingError(
             f"Embedding failed after {MAX_EMBEDDING_RETRIES} attempts: {last_exc}"
         ) from last_exc
 
-    def _embed_texts(self, texts: List[str], label: str = "text") -> List[List[float]]:
+    async def _embed_texts(self, texts: List[str], label: str = "text") -> List[List[float]]:
         result: List[List[float]] = []
         for idx, text in enumerate(texts):
             logger.info("Embedding %s %d/%d…", label, idx + 1, len(texts))
-            result.append(self._embed_text(text))
+            result.append(await self._embed_text(text))
         return result
 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 
-    def _load_or_build_sections(
+    async def _load_or_build_sections(
         self, chunks: List[str], doc_name: str, out_dir: Path
     ) -> List[str]:
         section_file = out_dir / f"{doc_name}{SUFFIX_SECTION_SUMMARIES}"
@@ -400,5 +401,5 @@ class DocumentAnalysisService:
             except Exception as exc:
                 logger.warning("Could not load section summaries: %s", exc)
         logger.info("Section summaries not found — building them first…")
-        return self._process_sections(chunks, doc_name, out_dir)
+        return await self._process_sections(chunks, doc_name, out_dir)
 

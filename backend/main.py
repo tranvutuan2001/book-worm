@@ -10,7 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.infra.logging_config import setup_logging
 from src.api.routes.chat import router as chat_router
 from src.api.routes.document import router as document_router
-from src.api.routes.model import router as model_router
 
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 setup_logging()
@@ -40,7 +39,6 @@ app.add_middleware(
 
 app.include_router(chat_router)
 app.include_router(document_router)
-app.include_router(model_router)
 
 if __name__ == "__main__":
     import uvicorn

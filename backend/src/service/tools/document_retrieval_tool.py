@@ -61,7 +61,7 @@ def _all_chunks(document_name: str) -> List[str]:
 # Tools (plain functions — registered with pydantic_ai.Agent)
 # ---------------------------------------------------------------------------
 
-def get_the_most_relevant_chunks(ctx: RunContext[None], question: str, document_name: str) -> List[str]:
+async def get_the_most_relevant_chunks(ctx: RunContext[None], question: str, document_name: str) -> List[str]:
     """Retrieve the most relevant text passages from the document based on
     the input question. Returns a list of relevant text chunks."""
     try:
@@ -73,7 +73,7 @@ def get_the_most_relevant_chunks(ctx: RunContext[None], question: str, document_
         index.add(n=vectors.shape[0], x=vectors)
 
         query_vec = np.array(
-            [_get_llm_service().embed_text(DEFAULT_EMBEDDING_MODEL, question)], dtype="float32"
+            [await _get_llm_service().embed_text(DEFAULT_EMBEDDING_MODEL, question)], dtype="float32"
         )
         n_queries = query_vec.shape[0]
         distances = np.empty((n_queries, TOP_K_CHUNKS), dtype="float32")
