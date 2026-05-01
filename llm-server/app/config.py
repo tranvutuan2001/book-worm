@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-4o"
     
-    MLX_MODEL_PATH: str = "models/chat/unsloth/gemma-4-E4B-it-UD-MLX-4bit"
+    MLX_MODEL_PATH: str = "models/chat/mlx-community/gemma-3-4b-it-mlx"
     
     LANGFUSE_PUBLIC_KEY: Optional[str] = None
     LANGFUSE_SECRET_KEY: Optional[str] = None

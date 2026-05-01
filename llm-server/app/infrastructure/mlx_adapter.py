@@ -18,9 +18,8 @@ class MLXProvider(LLMProvider, EmbeddingProvider):
             prompt = "\n".join([f"{m.role.value}: {m.content}" for m in messages])
             prompt += "\nassistant: "
             
-            # Running in executor to avoid blocking event loop
-            response = await asyncio.to_thread(
-                mlx_lm.generate,
+            # Running directly to avoid 'no Stream' errors with asyncio.to_thread
+            response = mlx_lm.generate(
                 model=self.model,
                 tokenizer=self.tokenizer,
                 prompt=prompt,
@@ -57,7 +56,7 @@ class MLXProvider(LLMProvider, EmbeddingProvider):
                 embedding = mx.mean(hidden_states, axis=1)
                 return embedding.tolist()[0]
 
-            embedding = await asyncio.to_thread(_get_embedding)
+            embedding = _get_embedding()
             return embedding
         except Exception as e:
             raise LLMGenerationException(
