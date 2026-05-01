@@ -1,4 +1,3 @@
-from typing import List
 from app.domain.protocols.embedding_provider import EmbeddingProvider
 from langfuse import observe
 
@@ -7,5 +6,5 @@ class EmbeddingService:
         self.embedding_provider = embedding_provider
 
     @observe()
-    async def execute(self, text: str) -> List[float]:
+    async def execute(self, text: str) -> list[float]:
         return await self.embedding_provider.embed(text)

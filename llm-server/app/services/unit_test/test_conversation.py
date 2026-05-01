@@ -10,5 +10,6 @@ async def test_conversation_service_execution(mock_llm_provider):
     
     response = await service.execute(messages, max_tokens=10)
     
-    assert response == "Mocked LLM Response"
-    mock_llm_provider.generate.assert_called_once_with(messages, 10)
+    assert response.content == "Mocked LLM Response"
+    assert response.role == MessageRole.ASSISTANT
+    mock_llm_provider.generate.assert_called_once_with(messages, 10, None)

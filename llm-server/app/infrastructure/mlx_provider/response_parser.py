@@ -2,7 +2,6 @@ import re
 import ast
 import json
 import uuid
-from typing import List, Tuple, Dict, Any, Optional
 
 class MLXResponseParser:
     """
@@ -32,13 +31,13 @@ class MLXResponseParser:
         return clean_text.strip()
 
     @classmethod
-    def parse(cls, response_text: str) -> Tuple[Optional[str], List[Dict[str, Any]]]:
+    def parse(cls, response_text: str) -> tuple[str | None, list[dict[str, str]]]:
         """
         Parses the raw response text, strips thoughts, and extracts tool calls.
         Returns a tuple of (clean_content, list_of_tool_calls).
         """
         clean_text = cls.strip_thoughts(response_text)
-        tool_calls = []
+        tool_calls: list[dict[str, str]] = []
 
         # Strategy 1: Look for explicit tool call tags
         for pattern in cls.TOOL_CALL_PATTERNS:
@@ -61,7 +60,7 @@ class MLXResponseParser:
         return clean_text if clean_text else None, tool_calls
 
     @classmethod
-    def _parse_call_content(cls, content: str) -> Any:
+    def _parse_call_content(cls, content: str) -> dict[str, str] | list[dict[str, str]] | None:
         """Attempts to parse the inner content of a tool call block."""
         # 1. Try parsing as JSON (dict or list of dicts)
         try:
@@ -69,7 +68,7 @@ class MLXResponseParser:
             if isinstance(data, dict) and "name" in data:
                 return cls._format_tool_call(data["name"], data.get("arguments", {}))
             elif isinstance(data, list):
-                results = []
+                results: list[dict[str, str]] = []
                 for item in data:
                     if isinstance(item, dict) and "name" in item:
                         results.append(cls._format_tool_call(item["name"], item.get("arguments", {})))
@@ -97,7 +96,7 @@ class MLXResponseParser:
         return None
 
     @classmethod
-    def _format_tool_call(cls, name: str, arguments: Any) -> Dict[str, Any]:
+    def _format_tool_call(cls, name: str, arguments: object) -> dict[str, str]:
         """Normalizes the parsed tool call into the expected dictionary format."""
         if isinstance(arguments, dict):
             args_str = json.dumps(arguments)

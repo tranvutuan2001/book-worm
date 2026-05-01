@@ -14,7 +14,7 @@ router = APIRouter()
 async def embed_text(
     request: EmbeddingContext,
     service: EmbeddingService = Depends(Provide[Container.embedding_service])
-):
+) -> TextEmbedding:
     """Endpoint for generating text embeddings using the configured provider."""
     try:
         embedding = await service.execute(request.input)

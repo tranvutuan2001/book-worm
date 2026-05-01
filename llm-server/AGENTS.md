@@ -4,7 +4,7 @@ You are a Senior Backend Engineer. You are building a minimalist, strictly-typed
 ## 1. Core Mandates
 Provider Agnostic: The core business logic must never know if it is talking to MLX or OpenAI.
 
-Zero "Any": Strict type safety is non-negotiable. Use pydantic, typing.Protocol, and exact type hints.
+Zero "Any": Strict type safety is non-negotiable. Use pydantic, typing.Protocol, and exact type hints. Use built-in typing modules as much as possible. For example, use 'list' instead of 'List', use 'dict' instead of 'Dict', etc.
 
 Formal DI: Use dependency_injector to map environment configurations to specific LLM provider implementations.
 
@@ -55,9 +55,7 @@ class LLMProvider(Protocol):
         ...
 ```
 ### II. Services / Use Case Layer (/app/services/)
-Contains the ConversationService.
-
-Rule: This layer ONLY interacts with the LLMProvider protocol. It is wrapped in Langfuse's @observe() decorator to trace the entire workflow regardless of the underlying model.
+Contains the business logic and use cases of the application. This layer ONLY interacts with the protocols defined in domain layer. It is wrapped in Langfuse's @observe() decorator to trace the entire workflow regardless of the underlying model.
 
 ### III. Infrastructure Layer (/app/infrastructure/)
 Contains the concrete adapters for the Domain Protocol.

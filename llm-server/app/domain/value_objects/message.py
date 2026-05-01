@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
 from app.domain.value_objects.message_role import MessageRole
 
 class ToolCallFunction(BaseModel):
@@ -14,7 +13,7 @@ class ToolCall(BaseModel):
 class Message(BaseModel):
     """Value Object representing a single message in a conversation."""
     role: MessageRole
-    content: Optional[str] = None
-    tool_calls: Optional[List[ToolCall]] = None
-    tool_call_id: Optional[str] = None
-    name: Optional[str] = None
+    content: str | None = None
+    tool_calls: list[ToolCall] | None = None
+    tool_call_id: str | None = None
+    name: str | None = None

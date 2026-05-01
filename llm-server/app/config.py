@@ -1,18 +1,17 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
 from app.domain.value_objects.llm_backend import LLMBackend
 
 class Settings(BaseSettings):
     LLM_BACKEND: LLMBackend
 
-    OPENAI_API_KEY: Optional[str] = None
-    OPENAI_MODEL: Optional[str] = None
-    MLX_MODEL_PATH: Optional[str] = None
-    MLX_CHAT_MODEL_PATH: Optional[str] = None
-    MLX_EMBEDDING_MODEL_PATH: Optional[str] = None
+    OPENAI_API_KEY: str | None = None
+    OPENAI_MODEL: str | None = None
+    MLX_MODEL_PATH: str | None = None
+    MLX_CHAT_MODEL_PATH: str | None = None
+    MLX_EMBEDDING_MODEL_PATH: str | None = None
     
-    LANGFUSE_PUBLIC_KEY: Optional[str]
-    LANGFUSE_SECRET_KEY: Optional[str]
+    LANGFUSE_PUBLIC_KEY: str | None
+    LANGFUSE_SECRET_KEY: str | None
     LANGFUSE_HOST: str
 
     HOST: str

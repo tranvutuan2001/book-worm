@@ -1,5 +1,4 @@
 from openai import AsyncOpenAI, OpenAIError
-from typing import List, Optional, Dict, Any
 from app.domain.value_objects.message import Message, ToolCall, ToolCallFunction
 from app.domain.value_objects.message_role import MessageRole
 from app.domain.protocols.llm_provider import LLMProvider
@@ -12,7 +11,7 @@ class OpenAILLMProvider(LLMProvider):
         self.client = client
         self.model = model
 
-    async def generate(self, messages: List[Message], max_tokens: int, tools: Optional[List[Dict[str, Any]]] = None) -> Message:
+    async def generate(self, messages: list[Message], max_tokens: int, tools: list[dict[str, object]] | None = None) -> Message:
         try:
             formatted_messages = []
             for m in messages:

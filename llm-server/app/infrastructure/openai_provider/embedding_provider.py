@@ -1,5 +1,4 @@
 from openai import AsyncOpenAI, OpenAIError
-from typing import List
 from app.domain.protocols.embedding_provider import EmbeddingProvider
 from app.domain.exceptions.llm_exception import LLMGenerationException
 
@@ -10,7 +9,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         self.client = client
         self.model = model
 
-    async def embed(self, text: str) -> List[float]:
+    async def embed(self, text: str) -> list[float]:
         try:
             response = await self.client.embeddings.create(
                 input=text,

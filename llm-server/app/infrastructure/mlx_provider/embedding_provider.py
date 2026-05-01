@@ -1,5 +1,4 @@
 import mlx.core as mx
-from typing import List
 from app.domain.protocols.embedding_provider import EmbeddingProvider
 from app.domain.exceptions.llm_exception import LLMGenerationException
 from app.infrastructure.mlx_provider.model_loader import MLXModel
@@ -10,7 +9,7 @@ class MLXEmbeddingProvider(EmbeddingProvider):
     def __init__(self, mlx_model: MLXModel):
         self.mlx_model = mlx_model
 
-    async def embed(self, text: str) -> List[float]:
+    async def embed(self, text: str) -> list[float]:
         try:
             # Tokenize text
             tokens = self.mlx_model.tokenizer.encode(text)

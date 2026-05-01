@@ -12,7 +12,7 @@ router = APIRouter()
 async def generate_completion(
     request: ChatContext,
     service: ConversationService = Depends(Provide[Container.conversation_service])
-):
+) -> dict[str, object]:
     """Endpoint for generating text completions using the configured LLM provider."""
     try:
         response_message = await service.execute(
