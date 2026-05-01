@@ -2,7 +2,9 @@ from fastapi import FastAPI
 import uvicorn
 from app.containers import Container
 from app.config import settings
-from app.api.endpoints import router
+from app.api.chat_endpoints import router as chat_router
+from app.api.embedding_endpoints import router as embedding_router
+from app.api.health_endpoints import router as health_router
 
 def create_app() -> FastAPI:
     container = Container()
@@ -16,12 +18,19 @@ def create_app() -> FastAPI:
         }
     })
     
-    # Wire the container to the api endpoints module
-    container.wire(modules=["app.api.endpoints"])
+    # Wire the container to the api endpoints modules
+    container.wire(modules=[
+        "app.api.chat_endpoints",
+        "app.api.embedding_endpoints",
+        "app.api.health_endpoints"
+    ])
     
     app = FastAPI(title="Multi-Provider LLM Server")
     app.container = container
-    app.include_router(router)
+    
+    app.include_router(chat_router)
+    app.include_router(embedding_router)
+    app.include_router(health_router)
     
     return app
 
