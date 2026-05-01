@@ -3,5 +3,5 @@ from typing import Optional
 
 class EmbeddingContext(BaseModel):
     """Value Object representing the context for an embedding request."""
-    input_text: str
+    input: str
     model_name: Optional[str] = None

@@ -18,9 +18,14 @@ class Container(containers.DeclarativeContainer):
         api_key=config.llm.openai_key
     )
     
-    mlx_model = providers.Singleton(
+    mlx_chat_model = providers.Singleton(
         MLXModel,
-        model_path=config.llm.mlx_path
+        model_path=config.llm.mlx_chat_path
+    )
+    
+    mlx_embedding_model = providers.Singleton(
+        MLXModel,
+        model_path=config.llm.mlx_embedding_path
     )
     
     # Provider Selection Logic for LLM
@@ -33,7 +38,7 @@ class Container(containers.DeclarativeContainer):
         ),
         mlx=providers.Singleton(
             MLXLLMProvider,
-            mlx_model=mlx_model
+            mlx_model=mlx_chat_model
         )
     )
     
@@ -46,7 +51,7 @@ class Container(containers.DeclarativeContainer):
         ),
         mlx=providers.Singleton(
             MLXEmbeddingProvider,
-            mlx_model=mlx_model
+            mlx_model=mlx_embedding_model
         )
     )
     

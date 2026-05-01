@@ -28,7 +28,7 @@ def test_generate_endpoint(client):
 
 def test_embedding_endpoint(client):
     payload = {
-        "input_text": "Hello world"
+        "input": "Hello world"
     }
     response = client.post("/embeddings", json=payload)
     

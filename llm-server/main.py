@@ -14,7 +14,8 @@ def create_app() -> FastAPI:
             "backend": settings.LLM_BACKEND,
             "openai_key": settings.OPENAI_API_KEY,
             "openai_model": settings.OPENAI_MODEL,
-            "mlx_path": settings.MLX_MODEL_PATH,
+            "mlx_chat_path": settings.MLX_CHAT_MODEL_PATH or settings.MLX_MODEL_PATH,
+            "mlx_embedding_path": settings.MLX_EMBEDDING_MODEL_PATH,
         }
     })
     

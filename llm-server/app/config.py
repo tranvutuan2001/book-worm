@@ -5,9 +5,11 @@ from app.domain.value_objects.llm_backend import LLMBackend
 class Settings(BaseSettings):
     LLM_BACKEND: LLMBackend
 
-    OPENAI_API_KEY: Optional[str]
-    OPENAI_MODEL: Optional[str]
-    MLX_MODEL_PATH: str
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_MODEL: Optional[str] = None
+    MLX_MODEL_PATH: Optional[str] = None
+    MLX_CHAT_MODEL_PATH: Optional[str] = None
+    MLX_EMBEDDING_MODEL_PATH: Optional[str] = None
     
     LANGFUSE_PUBLIC_KEY: Optional[str]
     LANGFUSE_SECRET_KEY: Optional[str]
