@@ -57,6 +57,11 @@ class MLXResponseParser:
                 clean_text = clean_text.replace(match.group(0), '')
 
         clean_text = clean_text.strip()
+        # If we have tool calls, content can be None. 
+        # If we don't have tool calls, content should ideally be at least an empty string for compatibility.
+        if not clean_text and not tool_calls:
+            return "", tool_calls
+            
         return clean_text if clean_text else None, tool_calls
 
     @classmethod

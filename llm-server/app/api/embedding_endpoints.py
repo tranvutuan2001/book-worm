@@ -6,19 +6,36 @@ from app.domain.value_objects.text_embedding import TextEmbedding
 from app.domain.exceptions.llm_exception import LLMGenerationException
 from app.services.embedding_service import EmbeddingService
 from app.settings import settings
+from app.api.schemas.embedding_request import EmbeddingRequest
+from app.api.schemas.embedding_response import EmbeddingResponse, EmbeddingData
 
 router = APIRouter()
 
-@router.post("/embeddings", response_model=TextEmbedding)
+@router.post("/v1/embeddings", response_model=EmbeddingResponse)
 @inject
-async def embed_text(
-    request: EmbeddingContext,
+async def openai_embeddings(
+    request: EmbeddingRequest,
     service: EmbeddingService = Depends(Provide[Container.embedding_service])
-) -> TextEmbedding:
-    """Endpoint for generating text embeddings using the configured provider."""
+) -> EmbeddingResponse:
+    """OpenAI-compatible endpoint for generating text embeddings."""
     try:
-        embedding = await service.execute(request.input)
-        return TextEmbedding(embedding=embedding, model=request.model_name or settings.LLM_BACKEND)
+        # Handle both single string and list of strings
+        inputs = [request.input] if isinstance(request.input, str) else request.input
+        
+        embeddings_data = []
+        for i, text in enumerate(inputs):
+            embedding = await service.execute(text)
+            embeddings_data.append(
+                EmbeddingData(
+                    index=i,
+                    embedding=embedding
+                )
+            )
+            
+        return EmbeddingResponse(
+            data=embeddings_data,
+            model=request.model
+        )
     except LLMGenerationException as e:
         raise HTTPException(status_code=502, detail=str(e))
     except Exception as e:
