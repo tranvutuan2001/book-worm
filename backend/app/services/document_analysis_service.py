@@ -106,15 +106,43 @@ def _recursive_split(
 # ---------------------------------------------------------------------------
 
 _SECTION_SUMMARY_SYSTEM = """
-Summarize the text below into a high-density, bulleted list.
-Focus only on hard facts, names, and key metrics.
-Use a professional, note-taking style.
+Summarize the text below into a comprehensive, high-density bulleted list.
+Extract ALL relevant facts — use as many bullets as needed. Do not limit yourself
+to the number of bullets shown in the example; the example only demonstrates the
+expected format and style.
+
+Organize bullets using these categories where applicable:
+- Core Objective: The primary purpose or main point of the section.
+- Key Metrics & Data: Specific numbers, percentages, or financial figures.
+- Entities: Important names, organizations, or locations.
+- Critical Insights: Key takeaways, decisions, or milestones.
+
+Format example (style reference only — real output should be much longer):
+- Core Objective: Evaluation of Q3 fiscal performance and operational overhead.
+- Financials: Revenue of $14.2B (exceeding targets by 4%); Operating Margin at 22%.
+- Key Entities: Marcus Vane (CFO), NeuralLink Corp (target of $2.1B acquisition).
+- Operational Insight: 15% growth in APAC region driven by enterprise cloud adoption.
+- Future Outlook: Management identified supply chain volatility as a 2025 risk factor.
 """.strip()
 
 _CHAPTER_SUMMARY_SYSTEM = """
-Summarize the text below into a high-density, bulleted list.
-Focus only on hard facts, names, and key metrics.
-Use a professional, note-taking style.
+Consolidate the provided section summaries into a comprehensive chapter-level overview.
+Preserve ALL key details from every section — use as many bullets as needed. Do not
+limit yourself to the number of bullets shown in the example; the example only
+demonstrates the expected format and style.
+
+Organize bullets using these categories where applicable:
+- Overarching Theme: The central narrative or focus of the chapter.
+- Consolidated Performance: Synthesis of key results and metrics from all sections.
+- Major Milestones: High-level achievements or structural changes.
+- Strategic Implications: Impact on the broader roadmap or business objectives.
+
+Format example (style reference only — real output should be much longer):
+- Overarching Theme: 2024 Strategic Pivot and Global Infrastructure Expansion.
+- Performance Summary: Total annual revenue reached $58B with 12% YoY growth; net income at $8.4B.
+- Key Milestones: Successful deployment of 12 data centers; acquisition of NeuralLink Corp for AI integration.
+- Executive Changes: Appointed Clara Oswald as CTO to lead 'AI-First' transformation.
+- Strategic Conclusion: Transition from hardware-centric to service-oriented model is 80% complete.
 """.strip()
 
 
@@ -128,7 +156,6 @@ class DocumentAnalysisService:
     # Public entry point
     # ------------------------------------------------------------------
 
-    @observe()
     async def pre_analyze_document(self, command: AnalyzeDocumentCommand) -> None:
         """Run the full analysis pipeline for a document.
 
@@ -175,6 +202,7 @@ class DocumentAnalysisService:
     # Pipeline stages
     # ------------------------------------------------------------------
 
+    @observe()
     async def _process_chunks(
         self, chunks: list[str], doc_name: str, out_dir: Path
     ) -> None:
@@ -186,6 +214,7 @@ class DocumentAnalysisService:
         )
         logger.info("[chunks] Done")
 
+    @observe()
     async def _process_sections(
         self, chunks: list[str], doc_name: str, out_dir: Path
     ) -> list[str]:
@@ -201,6 +230,7 @@ class DocumentAnalysisService:
         logger.info("[sections] Done (%d summaries)", len(summaries))
         return summaries
 
+    @observe()
     async def _process_chapters(
         self,
         chunks: list[str],
@@ -260,10 +290,7 @@ class DocumentAnalysisService:
             logger.info("Section summary %d–%d / %d", i + 1, end, len(chunks))
             user_msg = Message(
                 id="user",
-                content=(
-                    "Analyse and summarise the following document section:\n\n"
-                    + "\n".join(batch)
-                ),
+                content="\n".join(batch),
                 role=Role.USER,
                 timestamp=int(time.time()),
             )
@@ -297,15 +324,10 @@ class DocumentAnalysisService:
                 "Chapter summary from sections %d–%d / %d", i + 1, end,
                 len(section_summaries),
             )
-            combined = "\n\n".join(
-                f"Section {j + 1}: {s}" for j, s in enumerate(batch)
-            )
+            combined = "\n\n".join(batch)
             user_msg = Message(
                 id="user",
-                content=(
-                    "Create a comprehensive chapter summary from the following "
-                    "section summaries:\n\n" + combined
-                ),
+                content=combined,
                 role=Role.USER,
                 timestamp=int(time.time()),
             )

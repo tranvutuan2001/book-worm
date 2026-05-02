@@ -68,7 +68,7 @@ class LLMService:
             kwargs = {
                 "model": "", # The server chooses the suitable model automatically
                 "messages": messages,
-                "max_tokens": agent.model_settings.max_tokens or 1024,
+                "max_tokens": agent.model_settings.max_tokens,
                 "temperature": agent.model_settings.temperature,
             }
             if tools_schema:

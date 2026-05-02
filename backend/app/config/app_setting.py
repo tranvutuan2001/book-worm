@@ -42,7 +42,7 @@ class AppSetting(BaseSettings):
     max_embedding_retries: int = 3
 
     # --- LLM Inference Defaults ---
-    chat_max_tokens: int | None = None
+    chat_max_tokens: int | None = 16000
     chat_temperature: float = 0.2
     top_k_chunks: int = 3
 
