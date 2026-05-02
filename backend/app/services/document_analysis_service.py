@@ -1,15 +1,8 @@
-"""
-Document analysis service — extracts text, generates summaries and embeddings.
-
-This is the computationally heavy pipeline that runs in a background thread
-after a document is uploaded.  It has no FastAPI / HTTP dependency.
-"""
-
+import asyncio
 import json
 import logging
 import time
 from pathlib import Path
-from typing import List, Optional
 from langfuse import observe
 
 import pdfplumber
@@ -68,7 +61,7 @@ def _recursive_split(
     current_len = 0
 
     for part in parts:
-        piece = part if not sep else part
+        piece = part
         piece_len = len(piece) + (len(sep) if current else 0)
 
         if current_len + piece_len > chunk_size and current:
@@ -152,15 +145,19 @@ class DocumentAnalysisService:
             pages = self._extract_pages(command.pdf_path)
             logger.info("Extracted %d pages from '%s'", len(pages), command.document_name)
 
-            chunks = _recursive_split("".join(pages), app_setting.document_chunk_size, app_setting.document_chunk_overlap)
+            chunks = _recursive_split(
+                "".join(pages),
+                app_setting.document_chunk_size,
+                app_setting.document_chunk_overlap
+            )
             logger.info("Split into %d chunks", len(chunks))
 
             out_dir = app_setting.data_storage_path / command.document_name
 
-
             await self._process_chunks(chunks, command.document_name, out_dir)
-            section_summaries: Optional[List[str]] = None
-            section_summaries = await self._process_sections(chunks, command.document_name, out_dir)
+            section_summaries = await self._process_sections(
+                chunks, command.document_name, out_dir
+            )
             await self._process_chapters(
                 chunks, command.document_name, out_dir, section_summaries
             )
@@ -171,7 +168,7 @@ class DocumentAnalysisService:
             raise
         except Exception as exc:
             raise DocumentProcessingError(
-                f"Unexpected error during pre-analysis of '{document_name}': {exc}"
+                f"Unexpected error during pre-analysis of '{command.document_name}': {exc}"
             ) from exc
 
     # ------------------------------------------------------------------
@@ -179,7 +176,7 @@ class DocumentAnalysisService:
     # ------------------------------------------------------------------
 
     async def _process_chunks(
-        self, chunks: List[str], doc_name: str, out_dir: Path
+        self, chunks: list[str], doc_name: str, out_dir: Path
     ) -> None:
         logger.info("[chunks] Writing %d chunks…", len(chunks))
         write_json_file(chunks, str(out_dir / f"{doc_name}{app_setting.suffix_chunks}"))
@@ -190,8 +187,8 @@ class DocumentAnalysisService:
         logger.info("[chunks] Done")
 
     async def _process_sections(
-        self, chunks: List[str], doc_name: str, out_dir: Path
-    ) -> List[str]:
+        self, chunks: list[str], doc_name: str, out_dir: Path
+    ) -> list[str]:
         logger.info("[sections] Building section summaries…")
         summaries = await self._build_section_summaries(chunks)
         write_json_file(
@@ -206,10 +203,10 @@ class DocumentAnalysisService:
 
     async def _process_chapters(
         self,
-        chunks: List[str],
+        chunks: list[str],
         doc_name: str,
         out_dir: Path,
-        section_summaries: Optional[List[str]],
+        section_summaries: list[str] | None,
     ) -> None:
         logger.info("[chapters] Building chapter summaries…")
         if section_summaries is None:
@@ -228,13 +225,12 @@ class DocumentAnalysisService:
         )
         logger.info("[chapters] Done (%d summaries)", len(chapter_summaries))
 
-
     # ------------------------------------------------------------------
     # Text extraction
     # ------------------------------------------------------------------
 
-    def _extract_pages(self, pdf_path: str) -> List[str]:
-        pages: List[str] = []
+    def _extract_pages(self, pdf_path: str) -> list[str]:
+        pages: list[str] = []
         try:
             with pdfplumber.open(pdf_path) as pdf:
                 for i, page in enumerate(pdf.pages):
@@ -256,8 +252,8 @@ class DocumentAnalysisService:
     # Summarisation
     # ------------------------------------------------------------------
 
-    async def _build_section_summaries(self, chunks: List[str]) -> List[str]:
-        summaries: List[str] = []
+    async def _build_section_summaries(self, chunks: list[str]) -> list[str]:
+        summaries: list[str] = []
         for i in range(0, len(chunks), app_setting.chunks_per_section):
             batch = chunks[i : i + app_setting.chunks_per_section]
             end = min(i + app_setting.chunks_per_section, len(chunks))
@@ -292,8 +288,8 @@ class DocumentAnalysisService:
                 ) from exc
         return summaries
 
-    async def _build_chapter_summaries(self, section_summaries: List[str]) -> List[str]:
-        chapters: List[str] = []
+    async def _build_chapter_summaries(self, section_summaries: list[str]) -> list[str]:
+        chapters: list[str] = []
         for i in range(0, len(section_summaries), app_setting.sections_per_chapter):
             batch = section_summaries[i : i + app_setting.sections_per_chapter]
             end = min(i + app_setting.sections_per_chapter, len(section_summaries))
@@ -336,8 +332,8 @@ class DocumentAnalysisService:
     # Embedding helpers
     # ------------------------------------------------------------------
 
-    async def _embed_text(self, text: str) -> List[float]:
-        last_exc: Optional[Exception] = None
+    async def _embed_text(self, text: str) -> list[float]:
+        last_exc: Exception | None = None
         for attempt in range(app_setting.max_embedding_retries):
             try:
                 return await self._llm.embed_text(text=text)
@@ -350,14 +346,13 @@ class DocumentAnalysisService:
                     exc,
                 )
                 if attempt < app_setting.max_embedding_retries - 1:
-                    import asyncio
                     await asyncio.sleep(1)
         raise DocumentProcessingError(
             f"Embedding failed after {app_setting.max_embedding_retries} attempts: {last_exc}"
         ) from last_exc
 
-    async def _embed_texts(self, texts: List[str], label: str = "text") -> List[List[float]]:
-        result: List[List[float]] = []
+    async def _embed_texts(self, texts: list[str], label: str = "text") -> list[list[float]]:
+        result: list[list[float]] = []
         for idx, text in enumerate(texts):
             logger.info("Embedding %s %d/%d…", label, idx + 1, len(texts))
             result.append(await self._embed_text(text))
@@ -368,8 +363,8 @@ class DocumentAnalysisService:
     # ------------------------------------------------------------------
 
     async def _load_or_build_sections(
-        self, chunks: List[str], doc_name: str, out_dir: Path
-    ) -> List[str]:
+        self, chunks: list[str], doc_name: str, out_dir: Path
+    ) -> list[str]:
         section_file = out_dir / f"{doc_name}{app_setting.suffix_section_summaries}"
         if section_file.exists():
             try:

@@ -7,9 +7,9 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.infra.logging_config import setup_logging
-from app.api.routes.chat import router as chat_router
-from app.api.routes.document import router as document_router
+from app.infrastructure.logging_config import setup_logging
+from app.api.route.chat import router as chat_router
+from app.api.route.document import router as document_router
 
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 setup_logging()
