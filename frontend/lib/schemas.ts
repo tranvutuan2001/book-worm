@@ -12,8 +12,6 @@ export const ConversationSchema = z.object({
   message_list: z.array(MessageSchema),
   timestamp: z.number(),
   document_name: z.string().nullable().optional(),
-  chat_model: z.string(),
-  embedding_model: z.string(),
 });
 
 // Ask endpoint response
@@ -52,73 +50,6 @@ export type DocumentStatus = z.infer<typeof DocumentStatusSchema>;
 export type UploadResponse = z.infer<typeof UploadResponseSchema>;
 export type DocumentInfo = z.infer<typeof DocumentInfoSchema>;
 export type DocumentsResponse = z.infer<typeof DocumentsResponseSchema>;
-
-// LLM Backend Schemas
-export const ModelInfoSchema = z.object({
-  name: z.string(),
-  path: z.string(),
-  size: z.string(),
-  status: z.enum(['ready_to_use', 'downloading']),
-});
-
-export const DownloadableModelInfoSchema = z.object({
-  name: z.string(),
-  repository: z.string(),
-  filename: z.string(),
-});
-
-export const LoadedModelInfoSchema = z.object({
-  model_name: z.string(),
-  model_path: z.string(),
-  model_type: z.string(),
-  loaded: z.boolean(),
-});
-
-export const ModelLoadRequestSchema = z.object({
-  model_path: z.string(),
-  model_type: z.enum(['chat', 'embedding']),
-});
-
-export const ModelUnloadRequestSchema = z.object({
-  model_path: z.string(),
-  model_type: z.enum(['chat', 'embedding']),
-});
-
-export const ModelDownloadRequestSchema = z.object({
-  repository: z.string(),
-});
-
-export const ModelDownloadResponseSchema = z.object({
-  repository: z.string(),
-  status: z.string(),
-  path: z.string(),
-  message: z.string(),
-});
-
-export const ModelLoadResponseSchema = z.object({
-  model: z.string(),
-  model_type: z.string(),
-  status: z.string(),
-  message: z.string(),
-  model_path: z.string(),
-});
-
-export const ModelUnloadResponseSchema = z.object({
-  model_path: z.string(),
-  model_type: z.string(),
-  status: z.string(),
-  message: z.string(),
-});
-
-export type ModelInfo = z.infer<typeof ModelInfoSchema>;
-export type DownloadableModelInfo = z.infer<typeof DownloadableModelInfoSchema>;
-export type LoadedModelInfo = z.infer<typeof LoadedModelInfoSchema>;
-export type ModelLoadRequest = z.infer<typeof ModelLoadRequestSchema>;
-export type ModelUnloadRequest = z.infer<typeof ModelUnloadRequestSchema>;
-export type ModelDownloadRequest = z.infer<typeof ModelDownloadRequestSchema>;
-export type ModelDownloadResponse = z.infer<typeof ModelDownloadResponseSchema>;
-export type ModelLoadResponse = z.infer<typeof ModelLoadResponseSchema>;
-export type ModelUnloadResponse = z.infer<typeof ModelUnloadResponseSchema>;
 
 // ── PDF Document schema ───────────────────────────────────────────────────────
 export * from './pdf-document-schema';

@@ -6,8 +6,6 @@ import ChatInput from '@/components/ChatInput';
 import ChatHeader from '@/components/ChatHeader';
 import DocumentUpload from '@/components/DocumentUpload';
 import DocumentList from '@/components/DocumentList';
-import ModelManagement from '@/components/ModelManagement';
-import ModelSelector from '@/components/ModelSelector';
 import { Conversation, Message } from '@/lib/schemas';
 import { sendMessage } from '@/lib/api';
 
@@ -19,8 +17,6 @@ export default function Home() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [selectedChatModelPath, setSelectedChatModelPath] = useState<string | null>(null);
-  const [selectedEmbeddingModelPath, setSelectedEmbeddingModelPath] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -32,12 +28,6 @@ export default function Home() {
   }, [messages]);
 
   const handleSendMessage = async (content: string) => {
-    // Check if models are selected
-    if (!selectedChatModelPath || !selectedEmbeddingModelPath) {
-      alert('Please select both chat and embedding models before sending a message');
-      return;
-    }
-
     // Add user message
     const userMessage: Message = {
       id: `msg-${Date.now()}`,
@@ -61,8 +51,6 @@ export default function Home() {
         message_list: [...messages, userMessage],
         timestamp: Date.now(),
         document_name: selectedDocument,
-        chat_model: selectedChatModelPath,
-        embedding_model: selectedEmbeddingModelPath,
       };
 
       // Call the document analysis API
@@ -184,22 +172,12 @@ export default function Home() {
           selectedDocument={selectedDocument}
         />
       
-        {/* Main content with chat and model management */}
+        {/* Main content with chat */}
         <div className="flex-1 flex overflow-hidden">
           {/* Chat Area */}
           <div className="flex-1 flex flex-col min-w-0">
             <main className="flex-1 overflow-y-auto">
               <div className="max-w-4xl mx-auto px-4 py-6">
-                {/* Model Selector - Compact at top */}
-                <div className="mb-4">
-                  <ModelSelector
-                    selectedChatModelPath={selectedChatModelPath}
-                    selectedEmbeddingModelPath={selectedEmbeddingModelPath}
-                    onChatModelChange={setSelectedChatModelPath}
-                    onEmbeddingModelChange={setSelectedEmbeddingModelPath}
-                  />
-                </div>
-
                 {/* Chat Messages */}
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center py-12">
@@ -219,14 +197,10 @@ export default function Home() {
                       </svg>
                     </div>
                     <h2 className="text-3xl font-bold bg-linear-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-3">
-                      {selectedChatModelPath && selectedEmbeddingModelPath 
-                        ? 'Ready to chat!' 
-                        : 'Select models to get started'}
+                      Ready to chat!
                     </h2>
                     <p className="text-gray-600 max-w-md text-lg">
-                      {selectedChatModelPath && selectedEmbeddingModelPath
-                        ? 'Ask me anything! I\'m using your selected models to provide intelligent responses.'
-                        : 'Please select both a chat model and an embedding model to begin.'}
+                      Ask me anything! I can help you analyze documents and answer your questions.
                     </p>
                   </div>
                 ) : (
@@ -259,28 +233,9 @@ export default function Home() {
 
             <ChatInput 
               onSendMessage={handleSendMessage} 
-              disabled={isLoading || !selectedChatModelPath || !selectedEmbeddingModelPath} 
+              disabled={isLoading} 
               selectedDocument={selectedDocument}
             />
-          </div>
-
-          {/* Right Sidebar - Model Management */}
-          <div className={`
-            w-96 border-l border-purple-200 bg-white/95 backdrop-blur-sm flex-col overflow-hidden shadow-xl
-            hidden xl:flex
-          `}>
-            <div className="flex items-center justify-between p-4 border-b border-purple-200 bg-linear-to-r from-purple-600 to-blue-600">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                </svg>
-                Model Management
-              </h2>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-4">
-              <ModelManagement />
-            </div>
           </div>
         </div>
       </div>
