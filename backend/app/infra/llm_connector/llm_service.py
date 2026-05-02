@@ -8,9 +8,11 @@ and text embeddings by communicating with an external LLM server.
 import asyncio
 import json
 import logging
+import inspect
 from typing import Any, Callable
 
-import httpx
+from langfuse import observe
+from langfuse.openai import AsyncOpenAI
 
 from app.domain.entity.agent import Agent as DomainAgent
 from app.domain.entity.message import Message
@@ -31,7 +33,14 @@ class LLMService:
 
     def __init__(self, base_url: str) -> None:
         self._base_url = base_url.rstrip("/")
+        # We use LangfuseAsyncOpenAI to get observability out of the box
+        # API key is required by the client but may not be used by the local server
+        self._client = AsyncOpenAI(
+            base_url=f"{self._base_url}",
+            api_key="none",
+        )
 
+    @observe(name="agent_complete_chat", as_type="generation")
     async def agent_complete_chat(
         self,
         message_list: list[Message],
@@ -48,99 +57,128 @@ class LLMService:
         Returns:
             The final assistant text response.
         """
-        messages = [
-            {"role": "system", "content": agent.system_prompt}
-        ]
+        messages = [{"role": "system", "content": agent.system_prompt}]
         for msg in message_list:
             messages.append({"role": msg.role.value, "content": msg.content})
 
         tools_schema = self._prepare_tools(agent.tools) if agent.tools else None
-        
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            # Conversation loop (to handle multiple tool calls if needed)
-            for _ in range(10): # Limit to 10 steps to prevent infinite loops
-                payload = {
-                    "messages": messages,
-                    "max_tokens": agent.model_settings.max_tokens or 1024,
-                    "temperature": agent.model_settings.temperature,
-                    "tools": tools_schema,
-                }
 
-                # Retry loop for the specific HTTP request
-                data = None
-                for attempt in range(agent.max_retries + 1):
-                    try:
-                        logger.info(f"LLM request step {_+1}, attempt {attempt+1}")
-                        logger.debug(f"Payload: {json.dumps(payload, indent=2)}")
-                        response = await client.post(f"{self._base_url}/generate", json=payload)
-                        response.raise_for_status()
-                        data = response.json()
-                        break
-                    except (httpx.HTTPStatusError, httpx.RequestError) as e:
-                        if attempt == agent.max_retries:
-                            logger.error(f"LLM request failed after {agent.max_retries} retries: {e}")
-                            raise
-                        logger.warning(f"LLM request failed (attempt {attempt + 1}): {e}")
-                        await asyncio.sleep(1) # Basic backoff
+        # Conversation loop (to handle multiple tool calls if needed)
+        for _ in range(10): # Limit to 10 steps to prevent infinite loops
+            kwargs = {
+                "model": "default-model", # It's a dummy value for the local server
+                "messages": messages,
+                "max_tokens": agent.model_settings.max_tokens or 1024,
+                "temperature": agent.model_settings.temperature,
+            }
+            if tools_schema:
+                kwargs["tools"] = tools_schema
 
-                if not data:
-                    return ""
+            # Retry loop for the specific HTTP request
+            response = None
+            for attempt in range(agent.max_retries + 1):
+                try:
+                    logger.info(f"LLM request step {_+1}, attempt {attempt+1}")
+                    response = await self._client.chat.completions.create(**kwargs)
+                    break
+                except Exception as e:
+                    if attempt == agent.max_retries:
+                        logger.error(f"LLM request failed after {agent.max_retries} retries: {e}")
+                        raise
+                    logger.warning(f"LLM request failed (attempt {attempt + 1}): {e}")
+                    await asyncio.sleep(1) # Basic backoff
 
-                content = data.get("content")
-                tool_calls = data.get("tool_calls")
-                
-                logger.info(f"LLM response: content='{content}', tool_calls={tool_calls}")
+            if not response:
+                return ""
 
-                if not tool_calls:
-                    return content or ""
-                
-                # Handle tool calls
-                messages.append({"role": "assistant", "content": content, "tool_calls": tool_calls})
-                
-                for tool_call in tool_calls:
-                    tool_name = tool_call["function"]["name"]
-                    tool_args = tool_call["function"]["arguments"]
-                    if isinstance(tool_args, str):
-                        tool_args = json.loads(tool_args)
-                    
-                    tool_func = next((t for t in agent.tools if t.__name__ == tool_name), None)
-                    if tool_func:
-                        from pydantic_ai import RunContext
-                        ctx = RunContext(deps=None, model=None, usage=None, prompt=None)
-                        
-                        try:
-                            # Use inspect to see if it takes ctx
-                            import inspect
-                            sig = inspect.signature(tool_func)
-                            if "ctx" in sig.parameters:
-                                result = tool_func(ctx, **tool_args)
-                            else:
-                                result = tool_func(**tool_args)
-                            
-                            logger.info(f"Tool {tool_name} result: {result}")
-                            messages.append({
-                                "role": "tool",
-                                "tool_call_id": tool_call.get("id"),
-                                "name": tool_name,
-                                "content": str(result)
-                            })
-                        except Exception as e:
-                            logger.error(f"Error executing tool {tool_name}: {e}")
-                            messages.append({
-                                "role": "tool",
-                                "tool_call_id": tool_call.get("id"),
-                                "name": tool_name,
-                                "content": f"Error: {str(e)}"
-                            })
-                
-                # Continue conversation loop with updated messages
-                continue
+            choice = response.choices[0]
+            content = choice.message.content
+            tool_calls = choice.message.tool_calls
+            
+            logger.info(f"LLM response: content='{content}', tool_calls={tool_calls}")
+
+            if not tool_calls:
+                return content or ""
+            
+            # Handle tool calls
+            # Add assistant message to history
+            assistant_message = {"role": "assistant", "content": content}
+            
+            # OpenAI SDK objects to dicts
+            assistant_tool_calls = []
+            for tc in tool_calls:
+                assistant_tool_calls.append({
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    }
+                })
+            assistant_message["tool_calls"] = assistant_tool_calls
+            messages.append(assistant_message)
+            
+            for tool_call in tool_calls:
+                await self._execute_tool(tool_call, agent, messages)
+            
+            # Continue conversation loop with updated messages
+            continue
 
         return ""
 
+    @observe(name="execute_tool", as_type="span")
+    async def _execute_tool(self, tool_call, agent: DomainAgent, messages: list):
+        tool_name = tool_call.function.name
+        tool_args_str = tool_call.function.arguments
+        try:
+            tool_args = json.loads(tool_args_str)
+        except json.JSONDecodeError:
+            tool_args = {}
+            
+        tool_func = next((t for t in agent.tools if t.__name__ == tool_name), None)
+        if tool_func:
+            from pydantic_ai import RunContext
+            ctx = RunContext(deps=None, model=None, usage=None, prompt=None)
+            
+            try:
+                sig = inspect.signature(tool_func)
+                # Check if it's async
+                if inspect.iscoroutinefunction(tool_func):
+                    if "ctx" in sig.parameters:
+                        result = await tool_func(ctx, **tool_args)
+                    else:
+                        result = await tool_func(**tool_args)
+                else:
+                    if "ctx" in sig.parameters:
+                        result = tool_func(ctx, **tool_args)
+                    else:
+                        result = tool_func(**tool_args)
+                
+                logger.info(f"Tool {tool_name} result: {result}")
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "name": tool_name,
+                    "content": str(result)
+                })
+            except Exception as e:
+                logger.error(f"Error executing tool {tool_name}: {e}")
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "name": tool_name,
+                    "content": f"Error: {str(e)}"
+                })
+        else:
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "name": tool_name,
+                "content": f"Error: Tool {tool_name} not found."
+            })
+
     def _prepare_tools(self, tools: list[Callable[..., Any]]) -> list[dict[str, Any]]:
         """Convert Python callables to OpenAI-compatible tool schemas."""
-        import inspect
         from docstring_parser import parse
 
         schemas = []
@@ -163,6 +201,8 @@ class LLMService:
                     p_type = "number"
                 elif param.annotation == bool:
                     p_type = "boolean"
+                elif param.annotation == list or param.annotation == list[str]:
+                    p_type = "array"
                 
                 properties[name] = {
                     "type": p_type,
@@ -185,23 +225,21 @@ class LLMService:
             })
         return schemas
 
-    async def embed_text(self, text: str) -> list[float]:
+    @observe(name="embed_text", as_type="generation")
+    async def embed_text(self, text: str, model: str = "default-model", *args, **kwargs) -> list[float]:
         """
         Create a text embedding using the remote embedding server.
 
         Args:
             text: The text to embed.
+            model: Optional model name (handled natively by the OpenAI SDK)
 
         Returns:
             A list of floats representing the embedding vector.
         """
-        payload = {
-            "input": text,
-            "model_name": None # Server uses its own
-        }
+        response = await self._client.embeddings.create(
+            input=text,
+            model=model
+        )
+        return response.data[0].embedding
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(f"{self._base_url}/embeddings", json=payload)
-            response.raise_for_status()
-            data = response.json()
-            return data.get("embedding", [])

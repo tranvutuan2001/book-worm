@@ -69,7 +69,7 @@ SUFFIX_CHAPTER_EMBEDDINGS = "_chapter_summary_embeddings.json"
 # ---------------------------------------------------------------------------
 
 LLM_BACKEND: Literal["local", "lm_studio", "server"] = "server"
-LLM_SERVER_URL: str = "http://localhost:8001"
+LLM_SERVER_URL: str = "http://localhost:8001/v1"
 LM_STUDIO_BASE_URL: str = "http://localhost:1234/v1"
 LM_STUDIO_API_KEY: str = "lm-studio"
 
