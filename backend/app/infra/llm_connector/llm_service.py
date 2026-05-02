@@ -34,7 +34,7 @@ class LLMService:
     def __init__(self, base_url: str) -> None:
         self._base_url = base_url.rstrip("/")
         # We use LangfuseAsyncOpenAI to get observability out of the box
-        # API key is required by the client but may not be used by the local server
+        # API key is required by the client but may not be used by the remote server
         self._client = AsyncOpenAI(
             base_url=f"{self._base_url}",
             api_key="none",
@@ -66,7 +66,7 @@ class LLMService:
         # Conversation loop (to handle multiple tool calls if needed)
         for _ in range(10): # Limit to 10 steps to prevent infinite loops
             kwargs = {
-                "model": "default-model", # It's a dummy value for the local server
+                "model": "", # The server chooses the suitable model automatically
                 "messages": messages,
                 "max_tokens": agent.model_settings.max_tokens or 1024,
                 "temperature": agent.model_settings.temperature,
@@ -226,7 +226,7 @@ class LLMService:
         return schemas
 
     @observe(name="embed_text", as_type="generation")
-    async def embed_text(self, text: str, model: str = "default-model", *args, **kwargs) -> list[float]:
+    async def embed_text(self, text: str, model: str | None = None, *args, **kwargs) -> list[float]:
         """
         Create a text embedding using the remote embedding server.
 
@@ -239,7 +239,6 @@ class LLMService:
         """
         response = await self._client.embeddings.create(
             input=text,
-            model=model
+            model=model or ""
         )
         return response.data[0].embedding
-

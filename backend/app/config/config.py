@@ -1,83 +1,71 @@
-"""
-Application-wide configuration and path constants.
-
-All magic strings for paths, model names, and processing parameters live here
-so that the rest of the codebase references named constants rather than bare
-string literals.
-"""
-
 from pathlib import Path
-from typing import Literal
 
-# ---------------------------------------------------------------------------
-# Directory layout
-# ---------------------------------------------------------------------------
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Absolute path to the backend/ project root (where main.py lives)
-PROJECT_ROOT: Path = Path(__file__).resolve().parents[2]
 
-DATA_DIR: Path = PROJECT_ROOT / "0_data"
-PDF_DIR: Path = PROJECT_ROOT / "pdf"
-MODELS_DIR: Path = PROJECT_ROOT / "models"
-CHAT_MODELS_DIR: Path = MODELS_DIR / "chat"
-EMBEDDING_MODELS_DIR: Path = MODELS_DIR / "embedding"
-LOGS_DIR: Path = PROJECT_ROOT / "logs"
+class AppSettings(BaseSettings):
+    """
+    Central configuration for the Book-Worm application.
 
-# Location of JSON schema / example for PDF output
-PDF_SCHEMA_PATH: Path = PROJECT_ROOT / "pdf-schema.json"
-PDF_EXAMPLE_PATH: Path = PROJECT_ROOT / "pdf-example.json"
+    This class uses Pydantic Settings to manage configuration from environment
+    variables and default values.
+    """
 
-# ---------------------------------------------------------------------------
-# Default model paths (relative to PROJECT_ROOT)
-# ---------------------------------------------------------------------------
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,  # Allow uppercase env vars to map to lowercase fields
+        extra="ignore",
+    )
 
-DEFAULT_LOCAL_CHAT_MODEL: str = "models/chat/mlx-community/Qwen3.5-9B-MLX-4bit"
-DEFAULT_CHAT_TEMPLATE: str = "qwen"
-DEFAULT_LOCAL_EMBEDDING_MODEL: str = "models/embedding/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"
+    # --- Storage & Paths ---
+    project_root: Path = Path(__file__).resolve().parents[2]
 
-# ---------------------------------------------------------------------------
-# Document analysis parameters
-# ---------------------------------------------------------------------------
+    # We use Field(default_factory=...) to allow environment overrides while 
+    # maintaining relative paths as defaults.
+    data_storage_path: Path = Field(
+        default_factory=lambda: Path(__file__).resolve().parents[2] / "0_data"
+    )
+    pdf_storage_path: Path = Field(
+        default_factory=lambda: Path(__file__).resolve().parents[2] / "pdf"
+    )
+    logs_storage_path: Path = Field(
+        default_factory=lambda: Path(__file__).resolve().parents[2] / "logs"
+    )
 
-CHUNK_SIZE: int = 1000
-CHUNK_OVERLAP: int = 100
-CHUNKS_PER_SECTION: int = 10
-SECTIONS_PER_CHAPTER: int = 15
-MAX_EMBEDDING_RETRIES: int = 3
+    # --- Document Processing ---
+    document_chunk_size: int = 1000
+    document_chunk_overlap: int = 100
+    chunks_per_section: int = 10
+    sections_per_chapter: int = 15
+    max_embedding_retries: int = 3
 
-# ---------------------------------------------------------------------------
-# LLM inference parameters
-# ---------------------------------------------------------------------------
+    # --- LLM Inference Defaults ---
+    chat_max_tokens: int | None = None
+    chat_temperature: float = 0.2
+    top_k_chunks: int = 3
 
-CHAT_MAX_TOKENS: int | None = None
-CHAT_TEMPERATURE: float = 0.2
-TOP_K_CHUNKS: int = 3
+    # --- Model Artifact Suffixes ---
+    suffix_chunks: str = "_chunks.json"
+    suffix_chunk_embeddings: str = "_chunk_embeddings.json"
+    suffix_section_summaries: str = "_section_summaries.json"
+    suffix_section_embeddings: str = "_section_summary_embeddings.json"
+    suffix_chapter_summaries: str = "_chapter_summaries.json"
+    suffix_chapter_embeddings: str = "_chapter_summary_embeddings.json"
 
-# ---------------------------------------------------------------------------
-# File-name suffixes used when persisting analysis artefacts
-# ---------------------------------------------------------------------------
+    # --- Provider Configuration (llm-server only) ---
+    llm_server_url: str = "http://localhost:8001/v1"
 
-SUFFIX_CHUNKS = "_chunks.json"
-SUFFIX_CHUNK_EMBEDDINGS = "_chunk_embeddings.json"
-SUFFIX_SECTION_SUMMARIES = "_section_summaries.json"
-SUFFIX_SECTION_EMBEDDINGS = "_section_summary_embeddings.json"
-SUFFIX_CHAPTER_SUMMARIES = "_chapter_summaries.json"
-SUFFIX_CHAPTER_EMBEDDINGS = "_chapter_summary_embeddings.json"
+    # --- Computed Properties ---
+    @property
+    def pdf_schema_path(self) -> Path:
+        return self.project_root / "pdf-schema.json"
 
-# ---------------------------------------------------------------------------
-# LLM backend selection
-# ---------------------------------------------------------------------------
+    @property
+    def pdf_example_path(self) -> Path:
+        return self.project_root / "pdf-example.json"
 
-LLM_BACKEND: Literal["local", "lm_studio", "server"] = "server"
-LLM_SERVER_URL: str = "http://localhost:8001/v1"
-LM_STUDIO_BASE_URL: str = "http://localhost:1234/v1"
-LM_STUDIO_API_KEY: str = "lm-studio"
 
-# Model identifiers exactly as they appear in LM Studio's model list.
-# Leave empty to fall back to the model_path argument passed by the caller.
-LM_STUDIO_DEFAULT_CHAT_MODEL: str = "qwen3.5-9b-mlx"
-LM_STUDIO_DEFAULT_EMBEDDING_MODEL: str = "text-embedding-qwen3-embedding-0.6b"
-
-# ---------------------------------------------------------------------------
-DEFAULT_CHAT_MODEL = LM_STUDIO_DEFAULT_CHAT_MODEL if LLM_BACKEND == "lm_studio" else DEFAULT_LOCAL_CHAT_MODEL
-DEFAULT_EMBEDDING_MODEL = LM_STUDIO_DEFAULT_EMBEDDING_MODEL if LLM_BACKEND == "lm_studio" else DEFAULT_LOCAL_EMBEDDING_MODEL
+# Export a singleton instance
+settings = AppSettings()

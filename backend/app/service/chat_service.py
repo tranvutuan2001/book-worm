@@ -13,7 +13,7 @@ import time
 import traceback
 from langfuse import observe
 from app.core.exceptions import DocumentNotFoundError, LLMError
-from app.config.config import DATA_DIR
+from app.config.config import settings
 from app.domain.entity.agent import AgentFactory
 from app.domain.entity.conversation import Conversation
 from app.domain.entity.message import Message
@@ -126,7 +126,7 @@ class ChatService:
     def _validate_document(self, document_name: str | None) -> None:
         if not document_name:
             raise DocumentNotFoundError("Document name is required")
-        doc_path = DATA_DIR / document_name
+        doc_path = settings.data_storage_path / document_name
         if not doc_path.exists():
             raise DocumentNotFoundError(
                 f"Document '{document_name}' not found at {doc_path}"

@@ -3,7 +3,7 @@ Pydantic AI tools for document retrieval used by the chat agent.
 
 These are plain Python functions that the Pydantic AI ``Agent`` can call
 when the model decides it needs more context from the document.  They read
-from the pre-computed JSON artefacts stored under ``DATA_DIR / <document_name>/``.
+from the pre-computed JSON artefacts stored under ``data_storage_path / <document_name>/``.
 """
 
 import json
@@ -16,7 +16,7 @@ import faiss
 import numpy as np
 from pydantic_ai import RunContext
 
-from app.config.config import DATA_DIR, DEFAULT_EMBEDDING_MODEL, TOP_K_CHUNKS
+from app.config.config import settings
 from app.infra.llm_connector import LLMService
 
 logger = logging.getLogger("app.service.tools")
@@ -48,12 +48,12 @@ def _load_json(file_path: Path, description: str) -> object:
 
 
 def _chunk_embeddings(document_name: str) -> List[List[float]]:
-    path = DATA_DIR / document_name / f"{document_name}_chunk_embeddings.json"
+    path = settings.data_storage_path / document_name / f"{document_name}{settings.suffix_chunk_embeddings}"
     return _load_json(path, "Chunk embeddings")  # type: ignore[return-value]
 
 
 def _all_chunks(document_name: str) -> List[str]:
-    path = DATA_DIR / document_name / f"{document_name}_chunks.json"
+    path = settings.data_storage_path / document_name / f"{document_name}{settings.suffix_chunks}"
     return _load_json(path, "Chunks")  # type: ignore[return-value]
 
 
@@ -73,12 +73,12 @@ async def get_the_most_relevant_chunks(ctx: RunContext[None], question: str, doc
         index.add(n=vectors.shape[0], x=vectors)
 
         query_vec = np.array(
-            [await _get_llm_service().embed_text(DEFAULT_EMBEDDING_MODEL, question)], dtype="float32"
+            [await _get_llm_service().embed_text(text=question)], dtype="float32"
         )
         n_queries = query_vec.shape[0]
-        distances = np.empty((n_queries, TOP_K_CHUNKS), dtype="float32")
-        raw_indices = np.empty((n_queries, TOP_K_CHUNKS), dtype="int64")
-        index.search(n=n_queries, x=query_vec, k=TOP_K_CHUNKS, distances=distances, labels=raw_indices)
+        distances = np.empty((n_queries, settings.top_k_chunks), dtype="float32")
+        raw_indices = np.empty((n_queries, settings.top_k_chunks), dtype="int64")
+        index.search(n=n_queries, x=query_vec, k=settings.top_k_chunks, distances=distances, labels=raw_indices)
 
         all_chunks = _all_chunks(document_name)
         result = [all_chunks[i] for i in raw_indices[0] if i < len(all_chunks)]
@@ -95,7 +95,7 @@ async def get_the_most_relevant_chunks(ctx: RunContext[None], question: str, doc
 def get_document_summary(ctx: RunContext[None], document_name: str) -> str:
     """Return a high-level summary of the entire document."""
     try:
-        path = DATA_DIR / document_name / f"{document_name}_chapter_summaries.json"
+        path = settings.data_storage_path / document_name / f"{document_name}{settings.suffix_chapter_summaries}"
 
         if not path.exists():
             logger.warning("Chapter summaries not found for '%s'.", document_name)
