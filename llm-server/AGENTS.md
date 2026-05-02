@@ -55,7 +55,37 @@ class LLMProvider(Protocol):
         ...
 ```
 ### II. Services / Use Case Layer (/app/services/)
-Contains the business logic and use cases of the application. This layer ONLY interacts with the protocols defined in domain layer.
+Contains the business logic and use cases of the application. This layer ONLY interacts with the protocols defined in the domain layer.
+
+#### 1. Commands
+A **Command** is a simple data structure (often a `@dataclass`) that captures all the information needed to perform a specific business action.
+- **Intent-Based**: Named after a specific business action (e.g., `SubmitApplicationCommand` vs. `ApplicationDTO`).
+- **Immutable**: Once created, the command shouldn't change as it travels through your system.
+- **Behaviorless**: It contains data, not logic. It is an instruction, not the executioner.
+
+In short, **Commands** are used as the primary signatures for functions in services.
+
+#### 2. Service Implementation
+Services orchestrate the business logic by coordinating domain entities and infrastructure protocols.
+
+```python
+# app/services/text_generation_service.py
+from dataclasses import dataclass
+from app.domain.protocols import LLMProvider
+
+@dataclass(frozen=True)
+class BrainstormIdeasCommand:
+    topic: str
+    count: int
+
+class TextGenerationService:
+    def __init__(self, llm_provider: LLMProvider):
+        self._llm_provider = llm_provider
+
+    async def brainstorm_ideas(self, command: BrainstormIdeasCommand) -> list[str]:
+        # Implementation using self._llm_provider
+        ...
+```
 
 ### III. Infrastructure Layer (/app/infrastructure/)
 Contains the concrete adapters for the Domain Protocol.
@@ -69,7 +99,18 @@ OpenAIProvider(LLMProvider): Uses the openai Python SDK.
 Error Mapping: Each provider must catch its specific errors (e.g., openai.RateLimitError or MLX memory overflows) and re-raise them as a custom Domain error (e.g., LLMGenerationException).
 
 ### IV. API Layer (/app/api/)
-FastAPI endpoints. Fast, minimal, and completely ignorant of the underlying LLM provider.
+FastAPI endpoints and request/response handling. This layer is completely ignorant of the underlying LLM provider.
+
+#### 1. Structure
+- **dto/**: Defines the contracts (input and output) to the outside world using Pydantic models.
+- **route/**: Defines the FastAPI endpoints and routes.
+- **mapper/**: Contains logic to map DTOs to Service Commands.
+
+#### 2. Workflow
+1. The **Route** receives a request as a **DTO**.
+2. The **Mapper** converts the **DTO** into a domain-specific **Command**.
+3. The **Route** invokes the **Service** using the **Command**.
+4. The **Service** returns a result which the **Route** then returns (possibly wrapped in a response DTO).
 
 ## 3. Dependency Injection Configuration
 Use dependency_injector.providers.Configuration to read environment variables (e.g., LLM_BACKEND=mlx, LLM_BACKEND=openai).

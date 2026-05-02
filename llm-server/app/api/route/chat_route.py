@@ -1,12 +1,13 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from dependency_injector.wiring import inject, Provide
+
 from app.container import Container
-from app.domain.value_objects.chat_context import ChatContext
 from app.domain.exceptions.llm_exception import LLMGenerationException
 from app.services.text_generation_service import TextGenerationService
-from app.api.schemas.chat_completion_request import ChatCompletionRequest
-from app.api.schemas.chat_completion_response import ChatCompletionResponse, ChatChoice
+from app.api.dto.chat_completion_request import ChatCompletionRequest
+from app.api.dto.chat_completion_response import ChatCompletionResponse, ChatChoice
+from app.api.mapper.chat_mapper import ChatMapper
 
 router = APIRouter()
 
@@ -18,11 +19,8 @@ async def chat_completions(
 ) -> ChatCompletionResponse:
     """OpenAI-compatible endpoint for chat completions."""
     try:
-        response_message = await service.execute(
-            messages=request.messages,
-            max_tokens=request.max_tokens or 1024,
-            tools=request.tools
-        )
+        command = ChatMapper.to_generate_text_command(request)
+        response_message = await service.generate_text(command)
         
         return ChatCompletionResponse(
             id=f"chatcmpl-{uuid.uuid4()}",

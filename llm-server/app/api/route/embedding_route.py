@@ -1,13 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from dependency_injector.wiring import inject, Provide
+
 from app.container import Container
-from app.domain.value_objects.embedding_context import EmbeddingContext
-from app.domain.value_objects.text_embedding import TextEmbedding
 from app.domain.exceptions.llm_exception import LLMGenerationException
 from app.services.embedding_service import EmbeddingService
-from app.settings import settings
-from app.api.schemas.embedding_request import EmbeddingRequest
-from app.api.schemas.embedding_response import EmbeddingResponse, EmbeddingData
+from app.api.dto.embedding_request import EmbeddingRequest
+from app.api.dto.embedding_response import EmbeddingResponse, EmbeddingData
+from app.api.mapper.embedding_mapper import EmbeddingMapper
 
 router = APIRouter()
 
@@ -19,18 +18,13 @@ async def openai_embeddings(
 ) -> EmbeddingResponse:
     """OpenAI-compatible endpoint for generating text embeddings."""
     try:
-        # Handle both single string and list of strings
-        inputs = [request.input] if isinstance(request.input, str) else request.input
+        command = EmbeddingMapper.to_generate_embedding_command(request)
+        embeddings = await service.generate_embeddings(command)
         
-        embeddings_data = []
-        for i, text in enumerate(inputs):
-            embedding = await service.execute(text)
-            embeddings_data.append(
-                EmbeddingData(
-                    index=i,
-                    embedding=embedding
-                )
-            )
+        embeddings_data = [
+            EmbeddingData(index=i, embedding=emb)
+            for i, emb in enumerate(embeddings)
+        ]
             
         return EmbeddingResponse(
             data=embeddings_data,
