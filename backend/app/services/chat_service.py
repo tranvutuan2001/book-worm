@@ -14,17 +14,18 @@ import traceback
 from langfuse import observe
 from app.core.exceptions import DocumentNotFoundError, LLMError
 from app.config.app_setting import app_setting
-from app.domain.entity.agent import AgentFactory
-from app.domain.entity.conversation import Conversation
+from app.domain.entity.agent_factory import AgentFactory
+
 from app.domain.entity.message import Message
-from app.domain.enums import Role
-from app.infra.llm_connector import LLMService
-from app.infra.logging_config import (
+from app.domain.enum.role import Role
+from app.infrastructure.llm_connector import LLMService
+from app.infrastructure.logging_config import (
     end_request_logging,
     get_request_logger,
     start_request_logging,
 )
-from app.service.tools.document_retrieval_tool import get_the_most_relevant_chunks, get_document_summary
+from app.services.tools.document_retrieval_tool import get_the_most_relevant_chunks, get_document_summary
+from app.services.commands.ask_question_command import AskQuestionCommand
 
 logger = logging.getLogger("app.service")
 
@@ -69,11 +70,11 @@ class ChatService:
     # ------------------------------------------------------------------
 
     @observe()
-    async def ask(self, conversation: Conversation) -> str:
+    async def ask(self, command: AskQuestionCommand) -> str:
         """Answer the user's latest question about a document.
 
         Args:
-            conversation: Full conversation payload including document name.
+            command: AskQuestionCommand containing messages and document info.
 
         Returns:
             Verified answer string.
@@ -83,8 +84,8 @@ class ChatService:
             LLMError: If the LLM call fails.
         """
         user_query = (
-            conversation.message_list[-1].content
-            if conversation.message_list
+            command.messages[-1].content
+            if command.messages
             else "No query"
         )
         
@@ -93,19 +94,19 @@ class ChatService:
 
         req_logger.info(
             "Processing %d messages for document: %s",
-            len(conversation.message_list),
-            conversation.document_name,
+            len(command.messages),
+            command.document_name,
         )
 
         try:
-            self._validate_document(conversation.document_name)
+            self._validate_document(command.document_name)
 
             tools = (get_the_most_relevant_chunks, get_document_summary)
-            answer = await self._generate_answer(conversation, tools)
+            answer = await self._generate_answer(command.document_name, command.messages, tools)
             verified = await self._verify_answer(
-                conversation.message_list,
+                command.messages,
                 answer,
-                conversation.document_name,
+                command.document_name,
                 tools,
             )
 
@@ -132,15 +133,15 @@ class ChatService:
                 f"Document '{document_name}' not found at {doc_path}"
             )
 
-    async def _generate_answer(self, conversation: Conversation, tools: tuple) -> str:
+    async def _generate_answer(self, document_name: str, message_list: list[Message], tools: tuple) -> str:
         try:
-            system_prompt = f"{_SYSTEM_PROMPT}\n\nDocument: {conversation.document_name}"
+            system_prompt = f"{_SYSTEM_PROMPT}\n\nDocument: {document_name}"
             agent = AgentFactory.document_assistant(
                 system_prompt=system_prompt,
                 tools=list(tools),
             )
             return await self._llm.agent_complete_chat(
-                message_list=conversation.message_list,
+                message_list=message_list,
                 agent=agent,
             )
         except Exception as exc:

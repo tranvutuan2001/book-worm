@@ -17,7 +17,7 @@ import numpy as np
 from pydantic_ai import RunContext
 
 from app.config.app_setting import app_setting
-from app.infra.llm_connector import LLMService
+from app.infrastructure.llm_connector import LLMService
 
 logger = logging.getLogger("app.service.tools")
 

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from app.domain.enums import Role
+from app.domain.enum.role import Role
 
 
 class Message(BaseModel):

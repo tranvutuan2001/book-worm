@@ -6,71 +6,45 @@ translated to HTTP responses by the API route layer.
 """
 
 import logging
-import threading
+import asyncio
 import traceback
-from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
-
-from fastapi import UploadFile
 
 from app.config.app_setting import app_setting
 from app.core.exceptions import DocumentProcessingError, InvalidDocumentError
-from app.service.document_analysis_service import DocumentAnalysisService
+from app.domain.enum.document_status import DocumentStatus
+from app.domain.entity.document_record import DocumentRecord
+from app.domain.value_object.document_upload_result import DocumentUploadResult
+from app.domain.value_object.document_list_result import DocumentListResult
+from app.services.document_analysis_service import DocumentAnalysisService
+from app.services.commands.upload_document_command import UploadDocumentCommand
+from app.services.commands.list_documents_command import ListDocumentsCommand
+from app.services.commands.analyze_document_command import AnalyzeDocumentCommand
 
 logger = logging.getLogger("app.service")
-
-
-# ---------------------------------------------------------------------------
-# Service-level data containers (no FastAPI / schema dependency)
-# ---------------------------------------------------------------------------
-
-class DocumentStatus(str, Enum):
-    READY = "ready"
-    PROCESSING = "processing"
-    ANALYZING = "analyzing"
-    ERROR = "error"
-
-
-@dataclass
-class DocumentUploadResult:
-    document_name: str
-    status: DocumentStatus
-
-
-@dataclass
-class DocumentRecord:
-    name: str
-    status: DocumentStatus
-    path: str
-
-
-@dataclass
-class DocumentListResult:
-    documents: list[DocumentRecord] = field(default_factory=list)
 
 
 class DocumentService:
     def __init__(self, analysis_service: DocumentAnalysisService) -> None:
         self._analysis_service = analysis_service
 
-    async def upload_document(self, file: UploadFile) -> DocumentUploadResult:
+    async def upload_document(self, command: UploadDocumentCommand) -> DocumentUploadResult:
         """Upload a PDF document and trigger background pre-analysis.
 
         Raises:
             InvalidDocumentError: For unsupported file type or missing filename.
             DocumentProcessingError: If saving the file or starting analysis fails.
         """
-        if not file.filename:
+        if not command.filename:
             raise InvalidDocumentError("No filename provided")
 
-        if not file.filename.lower().endswith(".pdf"):
+        if not command.filename.lower().endswith(".pdf"):
             raise InvalidDocumentError(
-                f"Unsupported file type: '{file.filename}'. Only PDF files are accepted."
+                f"Unsupported file type: '{command.filename}'. Only PDF files are accepted."
             )
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        doc_name = f"{file.filename.replace('.pdf', '')}_{timestamp}"
+        doc_name = f"{command.filename.replace('.pdf', '')}_{timestamp}"
         doc_folder = app_setting.data_storage_path / doc_name
 
         logger.info("Starting upload for document: %s", doc_name)
@@ -84,8 +58,7 @@ class DocumentService:
 
         pdf_path = doc_folder / f"{doc_name}.pdf"
         try:
-            content = await file.read()
-            pdf_path.write_bytes(content)
+            pdf_path.write_bytes(command.content)
             logger.info("Saved PDF: %s", pdf_path)
         except Exception as exc:
             raise DocumentProcessingError(f"Failed to save PDF: {exc}") from exc
@@ -93,7 +66,11 @@ class DocumentService:
         async def _run_analysis() -> None:
             try:
                 logger.info("Background analysis started: %s", doc_name)
-                await self._analysis_service.pre_analyze_document(str(pdf_path), doc_name)
+                analyze_command = AnalyzeDocumentCommand(
+                    pdf_path=str(pdf_path),
+                    document_name=doc_name
+                )
+                await self._analysis_service.pre_analyze_document(analyze_command)
                 logger.info("Background analysis done: %s", doc_name)
             except Exception as exc:
                 logger.error(
@@ -103,7 +80,6 @@ class DocumentService:
                     traceback.format_exc(),
                 )
 
-        import asyncio
         asyncio.create_task(_run_analysis())
         logger.info("Analysis task started for: %s", doc_name)
 
@@ -112,7 +88,7 @@ class DocumentService:
             status=DocumentStatus.ANALYZING,
         )
 
-    async def list_documents(self) -> DocumentListResult:
+    async def list_documents(self, command: ListDocumentsCommand) -> DocumentListResult:
         """Return metadata for all documents stored in the data directory."""
         if not app_setting.data_storage_path.exists():
             return DocumentListResult()
@@ -133,4 +109,3 @@ class DocumentService:
 
         logger.info("Found %d documents", len(documents))
         return DocumentListResult(documents=documents)
-

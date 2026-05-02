@@ -6,7 +6,7 @@ All code **outside** this package must interact with LLM models exclusively
 through :class:`LLMService` (inference).
 """
 
-from app.infra.llm_connector.llm_service import LLMService
+from app.infrastructure.llm_connector.llm_service import LLMService
 
 __all__ = [
     "LLMService",

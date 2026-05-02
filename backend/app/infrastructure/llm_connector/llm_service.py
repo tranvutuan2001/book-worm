@@ -16,7 +16,7 @@ from langfuse.openai import AsyncOpenAI
 
 from app.domain.entity.agent import Agent as DomainAgent
 from app.domain.entity.message import Message
-from app.domain.enums import Role
+from app.domain.enum.role import Role
 
 logger = logging.getLogger("app.infra.llm_service")
 

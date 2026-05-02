@@ -1,10 +1,10 @@
 import pytest
 import asyncio
 import logging
-from app.infra.llm_connector.llm_service import LLMService
-from app.domain.entity.agent import AgentFactory
+from app.infrastructure.llm_connector.llm_service import LLMService
+from app.domain.entity.agent_factory import AgentFactory
 from app.domain.entity.message import Message
-from app.domain.enums import Role
+from app.domain.enum.role import Role
 from app.config.app_setting import app_setting
 
 # Setup logging to see what's happening

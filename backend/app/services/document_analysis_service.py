@@ -17,11 +17,12 @@ import pdfplumber
 from app.config.app_setting import app_setting
 from app.core.exceptions import DocumentProcessingError
 from app.core.utils import write_json_file
-from app.domain.entity.agent import AgentFactory
+from app.domain.entity.agent_factory import AgentFactory
 from app.domain.entity.message import Message
-from app.domain.enums import Role
+from app.domain.enum.role import Role
 from app.domain.value_object.chat_model_setting import ChatModelSettings
-from app.infra.llm_connector import LLMService
+from app.infrastructure.llm_connector import LLMService
+from app.services.commands.analyze_document_command import AnalyzeDocumentCommand
 
 logger = logging.getLogger("app.service")
 
@@ -135,43 +136,36 @@ class DocumentAnalysisService:
     # ------------------------------------------------------------------
 
     @observe()
-    async def pre_analyze_document(
-        self,
-        pdf_path: str,
-        document_name: str,
-    ) -> None:
-        """Run the full analysis pipeline for *pdf_path*.
+    async def pre_analyze_document(self, command: AnalyzeDocumentCommand) -> None:
+        """Run the full analysis pipeline for a document.
 
         Args:
-            pdf_path: Absolute path to the PDF file on disk.
-            document_name: Name used for output file prefixes.
-            process_levels: Subset of ``["chunks", "sections", "chapters"]``
-                to process.  Defaults to all three levels.
+            command: AnalyzeDocumentCommand containing pdf_path and document_name.
 
         Raises:
             DocumentProcessingError: If any stage of the pipeline fails.
         """
 
-        logger.info("Pre-analysis started: %s", document_name)
+        logger.info("Pre-analysis started: %s", command.document_name)
 
         try:
-            pages = self._extract_pages(pdf_path)
-            logger.info("Extracted %d pages from '%s'", len(pages), document_name)
+            pages = self._extract_pages(command.pdf_path)
+            logger.info("Extracted %d pages from '%s'", len(pages), command.document_name)
 
             chunks = _recursive_split("".join(pages), app_setting.document_chunk_size, app_setting.document_chunk_overlap)
             logger.info("Split into %d chunks", len(chunks))
 
-            out_dir = app_setting.data_storage_path / document_name
+            out_dir = app_setting.data_storage_path / command.document_name
 
 
-            await self._process_chunks(chunks, document_name, out_dir)
+            await self._process_chunks(chunks, command.document_name, out_dir)
             section_summaries: Optional[List[str]] = None
-            section_summaries = await self._process_sections(chunks, document_name, out_dir)
+            section_summaries = await self._process_sections(chunks, command.document_name, out_dir)
             await self._process_chapters(
-                chunks, document_name, out_dir, section_summaries
+                chunks, command.document_name, out_dir, section_summaries
             )
 
-            logger.info("Pre-analysis completed: %s", document_name)
+            logger.info("Pre-analysis completed: %s", command.document_name)
 
         except DocumentProcessingError:
             raise

@@ -16,19 +16,19 @@ LLMService (Remote)
 
 from dependency_injector import containers, providers
 
-from app.infra.llm_connector.llm_service import LLMService
-from app.service.chat_service import ChatService
-from app.service.document_analysis_service import DocumentAnalysisService
-from app.service.document_service import DocumentService
-from app.service.pdf_summarization_service import PDFSummarizationService
+from app.infrastructure.llm_connector.llm_service import LLMService
+from app.services.chat_service import ChatService
+from app.services.document_analysis_service import DocumentAnalysisService
+from app.services.document_service import DocumentService
+from app.services.pdf_summarization_service import PDFSummarizationService
 from app.config.app_setting import app_setting
 
 
 class Container(containers.DeclarativeContainer):
     wiring_config = containers.WiringConfiguration(
         modules=[
-            "app.api.routes.chat",
-            "app.api.routes.document",
+            "app.api.route.chat",
+            "app.api.route.document",
         ]
     )
 

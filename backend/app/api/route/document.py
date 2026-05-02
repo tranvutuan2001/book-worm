@@ -6,17 +6,17 @@ import traceback
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from dependency_injector.wiring import Provide, inject
 
-from app.api.schemas.document import (
-    DocumentInfo,
-    DocumentStatus,
-    DocumentsResponse,
-    UploadResponse,
-)
-from app.api.schemas.pdf_summarization import SummarizeResponse
+from app.api.dto.document_info import DocumentInfo
+from app.api.dto.document_status import DocumentStatus
+from app.api.dto.documents_response import DocumentsResponse
+from app.api.dto.upload_response import UploadResponse
+from app.api.dto.summarize_response import SummarizeResponse
+from app.api.mapper.document_mapper import DocumentMapper
 from app.container import Container
 from app.core.exceptions import DocumentNotFoundError, DocumentProcessingError, InvalidDocumentError
-from app.service.document_service import DocumentService
-from app.service.pdf_summarization_service import PDFSummarizationService
+from app.services.document_service import DocumentService
+from app.services.pdf_summarization_service import PDFSummarizationService
+from app.services.commands.list_documents_command import ListDocumentsCommand
 
 logger = logging.getLogger("app.api")
 
@@ -40,7 +40,8 @@ async def upload_document(
 ) -> UploadResponse:
     logger.info("POST /upload — file: %s", file.filename)
     try:
-        result = await service.upload_document(file)
+        command = await DocumentMapper.map_to_upload_command(file)
+        result = await service.upload_document(command)
         return UploadResponse(
             message="Document uploaded successfully and analysis started",
             document_name=result.document_name,
@@ -77,7 +78,8 @@ async def summarize_document(
 ) -> SummarizeResponse:
     logger.info("POST /documents/%s/summarize", document_name)
     try:
-        result = await service.summarize(document_name=document_name)
+        command = DocumentMapper.map_to_summarize_command(document_name)
+        result = await service.summarize(command)
         return SummarizeResponse(
             document_name=document_name,
             output_file=result["output_file"],
@@ -111,7 +113,8 @@ async def list_documents(
 ) -> DocumentsResponse:
     logger.info("GET /documents")
     try:
-        result = await service.list_documents()
+        command = ListDocumentsCommand()
+        result = await service.list_documents(command)
         return DocumentsResponse(
             documents=[
                 DocumentInfo(

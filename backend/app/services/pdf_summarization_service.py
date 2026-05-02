@@ -31,14 +31,15 @@ from langfuse import observe
 
 from app.config.app_setting import app_setting
 from app.core.exceptions import DocumentNotFoundError, DocumentProcessingError
-from app.domain.entity.agent import AgentFactory
+from app.domain.entity.agent_factory import AgentFactory
 from app.domain.entity.message import Message
-from app.domain.enums import Role
+from app.domain.enum.role import Role
 from app.domain.value_object.chat_model_setting import ChatModelSettings
-from app.infra.llm_connector.llm_service import LLMService
-from app.service.tools.document_retrieval_tool import (
+from app.infrastructure.llm_connector.llm_service import LLMService
+from app.services.tools.document_retrieval_tool import (
     get_document_summary,
 )
+from app.services.commands.summarize_pdf_command import SummarizePDFCommand
 
 # Sentinel used for the RunContext parameter (no dependency data needed)
 _NO_CTX: None = None
@@ -113,12 +114,12 @@ class PDFSummarizationService:
     @observe()
     async def summarize(
         self,
-        document_name: str,
+        command: SummarizePDFCommand,
     ) -> dict[str, Any]:
         """Run the full three-step summarisation pipeline.
 
         Args:
-            document_name:   Name of a pre-analysed document under ``data_storage_path``.
+            command: SummarizePDFCommand containing document_name.
 
         Returns:
             ``{"output_file": "<path>", "content": [<pdf-json-nodes>]}``
@@ -127,6 +128,7 @@ class PDFSummarizationService:
             DocumentNotFoundError:     If the document folder is missing.
             DocumentProcessingError:   If any pipeline step fails.
         """
+        document_name = command.document_name
         self._is_document_exist(document_name)
 
         schema = self._load_schema()
