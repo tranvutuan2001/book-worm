@@ -14,7 +14,7 @@ from langfuse import observe
 
 import pdfplumber
 
-from app.config.config import settings
+from app.config.app_setting import app_setting
 from app.core.exceptions import DocumentProcessingError
 from app.core.utils import write_json_file
 from app.domain.entity.agent import AgentFactory
@@ -158,10 +158,10 @@ class DocumentAnalysisService:
             pages = self._extract_pages(pdf_path)
             logger.info("Extracted %d pages from '%s'", len(pages), document_name)
 
-            chunks = _recursive_split("".join(pages), settings.document_chunk_size, settings.document_chunk_overlap)
+            chunks = _recursive_split("".join(pages), app_setting.document_chunk_size, app_setting.document_chunk_overlap)
             logger.info("Split into %d chunks", len(chunks))
 
-            out_dir = settings.data_storage_path / document_name
+            out_dir = app_setting.data_storage_path / document_name
 
 
             await self._process_chunks(chunks, document_name, out_dir)
@@ -188,10 +188,10 @@ class DocumentAnalysisService:
         self, chunks: List[str], doc_name: str, out_dir: Path
     ) -> None:
         logger.info("[chunks] Writing %d chunks…", len(chunks))
-        write_json_file(chunks, str(out_dir / f"{doc_name}{settings.suffix_chunks}"))
+        write_json_file(chunks, str(out_dir / f"{doc_name}{app_setting.suffix_chunks}"))
         embeddings = await self._embed_texts(chunks, label="chunk")
         write_json_file(
-            embeddings, str(out_dir / f"{doc_name}{settings.suffix_chunk_embeddings}")
+            embeddings, str(out_dir / f"{doc_name}{app_setting.suffix_chunk_embeddings}")
         )
         logger.info("[chunks] Done")
 
@@ -201,11 +201,11 @@ class DocumentAnalysisService:
         logger.info("[sections] Building section summaries…")
         summaries = await self._build_section_summaries(chunks)
         write_json_file(
-            summaries, str(out_dir / f"{doc_name}{settings.suffix_section_summaries}")
+            summaries, str(out_dir / f"{doc_name}{app_setting.suffix_section_summaries}")
         )
         embeddings = await self._embed_texts(summaries, label="section summary")
         write_json_file(
-            embeddings, str(out_dir / f"{doc_name}{settings.suffix_section_embeddings}")
+            embeddings, str(out_dir / f"{doc_name}{app_setting.suffix_section_embeddings}")
         )
         logger.info("[sections] Done (%d summaries)", len(summaries))
         return summaries
@@ -226,11 +226,11 @@ class DocumentAnalysisService:
         chapter_summaries = await self._build_chapter_summaries(section_summaries)
         write_json_file(
             chapter_summaries,
-            str(out_dir / f"{doc_name}{settings.suffix_chapter_summaries}"),
+            str(out_dir / f"{doc_name}{app_setting.suffix_chapter_summaries}"),
         )
         embeddings = await self._embed_texts(chapter_summaries, label="chapter summary")
         write_json_file(
-            embeddings, str(out_dir / f"{doc_name}{settings.suffix_chapter_embeddings}")
+            embeddings, str(out_dir / f"{doc_name}{app_setting.suffix_chapter_embeddings}")
         )
         logger.info("[chapters] Done (%d summaries)", len(chapter_summaries))
 
@@ -264,9 +264,9 @@ class DocumentAnalysisService:
 
     async def _build_section_summaries(self, chunks: List[str]) -> List[str]:
         summaries: List[str] = []
-        for i in range(0, len(chunks), settings.chunks_per_section):
-            batch = chunks[i : i + settings.chunks_per_section]
-            end = min(i + settings.chunks_per_section, len(chunks))
+        for i in range(0, len(chunks), app_setting.chunks_per_section):
+            batch = chunks[i : i + app_setting.chunks_per_section]
+            end = min(i + app_setting.chunks_per_section, len(chunks))
             logger.info("Section summary %d–%d / %d", i + 1, end, len(chunks))
             user_msg = Message(
                 id="user",
@@ -300,9 +300,9 @@ class DocumentAnalysisService:
 
     async def _build_chapter_summaries(self, section_summaries: List[str]) -> List[str]:
         chapters: List[str] = []
-        for i in range(0, len(section_summaries), settings.sections_per_chapter):
-            batch = section_summaries[i : i + settings.sections_per_chapter]
-            end = min(i + settings.sections_per_chapter, len(section_summaries))
+        for i in range(0, len(section_summaries), app_setting.sections_per_chapter):
+            batch = section_summaries[i : i + app_setting.sections_per_chapter]
+            end = min(i + app_setting.sections_per_chapter, len(section_summaries))
             logger.info(
                 "Chapter summary from sections %d–%d / %d", i + 1, end,
                 len(section_summaries),
@@ -344,7 +344,7 @@ class DocumentAnalysisService:
 
     async def _embed_text(self, text: str) -> List[float]:
         last_exc: Optional[Exception] = None
-        for attempt in range(settings.max_embedding_retries):
+        for attempt in range(app_setting.max_embedding_retries):
             try:
                 return await self._llm.embed_text(text=text)
             except Exception as exc:
@@ -352,14 +352,14 @@ class DocumentAnalysisService:
                 logger.warning(
                     "Embedding attempt %d/%d failed: %s",
                     attempt + 1,
-                    settings.max_embedding_retries,
+                    app_setting.max_embedding_retries,
                     exc,
                 )
-                if attempt < settings.max_embedding_retries - 1:
+                if attempt < app_setting.max_embedding_retries - 1:
                     import asyncio
                     await asyncio.sleep(1)
         raise DocumentProcessingError(
-            f"Embedding failed after {settings.max_embedding_retries} attempts: {last_exc}"
+            f"Embedding failed after {app_setting.max_embedding_retries} attempts: {last_exc}"
         ) from last_exc
 
     async def _embed_texts(self, texts: List[str], label: str = "text") -> List[List[float]]:
@@ -376,7 +376,7 @@ class DocumentAnalysisService:
     async def _load_or_build_sections(
         self, chunks: List[str], doc_name: str, out_dir: Path
     ) -> List[str]:
-        section_file = out_dir / f"{doc_name}{settings.suffix_section_summaries}"
+        section_file = out_dir / f"{doc_name}{app_setting.suffix_section_summaries}"
         if section_file.exists():
             try:
                 with section_file.open("r", encoding="utf-8") as fh:

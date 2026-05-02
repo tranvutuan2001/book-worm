@@ -29,7 +29,7 @@ import re
 import jsonschema
 from langfuse import observe
 
-from app.config.config import settings
+from app.config.app_setting import app_setting
 from app.core.exceptions import DocumentNotFoundError, DocumentProcessingError
 from app.domain.entity.agent import AgentFactory
 from app.domain.entity.message import Message
@@ -467,7 +467,7 @@ class PDFSummarizationService:
     def _is_document_exist(self, document_name: str) -> None:
         if not document_name:
             raise DocumentNotFoundError("Document name is required")
-        doc_path = settings.data_storage_path / document_name
+        doc_path = app_setting.data_storage_path / document_name
         if not doc_path.exists():
             raise DocumentNotFoundError(
                 f"Document '{document_name}' not found at {doc_path}"
@@ -476,12 +476,12 @@ class PDFSummarizationService:
     def _load_schema(self) -> dict[str, Any]:
         """Load and cache pdf-schema.json."""
         if self._schema is None:
-            if not settings.pdf_schema_path.exists():
+            if not app_setting.pdf_schema_path.exists():
                 raise DocumentProcessingError(
-                    f"PDF schema not found at {settings.pdf_schema_path}"
+                    f"PDF schema not found at {app_setting.pdf_schema_path}"
                 )
             try:
-                self._schema = json.loads(settings.pdf_schema_path.read_text(encoding="utf-8"))
+                self._schema = json.loads(app_setting.pdf_schema_path.read_text(encoding="utf-8"))
             except Exception as exc:
                 raise DocumentProcessingError(
                     f"Failed to load PDF schema: {exc}"
@@ -491,12 +491,12 @@ class PDFSummarizationService:
     def _load_example(self) -> list[Any]:
         """Load and cache pdf-example.json."""
         if self._example is None:
-            if not settings.pdf_example_path.exists():
+            if not app_setting.pdf_example_path.exists():
                 raise DocumentProcessingError(
-                    f"PDF example not found at {settings.pdf_example_path}"
+                    f"PDF example not found at {app_setting.pdf_example_path}"
                 )
             try:
-                self._example = json.loads(settings.pdf_example_path.read_text(encoding="utf-8"))
+                self._example = json.loads(app_setting.pdf_example_path.read_text(encoding="utf-8"))
             except Exception as exc:
                 raise DocumentProcessingError(
                     f"Failed to load PDF example: {exc}"
@@ -505,10 +505,10 @@ class PDFSummarizationService:
 
     def _save(self, document_name: str, pdf_json: list[Any]) -> Path:
         """Persist the generated JSON to ``PDF_DIR`` and return the path."""
-        settings.pdf_storage_path.mkdir(parents=True, exist_ok=True)
+        app_setting.pdf_storage_path.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{document_name}_summary_{timestamp}.json"
-        output_path = settings.pdf_storage_path / filename
+        output_path = app_setting.pdf_storage_path / filename
         try:
             output_path.write_text(
                 json.dumps(pdf_json, indent=2, ensure_ascii=False), encoding="utf-8"

@@ -14,7 +14,7 @@ from enum import Enum
 
 from fastapi import UploadFile
 
-from app.config.config import settings
+from app.config.app_setting import app_setting
 from app.core.exceptions import DocumentProcessingError, InvalidDocumentError
 from app.service.document_analysis_service import DocumentAnalysisService
 
@@ -71,7 +71,7 @@ class DocumentService:
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         doc_name = f"{file.filename.replace('.pdf', '')}_{timestamp}"
-        doc_folder = settings.data_storage_path / doc_name
+        doc_folder = app_setting.data_storage_path / doc_name
 
         logger.info("Starting upload for document: %s", doc_name)
 
@@ -114,16 +114,16 @@ class DocumentService:
 
     async def list_documents(self) -> DocumentListResult:
         """Return metadata for all documents stored in the data directory."""
-        if not settings.data_storage_path.exists():
+        if not app_setting.data_storage_path.exists():
             return DocumentListResult()
 
         documents: list[DocumentRecord] = []
-        for item in settings.data_storage_path.iterdir():
+        for item in app_setting.data_storage_path.iterdir():
             if not item.is_dir():
                 continue
             doc_name = item.name
-            chunks_file = item / f"{doc_name}{settings.suffix_chunks}"
-            embeddings_file = item / f"{doc_name}{settings.suffix_chunk_embeddings}"
+            chunks_file = item / f"{doc_name}{app_setting.suffix_chunks}"
+            embeddings_file = item / f"{doc_name}{app_setting.suffix_chunk_embeddings}"
             status = (
                 DocumentStatus.READY
                 if chunks_file.exists() and embeddings_file.exists()

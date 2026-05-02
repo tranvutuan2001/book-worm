@@ -16,7 +16,7 @@ import faiss
 import numpy as np
 from pydantic_ai import RunContext
 
-from app.config.config import settings
+from app.config.app_setting import app_setting
 from app.infra.llm_connector import LLMService
 
 logger = logging.getLogger("app.service.tools")
@@ -48,12 +48,12 @@ def _load_json(file_path: Path, description: str) -> object:
 
 
 def _chunk_embeddings(document_name: str) -> List[List[float]]:
-    path = settings.data_storage_path / document_name / f"{document_name}{settings.suffix_chunk_embeddings}"
+    path = app_setting.data_storage_path / document_name / f"{document_name}{app_setting.suffix_chunk_embeddings}"
     return _load_json(path, "Chunk embeddings")  # type: ignore[return-value]
 
 
 def _all_chunks(document_name: str) -> List[str]:
-    path = settings.data_storage_path / document_name / f"{document_name}{settings.suffix_chunks}"
+    path = app_setting.data_storage_path / document_name / f"{document_name}{app_setting.suffix_chunks}"
     return _load_json(path, "Chunks")  # type: ignore[return-value]
 
 
@@ -76,9 +76,9 @@ async def get_the_most_relevant_chunks(ctx: RunContext[None], question: str, doc
             [await _get_llm_service().embed_text(text=question)], dtype="float32"
         )
         n_queries = query_vec.shape[0]
-        distances = np.empty((n_queries, settings.top_k_chunks), dtype="float32")
-        raw_indices = np.empty((n_queries, settings.top_k_chunks), dtype="int64")
-        index.search(n=n_queries, x=query_vec, k=settings.top_k_chunks, distances=distances, labels=raw_indices)
+        distances = np.empty((n_queries, app_setting.top_k_chunks), dtype="float32")
+        raw_indices = np.empty((n_queries, app_setting.top_k_chunks), dtype="int64")
+        index.search(n=n_queries, x=query_vec, k=app_setting.top_k_chunks, distances=distances, labels=raw_indices)
 
         all_chunks = _all_chunks(document_name)
         result = [all_chunks[i] for i in raw_indices[0] if i < len(all_chunks)]
@@ -95,7 +95,7 @@ async def get_the_most_relevant_chunks(ctx: RunContext[None], question: str, doc
 def get_document_summary(ctx: RunContext[None], document_name: str) -> str:
     """Return a high-level summary of the entire document."""
     try:
-        path = settings.data_storage_path / document_name / f"{document_name}{settings.suffix_chapter_summaries}"
+        path = app_setting.data_storage_path / document_name / f"{document_name}{app_setting.suffix_chapter_summaries}"
 
         if not path.exists():
             logger.warning("Chapter summaries not found for '%s'.", document_name)

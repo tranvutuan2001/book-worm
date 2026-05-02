@@ -21,7 +21,7 @@ from app.service.chat_service import ChatService
 from app.service.document_analysis_service import DocumentAnalysisService
 from app.service.document_service import DocumentService
 from app.service.pdf_summarization_service import PDFSummarizationService
-from app.config.config import settings
+from app.config.app_setting import app_setting
 
 
 class Container(containers.DeclarativeContainer):
@@ -34,7 +34,7 @@ class Container(containers.DeclarativeContainer):
 
     llm_service = providers.Singleton(
         LLMService,
-        base_url=settings.llm_server_url,
+        base_url=app_setting.llm_server_url,
     )
 
     document_analysis_service = providers.Singleton(

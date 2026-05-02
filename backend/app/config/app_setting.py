@@ -4,7 +4,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class AppSettings(BaseSettings):
+class AppSetting(BaseSettings):
     """
     Central configuration for the Book-Worm application.
 
@@ -68,4 +68,4 @@ class AppSettings(BaseSettings):
 
 
 # Export a singleton instance
-settings = AppSettings()
+app_setting = AppSetting()

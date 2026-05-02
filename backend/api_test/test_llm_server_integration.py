@@ -5,7 +5,7 @@ from app.infra.llm_connector.llm_service import LLMService
 from app.domain.entity.agent import AgentFactory
 from app.domain.entity.message import Message
 from app.domain.enums import Role
-from app.config.config import LLM_SERVER_URL
+from app.config.app_setting import app_setting
 
 # Setup logging to see what's happening
 logging.basicConfig(level=logging.INFO)
@@ -24,7 +24,7 @@ def create_msg(role: Role, content: str) -> Message:
 
 @pytest.fixture
 def llm_service():
-    return LLMService(base_url=LLM_SERVER_URL)
+    return LLMService(base_url=app_setting.llm_server_url)
 
 @pytest.mark.asyncio
 async def test_simple_generation(llm_service):
