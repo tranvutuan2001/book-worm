@@ -16,6 +16,10 @@ from langfuse.openai import openai
 from app.domain.entity.agent import Agent as DomainAgent
 from app.domain.entity.message import Message
 from app.domain.enum.role import Role
+from app.infrastructure.llm_connector.dto.chat_message import ChatMessage
+from app.infrastructure.llm_connector.dto.tool_call import ToolCall
+from app.infrastructure.llm_connector.dto.tool_call_function import ToolCallFunction
+from app.infrastructure.llm_connector.mapper.completion_request_mapper import CompletionRequestMapper
 
 logger = logging.getLogger("app.infra.llm_service")
 
@@ -55,24 +59,15 @@ class LLMService:
         Returns:
             The final assistant text response.
         """
-        messages = [{"role": "system", "content": agent.system_prompt}]
-        for msg in message_list:
-            messages.append({"role": msg.role.value, "content": msg.content})
-
-        tools_schema = self._prepare_tools(agent.tools) if agent.tools else None
+        # Map initial request using the mapper
+        request = CompletionRequestMapper.map_to_completion_request(message_list, agent)
+        messages = request.messages
 
         # Conversation loop (to handle multiple tool calls if needed)
         for _ in range(10): # Limit to 10 steps to prevent infinite loops
-            kwargs = {
-                "model": "", # The server chooses the suitable model automatically
-                "messages": messages,
-                "max_tokens": agent.model_settings.max_tokens,
-                "temperature": agent.model_settings.temperature,
-                "name": "",
-                "metadata": {},
-            }
-            if tools_schema:
-                kwargs["tools"] = tools_schema
+            # Prepare request parameters from the request model and current messages
+            kwargs = request.model_dump(exclude_none=True)
+            kwargs["messages"] = [m.model_dump(exclude_none=True) for m in messages]
 
             # Retry loop for the specific HTTP request
             response = None
@@ -101,21 +96,20 @@ class LLMService:
                 return content or ""
             
             # Handle tool calls
-            # Add assistant message to history
-            assistant_message = {"role": "assistant", "content": content}
-            
-            # OpenAI SDK objects to dicts
-            assistant_tool_calls = []
-            for tc in tool_calls:
-                assistant_tool_calls.append({
-                    "id": tc.id,
-                    "type": "function",
-                    "function": {
-                        "name": tc.function.name,
-                        "arguments": tc.function.arguments,
-                    }
-                })
-            assistant_message["tool_calls"] = assistant_tool_calls
+            # Add assistant message to history using the model
+            assistant_message = ChatMessage(
+                role="assistant",
+                content=content,
+                tool_calls=[
+                    ToolCall(
+                        id=tc.id,
+                        function=ToolCallFunction(
+                            name=tc.function.name,
+                            arguments=tc.function.arguments,
+                        )
+                    ) for tc in tool_calls
+                ]
+            )
             messages.append(assistant_message)
             
             for tool_call in tool_calls:
@@ -126,7 +120,7 @@ class LLMService:
 
         return ""
 
-    async def _execute_tool(self, tool_call, agent: DomainAgent, messages: list):
+    async def _execute_tool(self, tool_call, agent: DomainAgent, messages: list[ChatMessage]):
         tool_name = tool_call.function.name
         tool_args_str = tool_call.function.arguments
         try:
@@ -154,75 +148,28 @@ class LLMService:
                         result = tool_func(**tool_args)
                 
                 logger.info(f"Tool {tool_name} result: {result}")
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "name": tool_name,
-                    "content": str(result)
-                })
+                messages.append(ChatMessage(
+                    role="tool",
+                    tool_call_id=tool_call.id,
+                    name=tool_name,
+                    content=str(result)
+                ))
             except Exception as e:
                 logger.error(f"Error executing tool {tool_name}: {e}")
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "name": tool_name,
-                    "content": f"Error: {str(e)}"
-                })
+                messages.append(ChatMessage(
+                    role="tool",
+                    tool_call_id=tool_call.id,
+                    name=tool_name,
+                    content=f"Error: {str(e)}"
+                ))
         else:
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "name": tool_name,
-                "content": f"Error: Tool {tool_name} not found."
-            })
+            messages.append(ChatMessage(
+                role="tool",
+                tool_call_id=tool_call.id,
+                name=tool_name,
+                content=f"Error: Tool {tool_name} not found."
+            ))
 
-    def _prepare_tools(self, tools: list[Callable[..., Any]]) -> list[dict[str, Any]]:
-        """Convert Python callables to OpenAI-compatible tool schemas."""
-        from docstring_parser import parse
-
-        schemas = []
-        for tool in tools:
-            doc = parse(tool.__doc__ or "")
-            sig = inspect.signature(tool)
-            
-            properties = {}
-            required = []
-            
-            for name, param in sig.parameters.items():
-                if name == "ctx": # Skip Pydantic AI context
-                    continue
-                
-                param_doc = next((p for p in doc.params if p.arg_name == name), None)
-                
-                # Basic type mapping
-                p_type = "string"
-                if param.annotation == float or param.annotation == int:
-                    p_type = "number"
-                elif param.annotation == bool:
-                    p_type = "boolean"
-                elif param.annotation == list or param.annotation == list[str]:
-                    p_type = "array"
-                
-                properties[name] = {
-                    "type": p_type,
-                    "description": param_doc.description if param_doc else ""
-                }
-                if param.default is inspect.Parameter.empty:
-                    required.append(name)
-            
-            schemas.append({
-                "type": "function",
-                "function": {
-                    "name": tool.__name__,
-                    "description": doc.short_description or "",
-                    "parameters": {
-                        "type": "object",
-                        "properties": properties,
-                        "required": required
-                    }
-                }
-            })
-        return schemas
 
     async def embed_text(self, text: str, model: str | None = None, *args, **kwargs) -> list[float]:
         """

@@ -11,6 +11,7 @@ to HTTP responses by the API route layer.
 import logging
 import time
 import traceback
+
 from langfuse import observe
 from app.core.exceptions import DocumentNotFoundError, LLMError
 from app.config.app_setting import app_setting
@@ -24,22 +25,36 @@ from app.infrastructure.logging_config import (
     get_request_logger,
     start_request_logging,
 )
-from app.services.tools.document_retrieval_tool import get_the_most_relevant_chunks, get_document_summary
+from app.domain.enum.tool_type import ToolType
+from app.services.tools.tool_factory import ToolFactory
 from app.services.commands.ask_question_command import AskQuestionCommand
 
 logger = logging.getLogger("app.service")
 
+_CHAT_TOOL_TYPES = (ToolType.DOCUMENT_SEARCH, ToolType.DOCUMENT_SUMMARY)
+
 _SYSTEM_PROMPT = """
 You are a knowledgeable assistant in a document-analyzing system.
 Answer in the language of the question.
-Use the tools to get necessary information to complete the chat.
-All answers must be based on the knowledge retrieved from the tools.
-Do not make up answers that are not supported by the tools.
-At the end of your response, briefly explain how you arrived at the answer by
-citing the document.
-If the answer cannot be found even after using the tools, respond with:
-"The provided data is not sufficient to answer this question."
-Format your answer for human readability.
+
+IMPORTANT — Tool Usage:
+- You MUST call at least one tool before answering any question.
+- NEVER answer without first calling a tool.
+- The tools are pre-configured for the current document — just provide
+  the required parameters.
+- For broad questions (summaries, overviews, themes), use the summary tool.
+- For specific questions (details, quotes, facts), use the search tool
+  with a focused query.
+- You may call multiple tools if needed to gather enough information.
+
+Rules:
+- All answers must be grounded in the information returned by the tools.
+- Do not fabricate or infer information beyond what the tools return.
+- At the end of your response, briefly cite which parts of the document
+  informed your answer.
+- Format your answer for human readability.
+- Only if the tools return no relevant information, respond with:
+  "The provided data is not sufficient to answer this question."
 """.strip()
 
 _VERIFICATION_SYSTEM_PROMPT = """
@@ -47,6 +62,7 @@ You are a strict verification assistant. Your job is to fact-check answers
 against the document using tools.
 
 CRITICAL RULES:
+- You MUST call at least one tool to verify claims before returning.
 - ONLY use information that you can verify with the provided tools.
 - REMOVE any claims that cannot be verified by checking the actual document.
 - DO NOT add information from your own knowledge.
@@ -101,7 +117,10 @@ class ChatService:
         try:
             self._validate_document(command.document_name)
 
-            tools = (get_the_most_relevant_chunks, get_document_summary)
+            tools = [
+                ToolFactory.create(t, command.document_name)
+                for t in _CHAT_TOOL_TYPES
+            ]
             answer = await self._generate_answer(command.document_name, command.messages, tools)
             verified = await self._verify_answer(
                 command.messages,
@@ -133,12 +152,17 @@ class ChatService:
                 f"Document '{document_name}' not found at {doc_path}"
             )
 
-    async def _generate_answer(self, document_name: str, message_list: list[Message], tools: tuple) -> str:
+    async def _generate_answer(
+        self,
+        document_name: str,
+        message_list: list[Message],
+        tools: list,
+    ) -> str:
         try:
             system_prompt = f"{_SYSTEM_PROMPT}\n\nDocument: {document_name}"
             agent = AgentFactory.document_assistant(
                 system_prompt=system_prompt,
-                tools=list(tools),
+                tools=tools,
             )
             return await self._llm.agent_complete_chat(
                 message_list=message_list,
@@ -153,7 +177,7 @@ class ChatService:
         message_list: list[Message],
         answer: str,
         document_name: str,
-        tools: tuple,
+        tools: list,
     ) -> str:
         req_logger = get_request_logger("app.api")
 
@@ -185,7 +209,7 @@ class ChatService:
             verification_system_prompt = f"{_VERIFICATION_SYSTEM_PROMPT}\n\nDocument: {document_name}"
             verify_agent = AgentFactory.verify(
                 system_prompt=verification_system_prompt,
-                tools=list(tools),
+                tools=tools,
             )
             verified = await self._llm.agent_complete_chat(
                 message_list=verification_message,
