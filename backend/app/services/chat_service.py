@@ -32,47 +32,6 @@ logger = logging.getLogger("app.service")
 
 _CHAT_TOOL_TYPES = (ToolType.DOCUMENT_SEARCH, ToolType.DOCUMENT_SUMMARY)
 
-_SYSTEM_PROMPT = """
-You are a knowledgeable assistant in a document-analyzing system.
-Answer in the language of the question.
-
-IMPORTANT — Tool Usage:
-- You MUST call at least one tool before answering any question.
-- NEVER answer without first calling a tool.
-- The tools are pre-configured for the current document — just provide
-  the required parameters.
-- For broad questions (summaries, overviews, themes), use the summary tool.
-- For specific questions (details, quotes, facts), use the search tool
-  with a focused query.
-- You may call multiple tools if needed to gather enough information.
-
-Rules:
-- All answers must be grounded in the information returned by the tools.
-- Do not fabricate or infer information beyond what the tools return.
-- At the end of your response, briefly cite which parts of the document
-  informed your answer.
-- Format your answer for human readability.
-- Only if the tools return no relevant information, respond with:
-  "The provided data is not sufficient to answer this question."
-""".strip()
-
-_VERIFICATION_SYSTEM_PROMPT = """
-You are a strict verification assistant. Your job is to fact-check answers
-against the document using tools.
-
-CRITICAL RULES:
-- You MUST call at least one tool to verify claims before returning.
-- ONLY use information that you can verify with the provided tools.
-- REMOVE any claims that cannot be verified by checking the actual document.
-- DO NOT add information from your own knowledge.
-- DO NOT make assumptions beyond what the tools show.
-- If uncertain, remove the questionable content rather than keeping it.
-- Check whether the answer addresses the user query given the conversation context.
-- If the answer is accurate and verified, return it as-is.
-
-Return only the fact-checked final answer with no meta-commentary.
-""".strip()
-
 
 class ChatService:
     """Handles the document Q&A use case."""
@@ -120,11 +79,10 @@ class ChatService:
                 ToolFactory.create(t, command.document_name)
                 for t in _CHAT_TOOL_TYPES
             ]
-            answer = await self._generate_answer(command.document_name, command.messages, tools)
+            answer = await self._generate_answer(command.messages, tools)
             verified = await self._verify_answer(
                 command.messages,
                 answer,
-                command.document_name,
                 tools,
             )
 
@@ -153,14 +111,11 @@ class ChatService:
 
     async def _generate_answer(
         self,
-        document_name: str,
         message_list: list[Message],
         tools: list,
     ) -> str:
         try:
-            system_prompt = f"{_SYSTEM_PROMPT}\n\nDocument: {document_name}"
             agent = AgentFactory.document_assistant(
-                system_prompt=system_prompt,
                 tools=tools,
             )
             return await self._llm.agent_complete_chat(
@@ -175,7 +130,6 @@ class ChatService:
         self,
         message_list: list[Message],
         answer: str,
-        document_name: str,
         tools: list,
     ) -> str:
         req_logger = get_request_logger("app.api")
@@ -205,9 +159,7 @@ class ChatService:
 
         req_logger.info("Starting verification step…")
         try:
-            verification_system_prompt = f"{_VERIFICATION_SYSTEM_PROMPT}\n\nDocument: {document_name}"
             verify_agent = AgentFactory.verify(
-                system_prompt=verification_system_prompt,
                 tools=tools,
             )
             verified = await self._llm.agent_complete_chat(

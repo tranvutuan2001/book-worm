@@ -35,7 +35,7 @@ async def test_simple_generation(llm_service):
     
     reply = await llm_service.agent_complete_chat(
         message_list=messages,
-        agent=agent
+        domain_agent=agent
     )
     
     logger.info(f"Simple generation reply: {reply}")
@@ -75,7 +75,7 @@ async def test_tool_calling(llm_service):
     
     reply = await llm_service.agent_complete_chat(
         message_list=messages,
-        agent=agent
+        domain_agent=agent
     )
     
     logger.info(f"Tool calling reply: {reply}")
@@ -96,7 +96,7 @@ async def test_multi_turn_chat(llm_service):
     
     reply = await llm_service.agent_complete_chat(
         message_list=messages,
-        agent=agent
+        domain_agent=agent
     )
     
     logger.info(f"Multi-turn reply: {reply}")
