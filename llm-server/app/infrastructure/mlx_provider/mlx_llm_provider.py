@@ -11,7 +11,7 @@ class MLXLLMProvider(LLMProvider):
     def __init__(self, mlx_model: MLXModel):
         self.mlx_model = mlx_model
 
-    async def generate(self, messages: list[Message], max_tokens: int, tools: list[dict[str, object]] | None = None) -> Message:
+    async def generate(self, messages: list[Message], max_completion_tokens: int, tools: list[dict[str, object]] | None = None) -> Message:
         try:
             formatted_messages = []
             for m in messages:
@@ -48,7 +48,7 @@ class MLXLLMProvider(LLMProvider):
                 model=self.mlx_model.model,
                 tokenizer=self.mlx_model.tokenizer,
                 prompt=prompt,
-                max_tokens=max_tokens,
+                max_tokens=max_completion_tokens,
                 verbose=False
             )
             from app.infrastructure.mlx_provider.mlx_response_parser import MLXResponseParser

@@ -11,7 +11,7 @@ class OpenAILLMProvider(LLMProvider):
         self.client = client
         self.model = model
 
-    async def generate(self, messages: list[Message], max_tokens: int, tools: list[dict[str, object]] | None = None) -> Message:
+    async def generate(self, messages: list[Message], max_completion_tokens: int, tools: list[dict[str, object]] | None = None) -> Message:
         try:
             formatted_messages = []
             for m in messages:
@@ -29,7 +29,7 @@ class OpenAILLMProvider(LLMProvider):
             kwargs = {
                 "model": self.model,
                 "messages": formatted_messages,
-                "max_tokens": max_tokens
+                "max_tokens": max_completion_tokens
             }
             if tools:
                 kwargs["tools"] = tools

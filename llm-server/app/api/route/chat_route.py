@@ -1,5 +1,4 @@
 import uuid
-import pprint
 from fastapi import APIRouter, Depends, HTTPException
 from dependency_injector.wiring import inject, Provide
 
@@ -18,9 +17,7 @@ async def chat_completions(
     request: ChatCompletionRequest,
     service: TextGenerationService = Depends(Provide[Container.text_generation_service])
 ) -> ChatCompletionResponse:
-    """OpenAI-compatible endpoint for chat completions."""
     try:
-        pprint.pprint(request.model_dump())
         command = ChatMapper.to_generate_text_command(request)
         response_message = await service.generate_text(command)
         
@@ -38,4 +35,5 @@ async def chat_completions(
     except LLMGenerationException as e:
         raise HTTPException(status_code=502, detail=str(e))
     except Exception as e:
+        print("Error: ", e)
         raise HTTPException(status_code=500, detail="Internal Server Error")

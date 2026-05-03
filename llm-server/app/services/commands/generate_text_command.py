@@ -5,5 +5,5 @@ from app.domain.value_objects.message import Message
 class GenerateTextCommand:
     """Command to generate text using an LLM."""
     messages: list[Message]
-    max_tokens: int
+    max_completion_tokens: int
     tools: list[dict[str, object]] | None = None

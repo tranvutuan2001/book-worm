@@ -9,6 +9,6 @@ class TextGenerationService:
     async def generate_text(self, command: GenerateTextCommand) -> Message:
         return await self._llm_provider.generate(
             messages=command.messages,
-            max_tokens=command.max_tokens,
+            max_completion_tokens=command.max_completion_tokens,
             tools=command.tools
         )
