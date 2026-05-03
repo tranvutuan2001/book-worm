@@ -48,7 +48,7 @@ class ChatSession(BaseModel): # Entity
 from typing import Protocol
 
 class LLMProvider(Protocol):
-    async def generate(self, messages: List[Message], max_tokens: int) -> str:
+    async def generate(self, messages: List[Message]) -> str:
         """Contract for generating text from an LLM."""
         ...
 ```

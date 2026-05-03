@@ -165,7 +165,7 @@ class ChatService:
             )
             return await self._llm.agent_complete_chat(
                 message_list=message_list,
-                agent=agent,
+                domain_agent=agent,
             )
         except Exception as exc:
             logger.error("LLM call failed: %s", exc, exc_info=True)
@@ -212,7 +212,7 @@ class ChatService:
             )
             verified = await self._llm.agent_complete_chat(
                 message_list=verification_message,
-                agent=verify_agent,
+                domain_agent=verify_agent,
             )
             req_logger.info("Verification complete (%d chars)", len(verified))
             return verified

@@ -304,7 +304,7 @@ class DocumentAnalysisService:
                 )
                 summary = await self._llm.agent_complete_chat(
                     message_list=[user_msg],
-                    agent=summary_agent,
+                    domain_agent=summary_agent,
                 )
                 logger.info("Section summary %d–%d done", i + 1, end)
                 logger.info("Summary:\n%s", summary)
@@ -342,7 +342,7 @@ class DocumentAnalysisService:
                 )
                 chapter = await self._llm.agent_complete_chat(
                     message_list=[user_msg],
-                    agent=chapter_agent,
+                    domain_agent=chapter_agent,
                 )
                 chapters.append(chapter)
             except Exception as exc:

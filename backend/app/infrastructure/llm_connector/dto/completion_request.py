@@ -14,7 +14,6 @@ class CompletionRequest(BaseModel):
     """
     model: str = ""
     messages: list[ChatMessage]
-    max_tokens: int | None = None
     temperature: float | None = None
     tools: list[ToolDefinition] | None = None
     name: str | None = None

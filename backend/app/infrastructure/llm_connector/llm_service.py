@@ -16,6 +16,7 @@ from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.messages import ModelRequest, ModelResponse, UserPromptPart, TextPart
 
+from app.config.app_setting import app_setting
 from app.domain.entity.agent import Agent as DomainAgent
 from app.domain.entity.message import Message
 from app.domain.enum.role import Role
@@ -45,7 +46,7 @@ class LLMService:
     async def agent_complete_chat(
         self,
         message_list: list[Message],
-        agent: DomainAgent,
+        domain_agent: DomainAgent,
     ) -> str:
         """
         Run a full chat turn with tool-calling support via Pydantic AI.
@@ -68,12 +69,12 @@ class LLMService:
         pydantic_ai_agent = PydanticAgent(
             model=model,
             output_type=str,
-            system_prompt=agent.system_prompt,
-            retries=agent.max_retries
+            system_prompt=domain_agent.system_prompt,
+            retries=domain_agent.max_retries
         )
 
         # 3. Register tools
-        for tool_func in agent.tools:
+        for tool_func in domain_agent.tools:
             pydantic_ai_agent.tool(tool_func)
 
         # 4. Map message history
@@ -93,6 +94,10 @@ class LLMService:
             result = await pydantic_ai_agent.run(
                 user_query,
                 message_history=history,
+                model_settings={
+                    "max_tokens": app_setting.chat_max_tokens,
+                    "temperature": domain_agent.model_settings.temperature,
+                }
             )
             return result.output
         except Exception as e:

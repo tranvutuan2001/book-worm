@@ -39,7 +39,6 @@ class CompletionRequestMapper:
         return CompletionRequest(
             model="",  # Server selects automatically
             messages=chat_messages,
-            max_tokens=agent.model_settings.max_tokens,
             temperature=agent.model_settings.temperature,
             tools=tools,
             name="",

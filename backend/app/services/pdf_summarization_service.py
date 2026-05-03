@@ -148,7 +148,7 @@ class PDFSummarizationService:
                 "[summarize] Step 3 — block %d/%d: generating JSON", i, len(blocks)
             )
             block_json = await self._step3_generate_json(
-                block, schema_str=schema_str, max_tokens=8192
+                block, schema_str=schema_str
             )
             logger.info(
                 "[summarize] Step 3 block %d complete (%d nodes)", i, len(block_json)
@@ -202,11 +202,11 @@ class PDFSummarizationService:
         try:
             step1_agent = AgentFactory.summary(
                 system_prompt=_STEP1_SYSTEM,
-                model_settings=ChatModelSettings(max_tokens=12000),
+                model_settings=ChatModelSettings(),
             )
             refined = await self._llm.agent_complete_chat(
                 message_list=[request_message],
-                agent=step1_agent,
+                domain_agent=step1_agent,
             )
             return refined
         except Exception as exc:
@@ -250,7 +250,7 @@ class PDFSummarizationService:
                 )
                 raw_output = await self._llm.agent_complete_chat(
                     message_list=[message],
-                    agent=step2_agent,
+                    domain_agent=step2_agent,
                 )
             except Exception as exc:
                 logger.error(
@@ -344,7 +344,6 @@ class PDFSummarizationService:
         max_attempts: int = 5,
         *,
         schema_str: str | None = None,
-        max_tokens: int = 8192,
     ) -> list[Any]:
         """Ask the LLM to format one content *block_text* into a JSON sub-array.
 
@@ -374,12 +373,11 @@ class PDFSummarizationService:
                     system_prompt=step3_system,
                     model_settings=ChatModelSettings(
                         json_schema=schema_str,
-                        max_tokens=max_tokens,
                     ),
                 )
                 raw_output = await self._llm.agent_complete_chat(
                     message_list=[user_message],
-                    agent=step3_agent,
+                    domain_agent=step3_agent,
                 )
             except Exception as exc:
                 logger.error(
