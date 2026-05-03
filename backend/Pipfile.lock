@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "39625f44e135d05344ebc174da425dd4a20665ee09f90a248a03518e1e48bd44"
+            "sha256": "f042ea2772cae2cfe02384c2c877c3f236fe1ac3850daa8e275435d3f881e722"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -2300,20 +2300,7 @@
         },
         "pydantic-ai-slim": {
             "extras": [
-                "ag-ui",
-                "anthropic",
-                "bedrock",
-                "cli",
-                "cohere",
-                "evals",
-                "google",
-                "groq",
-                "huggingface",
-                "mcp",
-                "mistral",
-                "openai",
-                "retries",
-                "vertexai"
+                "openai"
             ],
             "hashes": [
                 "sha256:80fd102bcd6e8108d5dfe42e2940b0b041c0f706c510314894468117dae6a9e0",

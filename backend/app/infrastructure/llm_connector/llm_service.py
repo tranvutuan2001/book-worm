@@ -9,17 +9,16 @@ import asyncio
 import json
 import logging
 import inspect
-from typing import Any, Callable
-
-from langfuse.openai import openai
+from typing import Any
+from langfuse.openai import AsyncOpenAI
+from pydantic_ai import Agent as PydanticAgent
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.messages import ModelRequest, ModelResponse, UserPromptPart, TextPart
 
 from app.domain.entity.agent import Agent as DomainAgent
 from app.domain.entity.message import Message
 from app.domain.enum.role import Role
-from app.infrastructure.llm_connector.dto.chat_message import ChatMessage
-from app.infrastructure.llm_connector.dto.tool_call import ToolCall
-from app.infrastructure.llm_connector.dto.tool_call_function import ToolCallFunction
-from app.infrastructure.llm_connector.mapper.completion_request_mapper import CompletionRequestMapper
 
 logger = logging.getLogger("app.infra.llm_service")
 
@@ -38,7 +37,7 @@ class LLMService:
         self._base_url = base_url.rstrip("/")
         # We use Langfuse wrapper to get observability out of the box
         # API key is required by the client but may not be used by the remote server
-        self._client = openai.AsyncOpenAI(
+        self._client = AsyncOpenAI(
             base_url=f"{self._base_url}",
             api_key="none",
         )
@@ -49,7 +48,7 @@ class LLMService:
         agent: DomainAgent,
     ) -> str:
         """
-        Run a full chat turn with tool-calling support via the remote LLM server.
+        Run a full chat turn with tool-calling support via Pydantic AI.
 
         Args:
             message_list: Conversation history as ``Message`` objects.
@@ -59,116 +58,47 @@ class LLMService:
         Returns:
             The final assistant text response.
         """
-        # Map initial request using the mapper
-        request = CompletionRequestMapper.map_to_completion_request(message_list, agent)
-        messages = request.messages
+        # 1. Initialize Pydantic AI Model with the Langfuse-instrumented client
+        model = OpenAIModel(
+            model_name="",  # The remote server handles the actual model
+            provider=OpenAIProvider(openai_client=self._client)
+        )
 
-        # Conversation loop (to handle multiple tool calls if needed)
-        for _ in range(10): # Limit to 10 steps to prevent infinite loops
-            # Prepare request parameters from the request model and current messages
-            kwargs = request.model_dump(exclude_none=True)
-            kwargs["messages"] = [m.model_dump(exclude_none=True) for m in messages]
+        # 2. Create the Pydantic AI Agent
+        pydantic_ai_agent = PydanticAgent(
+            model=model,
+            output_type=str,
+            system_prompt=agent.system_prompt,
+            retries=agent.max_retries
+        )
 
-            # Retry loop for the specific HTTP request
-            response = None
-            for attempt in range(agent.max_retries + 1):
-                try:
-                    logger.info(f"LLM request step {_+1}, attempt {attempt+1}")
-                    response = await self._client.chat.completions.create(**kwargs)
-                    break
-                except Exception as e:
-                    if attempt == agent.max_retries:
-                        logger.error(f"LLM request failed after {agent.max_retries} retries: {e}")
-                        raise
-                    logger.warning(f"LLM request failed (attempt {attempt + 1}): {e}")
-                    await asyncio.sleep(1) # Basic backoff
+        # 3. Register tools
+        for tool_func in agent.tools:
+            pydantic_ai_agent.tool(tool_func)
 
-            if not response:
-                return ""
+        # 4. Map message history
+        # Pydantic-AI expects ModelMessage (ModelRequest or ModelResponse)
+        history: list[ModelRequest | ModelResponse] = []
+        for msg in message_list[:-1]:
+            if msg.role == Role.USER:
+                history.append(ModelRequest(parts=[UserPromptPart(content=msg.content)]))
+            elif msg.role == Role.ASSISTANT:
+                history.append(ModelResponse(parts=[TextPart(content=msg.content)]))
 
-            choice = response.choices[0]
-            content = choice.message.content
-            tool_calls = choice.message.tool_calls
-            
-            logger.info(f"LLM response: content='{content}', tool_calls={tool_calls}")
-
-            if not tool_calls:
-                return content or ""
-            
-            # Handle tool calls
-            # Add assistant message to history using the model
-            assistant_message = ChatMessage(
-                role="assistant",
-                content=content,
-                tool_calls=[
-                    ToolCall(
-                        id=tc.id,
-                        function=ToolCallFunction(
-                            name=tc.function.name,
-                            arguments=tc.function.arguments,
-                        )
-                    ) for tc in tool_calls
-                ]
-            )
-            messages.append(assistant_message)
-            
-            for tool_call in tool_calls:
-                await self._execute_tool(tool_call, agent, messages)
-            
-            # Continue conversation loop with updated messages
-            continue
-
-        return ""
-
-    async def _execute_tool(self, tool_call, agent: DomainAgent, messages: list[ChatMessage]):
-        tool_name = tool_call.function.name
-        tool_args_str = tool_call.function.arguments
+        # 5. Run the agent
+        # The last message in message_list is the current user query
+        user_query = message_list[-1].content if message_list else ""
+        
         try:
-            tool_args = json.loads(tool_args_str)
-        except json.JSONDecodeError:
-            tool_args = {}
-            
-        tool_func = next((t for t in agent.tools if t.__name__ == tool_name), None)
-        if tool_func:
-            from pydantic_ai import RunContext
-            ctx = RunContext(deps=None, model=None, usage=None, prompt=None)
-            
-            try:
-                sig = inspect.signature(tool_func)
-                # Check if it's async
-                if inspect.iscoroutinefunction(tool_func):
-                    if "ctx" in sig.parameters:
-                        result = await tool_func(ctx, **tool_args)
-                    else:
-                        result = await tool_func(**tool_args)
-                else:
-                    if "ctx" in sig.parameters:
-                        result = tool_func(ctx, **tool_args)
-                    else:
-                        result = tool_func(**tool_args)
-                
-                logger.info(f"Tool {tool_name} result: {result}")
-                messages.append(ChatMessage(
-                    role="tool",
-                    tool_call_id=tool_call.id,
-                    name=tool_name,
-                    content=str(result)
-                ))
-            except Exception as e:
-                logger.error(f"Error executing tool {tool_name}: {e}")
-                messages.append(ChatMessage(
-                    role="tool",
-                    tool_call_id=tool_call.id,
-                    name=tool_name,
-                    content=f"Error: {str(e)}"
-                ))
-        else:
-            messages.append(ChatMessage(
-                role="tool",
-                tool_call_id=tool_call.id,
-                name=tool_name,
-                content=f"Error: Tool {tool_name} not found."
-            ))
+            result = await pydantic_ai_agent.run(
+                user_query,
+                message_history=history,
+            )
+            return result.output
+        except Exception as e:
+            logger.error(f"Pydantic AI agent run failed: {e}")
+            raise
+
 
 
     async def embed_text(self, text: str, model: str | None = None, *args, **kwargs) -> list[float]:

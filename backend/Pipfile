@@ -122,7 +122,6 @@ zipp = "==3.23.1"
 fsspec = {extras = ["http"], version = "==2026.2.0"}
 google-auth = {extras = ["requests"], version = "==2.49.2"}
 huggingface-hub = {extras = ["inference"], version = "==1.7.1"}
-pydantic-ai-slim = {extras = ["huggingface", "bedrock", "groq", "openai", "vertexai", "mistral", "google", "cohere", "anthropic", "ag-ui", "mcp", "cli", "evals", "retries"], version = "==0.6.2"}
 pyjwt = {extras = ["crypto"], version = "==2.12.1"}
 fastapi = "*"
 dependency-injector = "*"
@@ -139,6 +138,7 @@ jsonschema = "*"
 xgrammar = "*"
 uvicorn = {extras = ["standard"], version = "*"}
 pytest-asyncio = "*"
+pydantic-ai-slim = {extras = ["openai"], version = "*"}
 
 [dev-packages]
 
