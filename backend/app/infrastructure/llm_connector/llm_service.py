@@ -11,8 +11,7 @@ import logging
 import inspect
 from typing import Any, Callable
 
-from langfuse import observe
-from langfuse.openai import AsyncOpenAI
+from langfuse.openai import openai
 
 from app.domain.entity.agent import Agent as DomainAgent
 from app.domain.entity.message import Message
@@ -33,14 +32,13 @@ class LLMService:
 
     def __init__(self, base_url: str) -> None:
         self._base_url = base_url.rstrip("/")
-        # We use LangfuseAsyncOpenAI to get observability out of the box
+        # We use Langfuse wrapper to get observability out of the box
         # API key is required by the client but may not be used by the remote server
-        self._client = AsyncOpenAI(
+        self._client = openai.AsyncOpenAI(
             base_url=f"{self._base_url}",
             api_key="none",
         )
 
-    @observe(name="agent_complete_chat", as_type="generation")
     async def agent_complete_chat(
         self,
         message_list: list[Message],
@@ -70,6 +68,8 @@ class LLMService:
                 "messages": messages,
                 "max_tokens": agent.model_settings.max_tokens,
                 "temperature": agent.model_settings.temperature,
+                "name": "",
+                "metadata": {},
             }
             if tools_schema:
                 kwargs["tools"] = tools_schema
@@ -126,7 +126,6 @@ class LLMService:
 
         return ""
 
-    @observe(name="execute_tool", as_type="span")
     async def _execute_tool(self, tool_call, agent: DomainAgent, messages: list):
         tool_name = tool_call.function.name
         tool_args_str = tool_call.function.arguments
@@ -225,7 +224,6 @@ class LLMService:
             })
         return schemas
 
-    @observe(name="embed_text", as_type="generation")
     async def embed_text(self, text: str, model: str | None = None, *args, **kwargs) -> list[float]:
         """
         Create a text embedding using the remote embedding server.
@@ -239,6 +237,9 @@ class LLMService:
         """
         response = await self._client.embeddings.create(
             input=text,
-            model=model or ""
+            model=model or "",
+            name="",
+            metadata={},
+            **kwargs
         )
         return response.data[0].embedding
