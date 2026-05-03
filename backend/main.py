@@ -8,11 +8,20 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.infrastructure.logging_config import setup_logging
+from app.container import container
 from app.api.route.chat import router as chat_router
 from app.api.route.document import router as document_router
 
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 setup_logging()
+
+# Wire the container to the modules that use @inject
+container.wire(
+    modules=[
+        "app.api.route.chat",
+        "app.api.route.document",
+    ]
+)
 
 app = FastAPI(
     title="Book Worm — Document Analysis API",

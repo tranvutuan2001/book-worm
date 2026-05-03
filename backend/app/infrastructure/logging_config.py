@@ -27,12 +27,13 @@ def setup_logging():
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    # Configure root logger — file only, no console output
+    # Configure root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
 
+    # --- File handler (rotating) ---
     app_log_handler = RotatingFileHandler(
         os.path.join(logs_dir, "app.log"),
         maxBytes=10 * 1024 * 1024,  # 10 MB
@@ -41,6 +42,12 @@ def setup_logging():
     app_log_handler.setLevel(logging.INFO)
     app_log_handler.setFormatter(formatter)
     root_logger.addHandler(app_log_handler)
+
+    # --- Console handler (stderr) ---
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
 
 
 def get_request_logger(logger_name: str = "app") -> logging.Logger:

@@ -25,13 +25,6 @@ from app.config.app_setting import app_setting
 
 
 class Container(containers.DeclarativeContainer):
-    wiring_config = containers.WiringConfiguration(
-        modules=[
-            "app.api.route.chat",
-            "app.api.route.document",
-        ]
-    )
-
     llm_service = providers.Singleton(
         LLMService,
         base_url=app_setting.llm_server_url,
