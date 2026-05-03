@@ -96,7 +96,7 @@ class LLMService:
             )
             return result.output
         except Exception as e:
-            logger.error(f"Pydantic AI agent run failed: {e}")
+            logger.error(f"Pydantic AI agent run failed: {e}", exc_info=True)
             raise
 
 

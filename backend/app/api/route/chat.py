@@ -1,6 +1,6 @@
 """Chat (document Q&A) route."""
 import logging
-import traceback
+
 
 from fastapi import APIRouter, Depends, HTTPException
 from dependency_injector.wiring import Provide, inject
@@ -49,5 +49,5 @@ async def ask(
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Unhandled error in /ask: %s\n%s", exc, traceback.format_exc())
+        logger.error("Unhandled error in /ask: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")

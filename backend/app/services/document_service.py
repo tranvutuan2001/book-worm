@@ -7,7 +7,7 @@ translated to HTTP responses by the API route layer.
 
 import logging
 import asyncio
-import traceback
+
 from datetime import datetime
 
 from app.config.app_setting import app_setting
@@ -74,10 +74,10 @@ class DocumentService:
                 logger.info("Background analysis done: %s", doc_name)
             except Exception as exc:
                 logger.error(
-                    "Background analysis failed for %s: %s\n%s",
+                    "Background analysis failed for %s: %s",
                     doc_name,
                     exc,
-                    traceback.format_exc(),
+                    exc_info=True,
                 )
 
         asyncio.create_task(_run_analysis())

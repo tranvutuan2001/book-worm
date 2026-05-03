@@ -269,7 +269,7 @@ class DocumentAnalysisService:
                         if text:
                             pages.append(text)
                     except Exception as exc:
-                        logger.warning("Skipping page %d: %s", i + 1, exc)
+                        logger.warning("Skipping page %d: %s", i + 1, exc, exc_info=True)
         except FileNotFoundError:
             raise DocumentProcessingError(f"PDF not found: {pdf_path}")
         except Exception as exc:
@@ -310,6 +310,7 @@ class DocumentAnalysisService:
                 logger.info("Summary:\n%s", summary)
                 summaries.append(summary)
             except Exception as exc:
+                logger.error("Section summary %d–%d failed: %s", i + 1, end, exc, exc_info=True)
                 raise DocumentProcessingError(
                     f"Section summary {i + 1}–{end} failed: {exc}"
                 ) from exc
@@ -345,6 +346,7 @@ class DocumentAnalysisService:
                 )
                 chapters.append(chapter)
             except Exception as exc:
+                logger.error("Chapter summary %d–%d failed: %s", i + 1, end, exc, exc_info=True)
                 raise DocumentProcessingError(
                     f"Chapter summary {i + 1}–{end} failed: {exc}"
                 ) from exc

@@ -21,7 +21,7 @@ The final artefact is saved under ``PDF_DIR`` and the path is returned.
 import json
 import logging
 import time
-import traceback
+
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -184,7 +184,7 @@ class PDFSummarizationService:
         try:
             base_summary: str = get_document_summary(_NO_CTX, document_name=document_name)
         except Exception as exc:
-            logger.error("[step1] get_document_summary failed: %s\n%s", exc, traceback.format_exc())
+            logger.error("[step1] get_document_summary failed: %s", exc, exc_info=True)
             raise DocumentProcessingError(
                 f"Failed to fetch document summary: {exc}"
             ) from exc
@@ -210,7 +210,7 @@ class PDFSummarizationService:
             )
             return refined
         except Exception as exc:
-            logger.error("[step1] LLM refinement failed: %s\n%s", exc, traceback.format_exc())
+            logger.error("[step1] LLM refinement failed: %s", exc, exc_info=True)
             raise DocumentProcessingError(
                 f"Failed to refine document summary: {exc}"
             ) from exc
@@ -254,11 +254,11 @@ class PDFSummarizationService:
                 )
             except Exception as exc:
                 logger.error(
-                    "[split] LLM call failed (attempt %d/%d): %s\n%s",
+                    "[split] LLM call failed (attempt %d/%d): %s",
                     attempt,
                     max_attempts,
                     exc,
-                    traceback.format_exc(),
+                    exc_info=True,
                 )
                 raise DocumentProcessingError(
                     f"Failed to split summary into blocks: {exc}"
@@ -383,11 +383,11 @@ class PDFSummarizationService:
                 )
             except Exception as exc:
                 logger.error(
-                    "[step3] LLM call failed (attempt %d/%d): %s\n%s",
+                    "[step3] LLM call failed (attempt %d/%d): %s",
                     attempt,
                     max_attempts,
                     exc,
-                    traceback.format_exc(),
+                    exc_info=True,
                 )
                 raise DocumentProcessingError(
                     f"Failed to generate PDF JSON: {exc}"

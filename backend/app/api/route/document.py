@@ -1,7 +1,7 @@
 """Document management routes (upload, listing, and PDF summarization)."""
 
 import logging
-import traceback
+
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from dependency_injector.wiring import Provide, inject
@@ -54,7 +54,7 @@ async def upload_document(
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Unhandled error in /upload: %s\n%s", exc, traceback.format_exc())
+        logger.error("Unhandled error in /upload: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -93,7 +93,7 @@ async def summarize_document(
         raise
     except Exception as exc:
         logger.error(
-            "Unhandled error in /summarize: %s\n%s", exc, traceback.format_exc()
+            "Unhandled error in /summarize: %s", exc, exc_info=True
         )
         raise HTTPException(status_code=500, detail="Internal server error")
 
@@ -129,6 +129,6 @@ async def list_documents(
         raise
     except Exception as exc:
         logger.error(
-            "Unhandled error in /documents: %s\n%s", exc, traceback.format_exc()
+            "Unhandled error in /documents: %s", exc, exc_info=True
         )
         raise HTTPException(status_code=500, detail="Internal server error")

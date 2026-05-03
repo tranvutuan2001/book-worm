@@ -10,7 +10,6 @@ to HTTP responses by the API route layer.
 
 import logging
 import time
-import traceback
 
 from langfuse import observe
 from app.core.exceptions import DocumentNotFoundError, LLMError
@@ -136,7 +135,7 @@ class ChatService:
             raise
         except Exception as exc:
             end_request_logging(response_summary=str(exc), success=False)
-            logger.error("Unexpected error in ask(): %s\n%s", exc, traceback.format_exc())
+            logger.error("Unexpected error in ask(): %s", exc, exc_info=True)
             raise LLMError(f"Unexpected error during chat: {exc}") from exc
 
     # ------------------------------------------------------------------
@@ -169,7 +168,7 @@ class ChatService:
                 agent=agent,
             )
         except Exception as exc:
-            logger.error("LLM call failed: %s", exc)
+            logger.error("LLM call failed: %s", exc, exc_info=True)
             raise LLMError(f"Failed to generate answer: {exc}") from exc
 
     async def _verify_answer(
@@ -218,6 +217,6 @@ class ChatService:
             req_logger.info("Verification complete (%d chars)", len(verified))
             return verified
         except Exception as exc:
-            logger.error("Verification LLM call failed: %s", exc)
+            logger.error("Verification LLM call failed: %s", exc, exc_info=True)
             raise LLMError(f"Answer verification failed: {exc}") from exc
 
