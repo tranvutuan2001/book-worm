@@ -51,8 +51,17 @@ class MLXLLMProvider(LLMProvider):
                 max_tokens=max_completion_tokens,
                 verbose=False
             )
+
+            print("response", response)
+            
             from app.infrastructure.mlx_provider.mlx_response_parser import MLXResponseParser
-            clean_content, tool_calls_data = MLXResponseParser.parse(response)
+            clean_content, tool_calls_data = MLXResponseParser.parse(
+                response, 
+                model_path=self.mlx_model.model_path
+            )
+
+            print("clean_content", clean_content)
+            print("tool_calls_data", tool_calls_data)
             
             domain_tool_calls = None
             if tool_calls_data:
