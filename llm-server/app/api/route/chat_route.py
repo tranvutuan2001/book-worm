@@ -1,4 +1,5 @@
 import uuid
+import pprint
 from fastapi import APIRouter, Depends, HTTPException
 from dependency_injector.wiring import inject, Provide
 
@@ -19,6 +20,7 @@ async def chat_completions(
 ) -> ChatCompletionResponse:
     """OpenAI-compatible endpoint for chat completions."""
     try:
+        pprint.pprint(request.model_dump())
         command = ChatMapper.to_generate_text_command(request)
         response_message = await service.generate_text(command)
         
