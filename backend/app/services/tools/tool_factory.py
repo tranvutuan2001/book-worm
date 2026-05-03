@@ -6,11 +6,13 @@ from app.domain.enum.tool_type import ToolType
 from app.services.tools.document_retrieval_tool import (
     get_the_most_relevant_chunks,
     get_document_summary,
+    get_document_title,
 )
 
 _TOOL_REGISTRY: dict[ToolType, Callable[..., Any]] = {
     ToolType.DOCUMENT_SEARCH: get_the_most_relevant_chunks,
     ToolType.DOCUMENT_SUMMARY: get_document_summary,
+    ToolType.DOCUMENT_TITLE: get_document_title,
 }
 
 

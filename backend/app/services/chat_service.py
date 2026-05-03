@@ -30,7 +30,11 @@ from app.services.commands.ask_question_command import AskQuestionCommand
 
 logger = logging.getLogger("app.service")
 
-_CHAT_TOOL_TYPES = (ToolType.DOCUMENT_SEARCH, ToolType.DOCUMENT_SUMMARY)
+_CHAT_TOOL_TYPES = (
+    ToolType.DOCUMENT_SEARCH,
+    ToolType.DOCUMENT_SUMMARY,
+    ToolType.DOCUMENT_TITLE,
+)
 
 
 class ChatService:

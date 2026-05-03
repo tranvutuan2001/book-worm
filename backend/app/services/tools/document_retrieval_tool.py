@@ -9,6 +9,7 @@ from the pre-computed JSON artefacts stored under ``data_storage_path / <documen
 import json
 import logging
 import traceback
+import re
 from pathlib import Path
 from typing import List
 
@@ -118,3 +119,8 @@ def get_document_summary(ctx: RunContext[None], document_name: str) -> str:
 def word_count_tool(ctx: RunContext[None], text: str) -> int:
     """Utility function to count total number of words in a text."""
     return len(text.split())
+
+def get_document_title(ctx: RunContext[None], document_name: str) -> str:
+    """Return the title of the document."""
+    # Strip timestamp pattern _YYYYMMDD_HHMMSS if present
+    return re.sub(r"_\d{8}_\d{6}$", "", document_name)

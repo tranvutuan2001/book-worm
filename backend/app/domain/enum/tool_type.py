@@ -5,3 +5,4 @@ class ToolType(str, Enum):
     """Available tool types that can be bound to a document."""
     DOCUMENT_SEARCH = "document_search"
     DOCUMENT_SUMMARY = "document_summary"
+    DOCUMENT_TITLE = "document_title"

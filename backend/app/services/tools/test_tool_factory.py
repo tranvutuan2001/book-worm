@@ -41,15 +41,25 @@ class TestToolFactory:
 
         assert tool.__name__ == "get_document_summary"
 
+    def test_document_title_preserves_original_name(self):
+        tool = ToolFactory.create(ToolType.DOCUMENT_TITLE, "my_doc")
+
+        assert tool.__name__ == "get_document_title"
+
     def test_document_search_is_async(self):
         tool = ToolFactory.create(ToolType.DOCUMENT_SEARCH, "my_doc")
 
         assert inspect.iscoroutinefunction(tool)
 
-    def test_document_summary_is_sync(self):
+    def test_document_summary_is_async(self):
         tool = ToolFactory.create(ToolType.DOCUMENT_SUMMARY, "my_doc")
 
-        assert not inspect.iscoroutinefunction(tool)
+        assert inspect.iscoroutinefunction(tool)
+
+    def test_document_title_is_async(self):
+        tool = ToolFactory.create(ToolType.DOCUMENT_TITLE, "my_doc")
+
+        assert inspect.iscoroutinefunction(tool)
 
     def test_unknown_tool_type_raises_value_error(self):
         with pytest.raises(ValueError, match="Unknown tool type"):
