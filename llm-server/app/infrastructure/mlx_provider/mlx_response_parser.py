@@ -100,7 +100,8 @@ class _GemmaParser:
         r'<\|?channel\|?>?thought.*'
     ]
     TOOL_PATTERNS = [
-        r'<\|?tool_call\|?>(.*?)<\|?/?tool_call\|?>?'
+        r'<\|?tool_call\|?>(.*?)<\|?/?tool_call\|?>(?:\n| |$)?',
+        r'<\|?tool_call\|?>(.*)' 
     ]
 
     @classmethod
@@ -128,14 +129,18 @@ class _GemmaParser:
 
     @classmethod
     def _parse_call_content(cls, content: str) -> dict[str, str] | None:
+        # 1. Pre-process: handle weird Gemma markers like <|"|> or <|'|>
+        # These appear to be used by some Gemma models as special string delimiters
         temp_content = content.strip()
+        temp_content = temp_content.replace('<|"|>', '"').replace("<|'|>", "'")
         
         # Strategy C: Python AST (Common for Gemma/Hermes 'call:func(args)' format)
-        if temp_content.lower().startswith("call:"):
-            temp_content = temp_content[5:].strip()
+        ast_content = temp_content
+        if ast_content.lower().startswith("call:"):
+            ast_content = ast_content[5:].strip()
             
         try:
-            tree = ast.parse(temp_content, mode='eval')
+            tree = ast.parse(ast_content, mode='eval')
             if isinstance(tree.body, ast.Call) and hasattr(tree.body.func, 'id'):
                 func_name = tree.body.func.id
                 kwargs = {kw.arg: ast.literal_eval(kw.value) for kw in tree.body.keywords if kw.arg}
@@ -143,7 +148,42 @@ class _GemmaParser:
         except Exception:
             pass
             
-        # Strategy A Fallback: JSON
+        # Strategy B: Brace format (e.g. func{key:val} or call:func{key:val})
+        # Common in some Gemma 2 reasoning variants
+        brace_match = re.match(r'^(?:call:)?([a-zA-Z0-9_:]+)\s*\{(.*)\}$', temp_content, re.DOTALL | re.IGNORECASE)
+        if brace_match:
+            func_name = brace_match.group(1).strip().split(":")[-1]
+            args_content = brace_match.group(2).strip()
+            
+            if not args_content:
+                return MLXResponseParser.format_tool_call(func_name, {})
+
+            # Try to parse args_content as JSON first
+            try:
+                data = json.loads("{" + args_content + "}")
+                return MLXResponseParser.format_tool_call(func_name, data)
+            except Exception:
+                # Fallback: try to parse as a series of key:value pairs using regex
+                # This handles unquoted keys like {question: "..."}
+                params = {}
+                # This pattern matches key: value, where value is a quoted string or a primitive
+                kv_pairs = re.finditer(r'([a-zA-Z0-9_]+)\s*:\s*("(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|[a-zA-Z0-9_.-]+)', args_content)
+                for kv in kv_pairs:
+                    key = kv.group(1)
+                    val_raw = kv.group(2)
+                    try:
+                        # Try to parse value as JSON (handles strings, numbers, booleans)
+                        params[key] = json.loads(val_raw.replace("'", '"')) if val_raw.startswith("'") else json.loads(val_raw)
+                    except Exception:
+                        # Fallback for unquoted strings or complex values
+                        params[key] = val_raw.strip("'\"")
+                
+                if params:
+                    return MLXResponseParser.format_tool_call(func_name, params)
+                elif not args_content: # Handle empty braces {}
+                    return MLXResponseParser.format_tool_call(func_name, {})
+
+        # Strategy A Fallback: Pure JSON
         try:
             data = json.loads(temp_content)
             if isinstance(data, dict) and "name" in data:

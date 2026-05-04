@@ -45,3 +45,24 @@ def test_parse_mixed_content():
     assert len(tools) == 1
     assert tools[0]["name"] == "get_weather"
     assert "Rome" in tools[0]["arguments"]
+
+
+def test_parse_gemma_reasoning_tool_call():
+    text = """<|channel>thought
+I need to find info about Collins.
+<channel|><|tool_call>call:get_the_most_relevant_chunks{question:<|"|>tell me about collins<|"|>}<tool_call|>"""
+    
+    clean_text, tools = MLXResponseParser.parse(text, model_path="gemma-2-9b")
+    
+    assert clean_text is None
+    assert len(tools) == 1
+    assert tools[0]["name"] == "get_the_most_relevant_chunks"
+    assert "tell me about collins" in tools[0]["arguments"]
+
+def test_parse_gemma_empty_braces():
+    text = "<|tool_call>get_document_title{}<tool_call|>"
+    clean_text, tools = MLXResponseParser.parse(text, model_path="gemma")
+    
+    assert len(tools) == 1
+    assert tools[0]["name"] == "get_document_title"
+    assert tools[0]["arguments"] == "{}"
