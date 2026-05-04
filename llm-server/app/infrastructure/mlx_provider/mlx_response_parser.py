@@ -2,7 +2,156 @@ import re
 import ast
 import json
 import uuid
-from typing import Any
+
+class _QwenParser:
+    """Private strategy for parsing Qwen model responses."""
+    THOUGHT_PATTERNS = [
+        r'<think>.*?</think>', 
+        r'<think>.*',
+        r'.*?</think>'
+    ]
+    TOOL_PATTERNS = [
+        r'<tool_call>(.*?)</tool_call>',
+        r'(tool_call:[a-zA-Z0-9_:]+\{.*?\})'
+    ]
+
+    @classmethod
+    def parse(cls, text: str) -> tuple[str | None, list[dict[str, str]]]:
+        tool_calls: list[dict[str, str]] = []
+        clean_text = text
+
+        # 1. Extract tool calls
+        for pattern in cls.TOOL_PATTERNS:
+            matches = list(re.finditer(pattern, clean_text, flags=re.DOTALL | re.IGNORECASE))
+            for match in matches:
+                # Use first capturing group if present, otherwise full match
+                content = match.group(1).strip() if match.groups() else match.group(0).strip()
+                extracted = cls._parse_call_content(content)
+                
+                if extracted:
+                    if isinstance(extracted, list):
+                        tool_calls.extend(extracted)
+                    else:
+                        tool_calls.append(extracted)
+                    # Remove the matched block from clean_text
+                    clean_text = clean_text.replace(match.group(0), '')
+
+        # 2. Strip thoughts
+        for pattern in cls.THOUGHT_PATTERNS:
+            clean_text = re.sub(pattern, '', clean_text, flags=re.DOTALL | re.IGNORECASE)
+        
+        clean_text = clean_text.strip()
+        return clean_text if clean_text else None, tool_calls
+
+    @classmethod
+    def _parse_call_content(cls, content: str) -> dict[str, str] | list[dict[str, str]] | None:
+        # Strategy A: JSON (Standard Qwen format)
+        try:
+            data = json.loads(content)
+            if isinstance(data, dict) and "name" in data:
+                return MLXResponseParser.format_tool_call(data["name"], data.get("arguments", {}))
+            elif isinstance(data, list):
+                results: list[dict[str, str]] = []
+                for item in data:
+                    if isinstance(item, dict) and "name" in item:
+                        results.append(MLXResponseParser.format_tool_call(item["name"], item.get("arguments", {})))
+                if results: return results
+        except json.JSONDecodeError:
+            pass
+
+        # Strategy B: Tagged JSON (e.g. tool_call:name{...})
+        temp_content = content.strip()
+        if temp_content.lower().startswith("tool_call:"):
+            temp_content = temp_content[10:].strip()
+            
+        match = re.match(r'^([a-zA-Z0-9_:]+)\s*(\{.*\})$', temp_content, re.DOTALL)
+        if match:
+            func_name = match.group(1).strip().split(":")[-1]
+            try:
+                kwargs = json.loads(match.group(2).strip())
+                return MLXResponseParser.format_tool_call(func_name, kwargs)
+            except json.JSONDecodeError:
+                pass
+
+        # Strategy D: XML-like format (used by some Qwen reasoning models)
+        try:
+            func_match = re.search(r'<function=(.*?)>', content)
+            if func_match:
+                func_name = func_match.group(1).strip()
+                params = {}
+                param_matches = re.finditer(r'<parameter=(.*?)>(.*?)</parameter>', content, re.DOTALL)
+                for p_match in param_matches:
+                    p_name = p_match.group(1).strip()
+                    p_value = p_match.group(2).strip()
+                    try:
+                        params[p_name] = json.loads(p_value)
+                    except json.JSONDecodeError:
+                        params[p_name] = p_value
+                return MLXResponseParser.format_tool_call(func_name, params)
+        except Exception:
+            pass
+
+        return None
+
+class _GemmaParser:
+    """Private strategy for parsing Gemma model responses."""
+    THOUGHT_PATTERNS = [
+        r'<\|?channel\|?>?thought.*?<\|?/?channel\|?>?',
+        r'<\|?channel\|?>?thought.*'
+    ]
+    TOOL_PATTERNS = [
+        r'<\|?tool_call\|?>(.*?)<\|?/?tool_call\|?>?'
+    ]
+
+    @classmethod
+    def parse(cls, text: str) -> tuple[str | None, list[dict[str, str]]]:
+        tool_calls: list[dict[str, str]] = []
+        clean_text = text
+
+        # 1. Extract tool calls
+        for pattern in cls.TOOL_PATTERNS:
+            matches = list(re.finditer(pattern, clean_text, flags=re.DOTALL | re.IGNORECASE))
+            for match in matches:
+                content = match.group(1).strip() if match.groups() else match.group(0).strip()
+                extracted = cls._parse_call_content(content)
+                
+                if extracted:
+                    tool_calls.append(extracted)
+                    clean_text = clean_text.replace(match.group(0), '')
+
+        # 2. Strip thoughts
+        for pattern in cls.THOUGHT_PATTERNS:
+            clean_text = re.sub(pattern, '', clean_text, flags=re.DOTALL | re.IGNORECASE)
+        
+        clean_text = clean_text.strip()
+        return clean_text if clean_text else None, tool_calls
+
+    @classmethod
+    def _parse_call_content(cls, content: str) -> dict[str, str] | None:
+        temp_content = content.strip()
+        
+        # Strategy C: Python AST (Common for Gemma/Hermes 'call:func(args)' format)
+        if temp_content.lower().startswith("call:"):
+            temp_content = temp_content[5:].strip()
+            
+        try:
+            tree = ast.parse(temp_content, mode='eval')
+            if isinstance(tree.body, ast.Call) and hasattr(tree.body.func, 'id'):
+                func_name = tree.body.func.id
+                kwargs = {kw.arg: ast.literal_eval(kw.value) for kw in tree.body.keywords if kw.arg}
+                return MLXResponseParser.format_tool_call(func_name, kwargs)
+        except Exception:
+            pass
+            
+        # Strategy A Fallback: JSON
+        try:
+            data = json.loads(temp_content)
+            if isinstance(data, dict) and "name" in data:
+                return MLXResponseParser.format_tool_call(data["name"], data.get("arguments", {}))
+        except json.JSONDecodeError:
+            pass
+
+        return None
 
 class MLXResponseParser:
     """
@@ -19,29 +168,9 @@ class MLXResponseParser:
         path = model_path.lower() if model_path else ""
         
         if "gemma" in path:
-            return cls._parse_by_strategy(
-                response_text,
-                thought_patterns=[
-                    r'<\|?channel\|?>?thought.*?<\|?/?channel\|?>?',
-                    r'<\|?channel\|?>?thought.*'
-                ],
-                tool_patterns=[r'<\|?tool_call\|?>(.*?)<\|?/?tool_call\|?>?'],
-                is_gemma=True
-            )
-        elif "qwen" in path:
-            return cls._parse_by_strategy(
-                response_text,
-                thought_patterns=[
-                    r'<think>.*?</think>', 
-                    r'<think>.*',
-                    r'.*?</think>' # Handle pre-filled thoughts ending with </think>
-                ],
-                tool_patterns=[
-                    r'<tool_call>(.*?)</tool_call>',
-                    r'(tool_call:[a-zA-Z0-9_:]+\{.*?\})' # New Qwen format
-                ],
-                is_gemma=False
-            )
+            return _GemmaParser.parse(response_text)
+        elif "qwen" in path or not path: # Default to Qwen if path is missing to support tests and generic usage
+            return _QwenParser.parse(response_text)
         
         from app.domain.exceptions.llm_exception import LLMGenerationException
         raise LLMGenerationException(
@@ -49,127 +178,9 @@ class MLXResponseParser:
             provider="mlx"
         )
 
-    @classmethod
-    def _parse_by_strategy(
-        cls, 
-        text: str, 
-        thought_patterns: list[str], 
-        tool_patterns: list[str],
-        is_gemma: bool | None
-    ) -> tuple[str | None, list[dict[str, str]]]:
-        """Core parsing logic using provided patterns and strategy."""
-        tool_calls: list[dict[str, str]] = []
-        clean_text = text
 
-        # 1. Extract tool calls FIRST to avoid them being stripped by thought patterns
-        for pattern in tool_patterns:
-            matches = list(re.finditer(pattern, clean_text, flags=re.DOTALL | re.IGNORECASE))
-            for match in matches:
-                # Use first capturing group if present, otherwise full match
-                content = match.group(1).strip() if match.groups() else match.group(0).strip()
-                extracted = cls._parse_call_content(content, is_gemma)
-                
-                if extracted:
-                    if isinstance(extracted, list):
-                        tool_calls.extend(extracted)
-                    else:
-                        tool_calls.append(extracted)
-                    # Remove the matched block from clean_text
-                    clean_text = clean_text.replace(match.group(0), '')
-
-        # 2. Strip thoughts from the remaining text
-        for pattern in thought_patterns:
-            clean_text = re.sub(pattern, '', clean_text, flags=re.DOTALL | re.IGNORECASE)
-        
-        clean_text = clean_text.strip()
-        if not clean_text and not tool_calls:
-            return "", tool_calls
-            
-        return clean_text if clean_text else None, tool_calls
-
-    @classmethod
-    def _parse_call_content(cls, content: str, is_gemma: bool | None) -> dict[str, str] | list[dict[str, str]] | None:
-        """Attempts to parse the inner content of a tool call block."""
-        
-        # Strategy A: JSON (Common for Qwen and some Gemma variants)
-        try:
-            data = json.loads(content)
-            if isinstance(data, dict) and "name" in data:
-                return cls._format_tool_call(data["name"], data.get("arguments", {}))
-            elif isinstance(data, list):
-                results: list[dict[str, str]] = []
-                for item in data:
-                    if isinstance(item, dict) and "name" in item:
-                        results.append(cls._format_tool_call(item["name"], item.get("arguments", {})))
-                if results: return results
-        except json.JSONDecodeError:
-            pass
-
-        # Strategy B: Tagged/Prefixed formats (e.g. 'call:func_name{...}' or 'tool_call:provider:name{...}')
-        temp_content = content.strip()
-        
-        # Strip common prefixes
-        if temp_content.lower().startswith("tool_call:"):
-            temp_content = temp_content[10:].strip()
-        elif temp_content.lower().startswith("call:"):
-            temp_content = temp_content[5:].strip()
-            
-        # Match name and arguments: name{json_args}
-        # Name can contain colons (e.g., default_api:summarize)
-        match = re.match(r'^([a-zA-Z0-9_:]+)\s*(\{.*\})$', temp_content, re.DOTALL)
-        if match:
-            func_name = match.group(1).strip()
-            # If name has provider prefix (e.g. default_api:summarize), take only the function name
-            if ":" in func_name:
-                func_name = func_name.split(":")[-1]
-                
-            args_json = match.group(2).strip()
-            try:
-                kwargs = json.loads(args_json)
-                return cls._format_tool_call(func_name, kwargs)
-            except json.JSONDecodeError:
-                pass
-
-        # Strategy C: Python AST (Fallback for legacy or mixed formats)
-        try:
-            temp_content = content.strip()
-            if temp_content.lower().startswith("tool_call:"):
-                temp_content = temp_content[10:].strip()
-            elif temp_content.lower().startswith("call:"):
-                temp_content = temp_content[5:].strip()
-                
-            tree = ast.parse(temp_content, mode='eval')
-            if isinstance(tree.body, ast.Call) and hasattr(tree.body.func, 'id'):
-                func_name = tree.body.func.id
-                kwargs = {kw.arg: ast.literal_eval(kw.value) for kw in tree.body.keywords if kw.arg}
-                return cls._format_tool_call(func_name, kwargs)
-        except Exception:
-            pass
-
-        # Strategy D: XML-like format (used by some Qwen reasoning models)
-        # Format: <function=name><parameter=n1>v1</parameter>...
-        try:
-            func_match = re.search(r'<function=(.*?)>', content)
-            if func_match:
-                func_name = func_match.group(1).strip()
-                params = {}
-                param_matches = re.finditer(r'<parameter=(.*?)>(.*?)</parameter>', content, re.DOTALL)
-                for p_match in param_matches:
-                    p_name = p_match.group(1).strip()
-                    p_value = p_match.group(2).strip()
-                    # Try to parse as JSON if it looks like JSON, otherwise keep as string
-                    try:
-                        params[p_name] = json.loads(p_value)
-                    except json.JSONDecodeError:
-                        params[p_name] = p_value
-                return cls._format_tool_call(func_name, params)
-        except Exception:
-            pass
-
-        return None
-
-    @classmethod
-    def _format_tool_call(cls, name: str, arguments: object) -> dict[str, str]:
+    @staticmethod
+    def format_tool_call(name: str, arguments: dict[str, object] | object) -> dict[str, str]:
         """Normalizes the parsed tool call into the expected dictionary format."""
         if isinstance(arguments, dict):
             args_str = json.dumps(arguments)
