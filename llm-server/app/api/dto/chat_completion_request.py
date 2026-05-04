@@ -133,30 +133,13 @@ class ChatCompletionRequest(BaseModel):
     """Request schema for OpenAI-compatible chat completions."""
     messages: list[_ChatCompletionMessageParam]
     model: str
-    audio: _ChatCompletionAudioParam | None = None
     frequency_penalty: float | None = Field(default=None, ge=-2.0, le=2.0)
     logit_bias: dict[str, int] | None = None
-    logprobs: bool | None = None
-    top_logprobs: int | None = Field(default=None, ge=0, le=20)
     max_completion_tokens: int | None = Field(default=None, ge=1)
     metadata: dict[str, str] | None = None
-    modalities: list[Literal["text", "audio"]] | None = None
-    n: int | None = Field(default=1, ge=1, le=128)
-    parallel_tool_calls: bool | None = None
-    prediction: _ChatCompletionPredictionContent | None = None
-    presence_penalty: float | None = Field(default=None, ge=-2.0, le=2.0)
     response_format: Union[_ResponseFormatText, _ResponseFormatJSONObject, _ResponseFormatJSONSchema] | None = None
     seed: int | None = None
-    service_tier: Literal["auto", "default", "flex", "scale", "priority"] | None = None
     stop: str | list[str] | None = None
-    store: bool | None = None
-    stream: bool | None = False
-    stream_options: _ChatCompletionStreamOptions | None = None
     temperature: float | None = Field(default=None, ge=0.0, le=2.0)
     top_p: float | None = Field(default=None, ge=0.0, le=1.0)
     tools: list[_ChatCompletionTool] | None = None
-    tool_choice: Union[Literal["none", "auto", "required"], _ChatCompletionNamedToolChoice, _ChatCompletionNamedToolChoiceCustom] | None = None
-    user: str | None = None
-    safety_identifier: str | None = None
-    prompt_cache_key: str | None = None
-    verbosity: Literal["low", "medium", "high"] | None = None
