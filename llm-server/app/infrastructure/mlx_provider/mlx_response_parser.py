@@ -146,6 +146,26 @@ class MLXResponseParser:
         except Exception:
             pass
 
+        # Strategy D: XML-like format (used by some Qwen reasoning models)
+        # Format: <function=name><parameter=n1>v1</parameter>...
+        try:
+            func_match = re.search(r'<function=(.*?)>', content)
+            if func_match:
+                func_name = func_match.group(1).strip()
+                params = {}
+                param_matches = re.finditer(r'<parameter=(.*?)>(.*?)</parameter>', content, re.DOTALL)
+                for p_match in param_matches:
+                    p_name = p_match.group(1).strip()
+                    p_value = p_match.group(2).strip()
+                    # Try to parse as JSON if it looks like JSON, otherwise keep as string
+                    try:
+                        params[p_name] = json.loads(p_value)
+                    except json.JSONDecodeError:
+                        params[p_name] = p_value
+                return cls._format_tool_call(func_name, params)
+        except Exception:
+            pass
+
         return None
 
     @classmethod

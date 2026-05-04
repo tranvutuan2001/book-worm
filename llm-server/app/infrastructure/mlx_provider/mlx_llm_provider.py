@@ -33,15 +33,16 @@ class MLXLLMProvider(LLMProvider):
                     "add_generation_prompt": True
                 }
                 
-                import inspect
-                sig = inspect.signature(self.mlx_model.tokenizer.apply_chat_template)
-                if "tools" in sig.parameters and tools:
+                if tools:
                     kwargs["tools"] = tools
 
                 prompt = self.mlx_model.tokenizer.apply_chat_template(**kwargs)
             else:
                 prompt = "\n".join([f"{m.role.value}: {m.content or ''}" for m in messages])
                 prompt += "\nassistant: "
+
+            print("\n******** Tools: \n", tools)
+            print("\n******** Prompt: \n", prompt)
             
             # Running directly to avoid 'no Stream' errors with asyncio.to_thread
             response = mlx_lm.generate(
@@ -52,7 +53,7 @@ class MLXLLMProvider(LLMProvider):
                 verbose=False
             )
 
-            print("response", response)
+            print("\n******** Response: \n", response)
             
             from app.infrastructure.mlx_provider.mlx_response_parser import MLXResponseParser
             clean_content, tool_calls_data = MLXResponseParser.parse(
@@ -60,8 +61,8 @@ class MLXLLMProvider(LLMProvider):
                 model_path=self.mlx_model.model_path
             )
 
-            print("clean_content", clean_content)
-            print("tool_calls_data", tool_calls_data)
+            print("\n******** Clean Content: \n", clean_content)
+            print("\n******** Tool Calls Data: \n", tool_calls_data)
             
             domain_tool_calls = None
             if tool_calls_data:
