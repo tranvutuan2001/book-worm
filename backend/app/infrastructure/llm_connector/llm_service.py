@@ -5,11 +5,7 @@ This module provides a unified interface for chat completions (with tool-calling
 and text embeddings by communicating with an external LLM server.
 """
 
-import asyncio
-import json
 import logging
-import inspect
-from typing import Any
 from langfuse.openai import AsyncOpenAI
 from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai.models.openai import OpenAIModel
