@@ -10,5 +10,7 @@ class TextGenerationService:
         return await self._llm_provider.generate(
             messages=command.messages,
             max_completion_tokens=command.max_completion_tokens,
+            frequency_penalty=command.frequency_penalty,
+            response_format=command.response_format,
             tools=command.tools
         )

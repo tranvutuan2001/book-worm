@@ -1,3 +1,4 @@
+from typing import Any
 from openai import AsyncOpenAI, OpenAIError
 from app.domain.value_objects.message import Message, ToolCall, ToolCallFunction
 from app.domain.value_objects.message_role import MessageRole
@@ -11,7 +12,14 @@ class OpenAILLMProvider(LLMProvider):
         self.client = client
         self.model = model
 
-    async def generate(self, messages: list[Message], max_completion_tokens: int, tools: list[dict[str, object]] | None = None) -> Message:
+    async def generate(
+        self, 
+        messages: list[Message], 
+        max_completion_tokens: int, 
+        frequency_penalty: float | None = None,
+        response_format: dict[str, Any] | None = None,
+        tools: list[dict[str, Any]] | None = None
+    ) -> Message:
         try:
             formatted_messages = []
             for m in messages:
@@ -31,6 +39,10 @@ class OpenAILLMProvider(LLMProvider):
                 "messages": formatted_messages,
                 "max_tokens": max_completion_tokens
             }
+            if frequency_penalty is not None:
+                kwargs["frequency_penalty"] = frequency_penalty
+            if response_format:
+                kwargs["response_format"] = response_format
             if tools:
                 kwargs["tools"] = tools
 

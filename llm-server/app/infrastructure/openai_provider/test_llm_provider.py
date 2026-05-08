@@ -17,7 +17,7 @@ async def test_openai_llm_provider_generate():
     provider = OpenAILLMProvider(client=mock_client)
     messages = [Message(role=MessageRole.USER, content="Hello")]
     
-    response = await provider.generate(messages, max_tokens=10)
+    response = await provider.generate(messages, max_completion_tokens=10)
     
     assert response.content == "OpenAI Response"
     assert response.role == MessageRole.ASSISTANT
@@ -32,7 +32,7 @@ async def test_openai_llm_provider_error():
     messages = [Message(role=MessageRole.USER, content="Hello")]
     
     with pytest.raises(LLMGenerationException) as excinfo:
-        await provider.generate(messages, max_tokens=10)
+        await provider.generate(messages, max_completion_tokens=10)
     
     assert "API Error" in str(excinfo.value)
     assert excinfo.value.provider == "openai"

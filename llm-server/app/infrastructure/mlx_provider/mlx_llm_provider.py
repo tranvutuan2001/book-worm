@@ -1,4 +1,6 @@
+from typing import Any
 import mlx_lm
+from mlx_lm.sample_utils import make_logits_processors
 from app.domain.value_objects.message import Message, ToolCall, ToolCallFunction
 from app.domain.value_objects.message_role import MessageRole
 from app.domain.protocols.llm_provider import LLMProvider
@@ -11,7 +13,14 @@ class MLXLLMProvider(LLMProvider):
     def __init__(self, mlx_model: MLXModel):
         self.mlx_model = mlx_model
 
-    async def generate(self, messages: list[Message], max_completion_tokens: int, tools: list[dict[str, object]] | None = None) -> Message:
+    async def generate(
+        self, 
+        messages: list[Message], 
+        max_completion_tokens: int, 
+        frequency_penalty: float | None = None,
+        response_format: dict[str, Any] | None = None,
+        tools: list[dict[str, Any]] | None = None
+    ) -> Message:
         try:
             formatted_messages = []
             for m in messages:
@@ -44,13 +53,18 @@ class MLXLLMProvider(LLMProvider):
             print("\n******** Tools: \n", tools)
             print("\n******** Prompt: \n", prompt)
             
+            logits_processors = []
+            if frequency_penalty is not None:
+                logits_processors = make_logits_processors(frequency_penalty=frequency_penalty)
+
             # Running directly to avoid 'no Stream' errors with asyncio.to_thread
             response = mlx_lm.generate(
                 model=self.mlx_model.model,
                 tokenizer=self.mlx_model.tokenizer,
                 prompt=prompt,
                 max_tokens=max_completion_tokens,
-                verbose=False
+                verbose=False,
+                logits_processors=logits_processors
             )
 
             print("\n******** Response: \n", response)

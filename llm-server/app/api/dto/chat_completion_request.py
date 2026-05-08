@@ -93,9 +93,15 @@ class _ChatCompletionTool(BaseModel):
     type: Literal["function"]
     function: _ChatCompletionToolFunction
 
+class _ResponseFormatJSONSchema(BaseModel):
+    type: Literal["json_schema"]
+    json_schema: dict[str, Any]
+
 class ChatCompletionRequest(BaseModel):
     """Request schema for OpenAI-compatible chat completions."""
     messages: list[_ChatCompletionMessageParam]
     model: str
+    frequency_penalty: float | None = Field(default=None, ge=-2.0, le=2.0)
     max_completion_tokens: int | None = Field(default=None, ge=1)
+    response_format: _ResponseFormatJSONSchema | None = None
     tools: list[_ChatCompletionTool] | None = None

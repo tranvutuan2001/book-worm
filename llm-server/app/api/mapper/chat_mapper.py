@@ -37,6 +37,8 @@ class ChatMapper:
         return GenerateTextCommand(
             messages=domain_messages,
             max_completion_tokens=request.max_completion_tokens,
+            frequency_penalty=request.frequency_penalty,
+            response_format=request.response_format.model_dump() if request.response_format else None,
             tools=[t.model_dump() for t in request.tools] if request.tools else None
         )
 
