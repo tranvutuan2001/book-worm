@@ -7,8 +7,52 @@ from app.domain.protocols.llm_provider import LLMProvider
 from app.domain.exceptions.llm_exception import LLMGenerationException
 from app.infrastructure.mlx_provider.mlx_model import MLXModel
 
+import mlx.core as mx
+import numpy as np
+
+class _XGrammarLogitsProcessor:
+    def __init__(self, matcher, vocab_size: int, eos_token_id: int):
+        import xgrammar as xgr
+        self.matcher = matcher
+        self.vocab_size = vocab_size
+        self.eos_token_id = eos_token_id
+        self.bitmask = xgr.allocate_token_bitmask(1, vocab_size)
+        self.bitmask_np = self.bitmask.numpy()
+        self.last_token_idx = None
+        
+    def __call__(self, input_ids: mx.array, logits: mx.array) -> mx.array:
+        input_ids_list = input_ids.tolist()
+        
+        if self.last_token_idx is None:
+            self.last_token_idx = len(input_ids_list)
+        
+        while self.last_token_idx < len(input_ids_list):
+            token = input_ids_list[self.last_token_idx]
+            if not self.matcher.is_terminated():
+                try:
+                    self.matcher.accept_token(token)
+                except Exception:
+                    pass
+            self.last_token_idx += 1
+            
+        if self.matcher.is_terminated():
+            # If XGrammar is done, force the model to generate the EOS token.
+            mask = mx.zeros(logits.shape, dtype=mx.bool_)
+            if self.eos_token_id is not None and self.eos_token_id < logits.shape[-1]:
+                mask[..., self.eos_token_id] = True
+            return mx.where(mask, logits, mx.array([-float('inf')], dtype=logits.dtype))
+            
+        self.matcher.fill_next_token_bitmask(self.bitmask)
+        
+        uint8_view = self.bitmask_np.view(np.uint8)
+        bits = np.unpackbits(uint8_view, bitorder='little')[:self.vocab_size]
+        
+        mask = mx.array(bits, dtype=mx.bool_)
+        
+        # Apply mask: where bit is 0 (rejected), set to -inf
+        return mx.where(mask, logits, mx.array([-float('inf')], dtype=logits.dtype))
+
 class MLXLLMProvider(LLMProvider):
-    """MLX-based implementation of the LLMProvider."""
     
     def __init__(self, mlx_model: MLXModel):
         self.mlx_model = mlx_model
@@ -56,6 +100,29 @@ class MLXLLMProvider(LLMProvider):
             logits_processors = []
             if frequency_penalty is not None:
                 logits_processors = make_logits_processors(frequency_penalty=frequency_penalty)
+
+            if response_format and response_format.get("type") == "json_schema":
+                schema = response_format.get("json_schema", {}).get("schema")
+                if schema:
+                    import xgrammar as xgr
+                    
+                    if hasattr(self.mlx_model.tokenizer, "vocab_size"):
+                        vocab_size = self.mlx_model.tokenizer.vocab_size
+                    else:
+                        vocab_size = len(self.mlx_model.tokenizer)
+                        
+                    hf_tokenizer = getattr(self.mlx_model.tokenizer, "_tokenizer", self.mlx_model.tokenizer)
+                    tokenizer_info = xgr.TokenizerInfo.from_huggingface(
+                        hf_tokenizer, 
+                        vocab_size=vocab_size
+                    )
+                    compiler = xgr.GrammarCompiler(tokenizer_info)
+                    grammar = compiler.compile_json_schema(schema)
+                    matcher = xgr.GrammarMatcher(grammar)
+                    
+                    eos_token_id = getattr(self.mlx_model.tokenizer, "eos_token_id", None)
+                    processor = _XGrammarLogitsProcessor(matcher, vocab_size, eos_token_id)
+                    logits_processors.append(processor)
 
             # Running directly to avoid 'no Stream' errors with asyncio.to_thread
             response = mlx_lm.generate(

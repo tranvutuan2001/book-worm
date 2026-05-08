@@ -63,3 +63,54 @@ def test_chat_completions_with_tools(openai_client):
         assert tool_call.function.name == "get_weather"
     elif response.choices[0].message.content:
         assert isinstance(response.choices[0].message.content, str)
+
+def test_chat_completions_with_response_format(openai_client):
+    """Test chat completions with response_format to enforce json_schema output."""
+    model_name = "models/chat/mlx-community/gemma-4-26b-a4b-it-4bit"
+    schema = {
+        "$id": "https://example.com/person.schema.json",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Person",
+        "description": "A person with name and age",
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "The person's name"
+            },
+            "age": {
+                "type": "integer",
+                "description": "The person's age in years"
+            }
+        },
+        "required": ["name", "age"]
+    }
+    
+    response = openai_client.chat.completions.create(
+        model=model_name,
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that extracts structured data."},
+            {"role": "user", "content": "Extract the following information: Alice is 30 years old."}
+        ],
+        max_tokens=100,
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": "person_info",
+                "schema": schema,
+                "strict": True
+            }
+        }
+    )
+    
+    assert response.choices[0].message.role == "assistant"
+    content = response.choices[0].message.content
+    assert content is not None
+    
+    import json
+    import jsonschema
+    
+    parsed_content = json.loads(content)
+    jsonschema.validate(instance=parsed_content, schema=schema)
+    assert isinstance(parsed_content["name"], str)
+    assert isinstance(parsed_content["age"], int)

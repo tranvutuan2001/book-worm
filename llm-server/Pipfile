@@ -16,6 +16,8 @@ pytest-asyncio = "*"
 httpx = "*"
 python-dotenv = "*"
 mlx-vlm = "*"
+xgrammar = "*"
+jsonschema = "*"
 
 [dev-packages]
 

@@ -21,6 +21,19 @@ async def chat_completions(
         command = ChatMapper.to_generate_text_command(request)
         response_message = await service.generate_text(command)
         
+        if request.response_format and request.response_format.type == "json_schema":
+            schema = request.response_format.json_schema.get("schema")
+            if schema and response_message.content:
+                import json
+                import jsonschema
+                try:
+                    parsed_content = json.loads(response_message.content)
+                    jsonschema.validate(instance=parsed_content, schema=schema)
+                except json.JSONDecodeError:
+                    raise HTTPException(status_code=400, detail="Model failed to generate valid JSON")
+                except jsonschema.exceptions.ValidationError as ve:
+                    raise HTTPException(status_code=400, detail=f"Model failed to generate desired format: {ve.message}")
+        
         return ChatCompletionResponse(
             id=f"chatcmpl-{uuid.uuid4()}",
             model=request.model,
