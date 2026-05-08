@@ -12,7 +12,7 @@ import logging
 import time
 
 from langfuse import observe
-from app.core.exceptions import DocumentNotFoundError, LLMError
+from app.util.exceptions import DocumentNotFoundError, LLMError
 from app.config.app_setting import app_setting
 from app.domain.entity.agent_factory import AgentFactory
 

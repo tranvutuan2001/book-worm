@@ -13,7 +13,7 @@ from app.api.dto.upload_response import UploadResponse
 from app.api.dto.summarize_response import SummarizeResponse
 from app.api.mapper.document_mapper import DocumentMapper
 from app.container import Container
-from app.core.exceptions import DocumentNotFoundError, DocumentProcessingError, InvalidDocumentError
+from app.util.exceptions import DocumentNotFoundError, DocumentProcessingError, InvalidDocumentError
 from app.services.document_service import DocumentService
 from app.services.pdf_summarization_service import PDFSummarizationService
 from app.services.commands.list_documents_command import ListDocumentsCommand

@@ -9,7 +9,7 @@ from app.api.dto.ask_request import AskRequest
 from app.api.dto.ask_response import AskResponse
 from app.api.mapper.chat_mapper import ChatMapper
 from app.container import Container
-from app.core.exceptions import DocumentNotFoundError, LLMError
+from app.util.exceptions import DocumentNotFoundError, LLMError
 from app.services.chat_service import ChatService
 
 logger = logging.getLogger("app.api")

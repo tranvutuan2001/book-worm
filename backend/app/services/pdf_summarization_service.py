@@ -30,7 +30,7 @@ import jsonschema
 from langfuse import observe
 
 from app.config.app_setting import app_setting
-from app.core.exceptions import DocumentNotFoundError, DocumentProcessingError
+from app.util.exceptions import DocumentNotFoundError, DocumentProcessingError
 from app.domain.entity.agent_factory import AgentFactory
 from app.domain.entity.message import Message
 from app.domain.enum.role import Role
@@ -73,7 +73,7 @@ Segmentation Logic:
 2. Zero-Loss Policy: You must perform a literal extraction. Every character, word, and punctuation mark from the original text must be present in the final segments, in the exact original order. Do not summarize, fix typos, or omit data.
 3. Size Constraints: * Maximum: Each individual block MUST NOT exceed 300 words. * Minimum: Aim for blocks larger than 100 words whenever possible.
 Note: If the entire input text is shorter than 100 words, provide it as a single-element array.
-4. Granularity: Ensure blocks are large enough to retain their core meaning but strictly stay within the specified word-count range.
+4. Granularity: Ensure blocks are large enough to retain their util meaning but strictly stay within the specified word-count range.
 
 Output Constraints (Strict Compliance Required):
 

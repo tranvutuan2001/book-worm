@@ -11,7 +11,7 @@ import asyncio
 from datetime import datetime
 
 from app.config.app_setting import app_setting
-from app.core.exceptions import DocumentProcessingError, InvalidDocumentError
+from app.util.exceptions import DocumentProcessingError, InvalidDocumentError
 from app.domain.enum.document_status import DocumentStatus
 from app.domain.entity.document_record import DocumentRecord
 from app.domain.value_object.document_upload_result import DocumentUploadResult
