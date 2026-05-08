@@ -14,12 +14,7 @@ import time
 from langfuse import observe
 from app.util.exceptions import DocumentNotFoundError, LLMError
 from app.config.app_setting import app_setting
-from app.domain.entity.agent import (
-    Agent,
-    AGENT_DOCUMENT_ASSISTANT_SYSTEM_PROMPT,
-    AGENT_VERIFY_SYSTEM_PROMPT,
-)
-
+from app.domain.entity.agent import Agent
 from app.domain.entity.message import Message
 from app.domain.enum.role import Role
 from app.infrastructure.llm_connector import LLMService
@@ -40,6 +35,31 @@ _CHAT_TOOL_TYPES = (
     ToolType.DOCUMENT_TITLE,
 )
 
+VERIFICATION_SYSTEM_PROMPT: str = (
+    "You are a strict verification assistant.\n"
+    "Your task is to check whether the provided answer correctly addresses "
+    "the given task.\n"
+    "CRITICAL RULES:\n"
+    "  - Use only information verifiable with the provided tools.\n"
+    "  - Remove any claims that cannot be verified.\n"
+    "  - Do NOT add information from your own knowledge.\n"
+    "  - Do NOT make assumptions beyond what tools confirm.\n"
+    "  - If uncertain, remove the questionable content rather than keeping it.\n"
+    "Return only the fact-checked final answer with no meta-commentary."
+)
+
+DOCUMENT_ASSISTANT_SYSTEM_PROMPT: str = (
+    "You are a knowledgeable assistant in a document-analyzing system.\n"
+    "Answer in the language of the question.\n"
+    "Use the tools to retrieve the information needed to answer.\n"
+    "All answers must be grounded in knowledge retrieved from the tools.\n"
+    "Do not fabricate answers that are not supported by the tools.\n"
+    "At the end of your response, briefly cite which part of the document "
+    "informed your answer.\n"
+    "Format your answer for human readability.\n"
+    'If the answer cannot be found even after using the tools, respond with:\n'
+    '"The provided data is not sufficient to answer this question."'
+)
 
 class ChatService:
     """Handles the document Q&A use case."""
@@ -124,7 +144,7 @@ class ChatService:
     ) -> str:
         try:
             agent = Agent(
-                system_prompt=AGENT_DOCUMENT_ASSISTANT_SYSTEM_PROMPT,
+                system_prompt=DOCUMENT_ASSISTANT_SYSTEM_PROMPT,
                 tools=tools,
             )
             return await self._llm.agent_complete_chat(
@@ -169,7 +189,7 @@ class ChatService:
         req_logger.info("Starting verification step…")
         try:
             verify_agent = Agent(
-                system_prompt=AGENT_VERIFY_SYSTEM_PROMPT,
+                system_prompt=VERIFICATION_SYSTEM_PROMPT,
                 tools=tools,
             )
             verified = await self._llm.agent_complete_chat(
