@@ -17,10 +17,13 @@ async def test_text_generation_service_execution(mock_llm_provider):
         tools=None
     )
     
+    # Set a specific response for this test
+    expected_response = Message(role=MessageRole.ASSISTANT, content="Custom Response")
+    mock_llm_provider.generate.return_value = expected_response
+    
     response = await service.generate_text(command)
     
-    assert response.content == "Mocked LLM Response"
-    assert response.role == MessageRole.ASSISTANT
+    assert response == expected_response
     mock_llm_provider.generate.assert_called_once_with(
         messages=messages, 
         max_completion_tokens=10, 
