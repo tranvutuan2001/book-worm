@@ -31,7 +31,7 @@ from langfuse import observe
 
 from app.config.app_setting import app_setting
 from app.util.exceptions import DocumentNotFoundError, DocumentProcessingError
-from app.domain.entity.agent_factory import AgentFactory
+from app.domain.entity.agent import Agent
 from app.domain.entity.message import Message
 from app.domain.enum.role import Role
 from app.domain.value_object.chat_model_setting import ChatModelSettings
@@ -200,7 +200,7 @@ class PDFSummarizationService:
             timestamp=int(time.time() * 1000),
         )
         try:
-            step1_agent = AgentFactory.summary(
+            step1_agent = Agent(
                 system_prompt=_STEP1_SYSTEM,
                 model_settings=ChatModelSettings(),
             )
@@ -244,7 +244,7 @@ class PDFSummarizationService:
                 timestamp=int(time.time() * 1000),
             )
             try:
-                step2_agent = AgentFactory.summary(
+                step2_agent = Agent(
                     system_prompt=_STEP2_SPLIT_SYSTEM,
                     model_settings=ChatModelSettings(json_schema=JSON_ARRAY_OF_STRINGS_SCHEMA),
                 )
@@ -369,7 +369,7 @@ class PDFSummarizationService:
                 timestamp=int(time.time() * 1000),
             )
             try:
-                step3_agent = AgentFactory.summary(
+                step3_agent = Agent(
                     system_prompt=step3_system,
                     model_settings=ChatModelSettings(
                         json_schema=schema_str,

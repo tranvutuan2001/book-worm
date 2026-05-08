@@ -11,7 +11,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from app.domain.enum.agent_type import AgentType
 from app.domain.value_object.chat_model_setting import ChatModelSettings
 
 # ---------------------------------------------------------------------------
@@ -69,7 +68,6 @@ AGENT_DOCUMENT_ASSISTANT_SYSTEM_PROMPT: str = (
 class Agent:
     """A configured LLM agent ready to be executed by :class:`LLMService`."""
 
-    agent_type: AgentType
     system_prompt: str
     tools: list[Callable[..., Any]] = field(default_factory=list)
     model_settings: ChatModelSettings = field(default_factory=ChatModelSettings)

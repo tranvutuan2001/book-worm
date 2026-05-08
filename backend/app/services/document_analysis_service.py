@@ -10,7 +10,7 @@ import pdfplumber
 from app.config.app_setting import app_setting
 from app.util.exceptions import DocumentProcessingError
 from app.util.utils import write_json_file
-from app.domain.entity.agent_factory import AgentFactory
+from app.domain.entity.agent import Agent
 from app.domain.entity.message import Message
 from app.domain.enum.role import Role
 from app.domain.value_object.chat_model_setting import ChatModelSettings
@@ -295,7 +295,7 @@ class DocumentAnalysisService:
                 timestamp=int(time.time()),
             )
             try:
-                summary_agent = AgentFactory.summary(
+                summary_agent = Agent(
                     system_prompt=_SECTION_SUMMARY_SYSTEM,
                     model_settings=ChatModelSettings(
                         temperature=0.2,
@@ -333,7 +333,7 @@ class DocumentAnalysisService:
                 timestamp=int(time.time()),
             )
             try:
-                chapter_agent = AgentFactory.summary(
+                chapter_agent = Agent(
                     system_prompt=_CHAPTER_SUMMARY_SYSTEM,
                     model_settings=ChatModelSettings(
                         temperature=0.2,

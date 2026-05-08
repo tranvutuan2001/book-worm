@@ -1,7 +1,7 @@
 import pytest
 import logging
 from app.infrastructure.llm_connector.llm_service import LLMService
-from app.domain.entity.agent_factory import AgentFactory
+from app.domain.entity.agent import Agent
 from app.domain.entity.message import Message
 from app.domain.enum.role import Role
 from app.config.app_setting import app_setting
@@ -28,7 +28,7 @@ def llm_service():
 @pytest.mark.asyncio
 async def test_simple_generation(llm_service):
     """Test basic text generation without tools."""
-    agent = AgentFactory.document_assistant(
+    agent = Agent(
         system_prompt="You are a helpful assistant. Reply with only the word 'ACK'.",
     )
     messages = [create_msg(Role.USER, "Please acknowledge.")]
@@ -67,7 +67,7 @@ async def test_tool_calling(llm_service):
             return "Sunny, 25°C"
         return "Unknown"
 
-    agent = AgentFactory.document_assistant(
+    agent = Agent(
         system_prompt="You are a weather assistant. Use the tools provided to answer questions. If you need to know the weather, use the get_weather tool.",
         tools=[get_weather]
     )
@@ -85,7 +85,7 @@ async def test_tool_calling(llm_service):
 @pytest.mark.asyncio
 async def test_multi_turn_chat(llm_service):
     """Test multi-turn conversation memory."""
-    agent = AgentFactory.document_assistant(
+    agent = Agent(
         system_prompt="You are a helpful assistant.",
     )
     messages = [

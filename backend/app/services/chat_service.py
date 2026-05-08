@@ -14,7 +14,11 @@ import time
 from langfuse import observe
 from app.util.exceptions import DocumentNotFoundError, LLMError
 from app.config.app_setting import app_setting
-from app.domain.entity.agent_factory import AgentFactory
+from app.domain.entity.agent import (
+    Agent,
+    AGENT_DOCUMENT_ASSISTANT_SYSTEM_PROMPT,
+    AGENT_VERIFY_SYSTEM_PROMPT,
+)
 
 from app.domain.entity.message import Message
 from app.domain.enum.role import Role
@@ -119,7 +123,8 @@ class ChatService:
         tools: list,
     ) -> str:
         try:
-            agent = AgentFactory.document_assistant(
+            agent = Agent(
+                system_prompt=AGENT_DOCUMENT_ASSISTANT_SYSTEM_PROMPT,
                 tools=tools,
             )
             return await self._llm.agent_complete_chat(
@@ -163,7 +168,8 @@ class ChatService:
 
         req_logger.info("Starting verification step…")
         try:
-            verify_agent = AgentFactory.verify(
+            verify_agent = Agent(
+                system_prompt=AGENT_VERIFY_SYSTEM_PROMPT,
                 tools=tools,
             )
             verified = await self._llm.agent_complete_chat(
