@@ -68,35 +68,89 @@ def test_chat_completions_with_response_format(openai_client):
     """Test chat completions with response_format to enforce json_schema output."""
     model_name = "models/chat/mlx-community/gemma-4-26b-a4b-it-4bit"
     schema = {
-        "$id": "https://example.com/person.schema.json",
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "Person",
-        "description": "A person with name and age",
+        "title": "ProfessionalProfile",
         "type": "object",
         "properties": {
-            "name": {
-                "type": "string",
-                "description": "The person's name"
+            "identity": {
+                "type": "object",
+                "properties": {
+                    "appellation": {"type": "string"},
+                    "biometrics": {
+                        "type": "object",
+                        "properties": {
+                            "years_since_birth": {"type": "integer"},
+                            "gender_identity": {"type": "string", "enum": ["male", "female", "non-binary", "prefer not to say"]}
+                        },
+                        "required": ["years_since_birth", "gender_identity"]
+                    }
+                },
+                "required": ["appellation", "biometrics"]
             },
-            "age": {
-                "type": "integer",
-                "description": "The person's age in years"
+            "geographic_footprint": {
+                "type": "object",
+                "properties": {
+                    "urban_center": {"type": "string"},
+                    "precise_location": {
+                        "type": "object",
+                        "properties": {
+                            "thoroughfare": {"type": "string"},
+                            "postal_identifier": {"type": "string"}
+                        },
+                        "required": ["thoroughfare"]
+                    }
+                },
+                "required": ["urban_center", "precise_location"]
+            },
+            "career_assets": {
+                "type": "object",
+                "properties": {
+                    "academic_status": {
+                        "type": "object",
+                        "properties": {
+                            "is_active_student": {"type": "boolean"},
+                            "highest_degree": {"type": "string"}
+                        },
+                        "required": ["is_active_student"]
+                    },
+                    "technical_stack": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "domain": {"type": "string"},
+                                "proficiency_estimation": {"type": "string", "enum": ["novice", "competent", "master"]}
+                            },
+                            "required": ["domain", "proficiency_estimation"]
+                        }
+                    }
+                },
+                "required": ["academic_status", "technical_stack"]
             }
         },
-        "required": ["name", "age"]
+        "required": ["identity", "geographic_footprint", "career_assets"]
     }
     
+    ambiguous_prompt = (
+        "The individual known as Alice, who saw the world for the first time exactly thirty years ago, "
+        "identifies as a woman. She has established her primary residence in the City of Lights. "
+        "Her home is situated on the famous thoroughfare Rue de Rivoli, at number 123, within the district 75001. "
+        "When it comes to her professional repertoire, she is highly proficient in the language of snakes, "
+        "possesses competent skills in the language that emphasizes memory safety, and is a novice in the "
+        "statically typed language born at Google. Her days of formal schooling are a distant memory, "
+        "and she holds a Master's degree in Computer Science."
+    )
+
     response = openai_client.chat.completions.create(
         model=model_name,
         messages=[
-            {"role": "system", "content": "You are a helpful assistant that extracts structured data."},
-            {"role": "user", "content": "Extract the following information: Alice is 30 years old."}
+            {"role": "system", "content": "You are a sophisticated data extraction engine. Parse the narrative into the requested high-fidelity JSON structure."},
+            {"role": "user", "content": ambiguous_prompt}
         ],
-        max_tokens=100,
+        max_tokens=1000,
         response_format={
             "type": "json_schema",
             "json_schema": {
-                "name": "person_info",
+                "name": "professional_profile_extraction",
                 "schema": schema,
                 "strict": True
             }
@@ -111,6 +165,5 @@ def test_chat_completions_with_response_format(openai_client):
     import jsonschema
     
     parsed_content = json.loads(content)
+    print(f"\nParsed content: {json.dumps(parsed_content, indent=2)}")
     jsonschema.validate(instance=parsed_content, schema=schema)
-    assert isinstance(parsed_content["name"], str)
-    assert isinstance(parsed_content["age"], int)

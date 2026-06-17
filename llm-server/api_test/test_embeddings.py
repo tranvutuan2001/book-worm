@@ -24,7 +24,7 @@ def test_embeddings_single_input(openai_client):
     
     assert response.object == "list"
     assert len(response.data) == 1
-    assert response.data[0].index == 0
+    assert response.data[0].index == 0  
     assert isinstance(response.data[0].embedding, list)
     assert len(response.data[0].embedding) > 0
     assert response.model == model_name
